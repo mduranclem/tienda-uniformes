@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser')
 const colegiosRouter = require('./routes/colegios')
 const productosRouter = require('./routes/productos')
 const carritoRouter = require('./routes/carrito')
+const usuariosRouter = require('./routes/usuarios')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
@@ -20,6 +21,7 @@ app.use(cookieParser())
 app.use('/api/colegios', colegiosRouter)
 app.use('/api/productos', productosRouter)
 app.use('/api/carrito', carritoRouter)
+app.use('/api/usuarios', usuariosRouter)
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 

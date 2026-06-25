@@ -37,4 +37,13 @@ export const carritoApi = {
   actualizar: (varianteId, cantidad) =>
     request(`/carrito/items/${varianteId}`, { method: 'PUT', body: JSON.stringify({ cantidad }) }),
   quitar: (varianteId) => request(`/carrito/items/${varianteId}`, { method: 'DELETE' }),
+  merge: () => request('/carrito/merge', { method: 'POST' }),
+}
+
+// ── Usuarios ──────────────────────────────────────────────────────────────────
+export const usuariosApi = {
+  sync: (token) =>
+    request('/usuarios/sync', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  me: (token) =>
+    request('/usuarios/me', { headers: { Authorization: `Bearer ${token}` } }),
 }

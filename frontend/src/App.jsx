@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage'
 import CatalogoPage from './pages/CatalogoPage'
 import ProductoPage from './pages/ProductoPage'
 import CarritoPage from './pages/CarritoPage'
+import LoginPage from './pages/LoginPage'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
                 <Route path="/catalogo" element={<CatalogoPage />} />
                 <Route path="/producto/:id" element={<ProductoPage />} />
                 <Route path="/carrito" element={<CarritoPage />} />
+                <Route path="/login" element={<LoginPage />} />
               </Routes>
             </main>
             <Footer />
