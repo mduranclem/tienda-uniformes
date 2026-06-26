@@ -21,8 +21,16 @@ const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+].filter(Boolean)
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+    cb(new Error('CORS: origin no permitido'))
+  },
   credentials: true,
 }))
 app.use(express.json())
