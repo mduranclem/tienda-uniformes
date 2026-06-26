@@ -43,7 +43,9 @@ export default function App() {
 
             {/* Tienda pública */}
             <Route path="/*" element={
-              <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(rgba(9,9,11,0.7), rgba(9,9,11,0.7)), url(/fondo.png)', backgroundSize: '100% auto', backgroundPosition: 'top center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'scroll' }}>
+              <div className="min-h-screen flex flex-col relative" style={{ background: 'linear-gradient(rgba(9,9,11,0.75), rgba(9,9,11,0.75)), url(/fondo.png)', backgroundSize: '100% auto', backgroundPosition: 'top center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'scroll' }}>
+                {/* Capa extra oscura solo en mobile */}
+                <div className="sm:hidden absolute inset-0 bg-black/40 pointer-events-none z-0" />
                 <div className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 text-white text-center py-2 px-4 text-sm font-semibold tracking-wide">
                   🎉 ¡20% OFF en tu primera compra! — Se aplica automáticamente al finalizar
                 </div>
