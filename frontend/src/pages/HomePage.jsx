@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { colegiosApi, productosApi, bannersApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
-import { ShieldCheck, Truck, BadgeCheck, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShieldCheck, Truck, BadgeCheck, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 const PLACEHOLDER = 'https://placehold.co/800x800/18181b/3f3f46?text=+'
 
@@ -144,6 +144,8 @@ export default function HomePage() {
   const [colegios, setColegios] = useState([])
   const [banners, setBanners] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [busqueda, setBusqueda] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     Promise.all([
@@ -159,13 +161,41 @@ export default function HomePage() {
       .finally(() => setCargando(false))
   }, [])
 
+  function handleBusqueda(e) {
+    e.preventDefault()
+    if (busqueda.trim()) navigate(`/catalogo?q=${encodeURIComponent(busqueda.trim())}`)
+    else navigate('/catalogo')
+  }
+
   return (
     <div>
       <HeroCarrusel slides={banners} />
 
+      {/* Buscador principal */}
+      <section className="max-w-2xl mx-auto px-4 -mt-4 relative z-10 mb-6">
+        <form onSubmit={handleBusqueda}>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 w-5 h-5" />
+            <input
+              type="search"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar remeras, buzos, colegio..."
+              className="w-full pl-12 pr-32 py-3.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors"
+            >
+              Buscar
+            </button>
+          </div>
+        </form>
+      </section>
+
       {/* Colegios */}
       {colegios.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 py-10">
+        <section className="max-w-6xl mx-auto px-4 py-6">
           <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-4">Por institución</h2>
           <div className="flex flex-wrap gap-2">
             {colegios.map(c => (
