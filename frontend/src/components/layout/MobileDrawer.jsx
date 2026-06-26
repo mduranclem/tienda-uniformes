@@ -48,10 +48,10 @@ export default function MobileDrawer({ abierto, onCerrar }) {
 
       {/* Panel */}
       <aside
-        className="fixed top-0 right-0 h-full w-[82vw] max-w-sm z-50 flex flex-col"
+        className="fixed top-0 left-0 h-full w-[82vw] max-w-sm z-50 flex flex-col"
         style={{
           background: '#111',
-          transform: abierto ? 'translateX(0)' : 'translateX(100%)',
+          transform: abierto ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.3s ease-in-out',
         }}
       >
