@@ -98,6 +98,9 @@ export default function CheckoutPage() {
     if (!form.nombre.trim() || !form.email.trim()) {
       setError('Nombre y email son obligatorios.'); return
     }
+    if (!form.telefono.trim()) {
+      setError('El número de WhatsApp es obligatorio.'); return
+    }
     if (esEnvio && (!form.calle.trim() || !form.ciudad.trim())) {
       setError('Completá la dirección de envío.'); return
     }
@@ -182,13 +185,14 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">Teléfono</label>
+                  <label className="block text-xs text-zinc-400 mb-1">WhatsApp *</label>
                   <input
                     type="tel"
                     value={form.telefono}
                     onChange={e => setField('telefono', e.target.value)}
                     className="input w-full"
                     placeholder="11 1234-5678"
+                    required
                   />
                 </div>
               </div>

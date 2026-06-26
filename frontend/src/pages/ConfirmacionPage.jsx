@@ -42,9 +42,12 @@ export default function ConfirmacionPage() {
         <p className="text-zinc-400 text-sm">
           Orden <span className="font-semibold text-zinc-200">#{orden.numero}</span>
         </p>
-        <p className="text-zinc-500 text-xs mt-1">
-          Te vamos a contactar a <span className="text-zinc-300">{orden.emailGuest ?? orden.usuario?.email}</span>
-        </p>
+        {orden.telefonoGuest && (
+          <p className="text-zinc-500 text-xs mt-1">
+            Te vamos a contactar por WhatsApp al{' '}
+            <span className="text-zinc-300 font-medium">{orden.telefonoGuest}</span>
+          </p>
+        )}
       </div>
 
       {/* Detalle */}

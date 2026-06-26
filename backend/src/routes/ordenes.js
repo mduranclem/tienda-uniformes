@@ -76,7 +76,7 @@ router.post('/', authOpcional, async (req, res, next) => {
           usuarioId: req.user?.id ?? null,
           emailGuest: req.user ? null : email,
           nombreGuest: req.user ? null : nombre,
-          telefonoGuest: req.user ? null : telefono ?? null,
+          telefonoGuest: telefono ?? null,
           entregaId,
           domicilio: entrega.tipo === 'ENVIO' ? domicilio : null,
           subtotal,
