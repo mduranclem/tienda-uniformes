@@ -1,23 +1,23 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Search, Menu, User, LogOut, LayoutDashboard, X, ClipboardList } from 'lucide-react'
+import { ShoppingCart, Search, Menu, User, LogOut, LayoutDashboard, ClipboardList } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
 import CartDrawer from '../cart/CartDrawer'
+import MobileDrawer from './MobileDrawer'
 
 export default function Header() {
   const { totalItems } = useCart()
   const { usuario, logout } = useAuth()
   const navigate = useNavigate()
-  const [menuAbierto, setMenuAbierto] = useState(false)
   const [drawerAbierto, setDrawerAbierto] = useState(false)
+  const [menuAbierto, setMenuAbierto] = useState(false)
   const [busqueda, setBusqueda] = useState('')
 
   function handleBusqueda(e) {
     e.preventDefault()
     if (busqueda.trim()) {
       navigate(`/catalogo?q=${encodeURIComponent(busqueda.trim())}`)
-      setMenuAbierto(false)
     }
   }
 
@@ -83,47 +83,19 @@ export default function Header() {
             </button>
 
             {/* Burger mobile */}
-            <button className="sm:hidden p-1.5" onClick={() => setMenuAbierto(!menuAbierto)} aria-label="Menú">
-              {menuAbierto ? <X className="w-6 h-6 text-zinc-300" /> : <Menu className="w-6 h-6 text-zinc-300" />}
+            <button
+              className="sm:hidden p-1.5"
+              onClick={() => setMenuAbierto(true)}
+              aria-label="Abrir menú"
+            >
+              <Menu className="w-6 h-6 text-zinc-300" />
             </button>
           </div>
         </div>
-
-        {/* Menú mobile */}
-        {menuAbierto && (
-          <nav className="sm:hidden border-t border-zinc-800 bg-zinc-900 px-4 py-3 flex flex-col gap-3 text-sm">
-            <Link to="/catalogo" onClick={() => setMenuAbierto(false)} className="font-medium text-zinc-200">Catálogo</Link>
-            {usuario ? (
-              <>
-                <span className="text-zinc-500 text-xs">{usuario.nombre ?? usuario.email}</span>
-                {usuario.rol === 'ADMIN' && (
-                  <Link to="/admin" onClick={() => setMenuAbierto(false)} className="font-medium text-blue-400">Panel admin</Link>
-                )}
-                <Link to="/mi-cuenta/ordenes" onClick={() => setMenuAbierto(false)} className="font-medium text-zinc-200 flex items-center gap-1.5">
-                  <ClipboardList className="w-4 h-4" /> Mis compras
-                </Link>
-                <button onClick={() => { logout(); setMenuAbierto(false) }} className="text-left text-red-400 font-medium">
-                  Cerrar sesión
-                </button>
-              </>
-            ) : (
-              <Link to="/login" onClick={() => setMenuAbierto(false)} className="font-medium text-zinc-200">Ingresar</Link>
-            )}
-            <form onSubmit={handleBusqueda} className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
-              <input
-                type="search"
-                value={busqueda}
-                onChange={e => setBusqueda(e.target.value)}
-                placeholder="Buscar productos..."
-                className="w-full pl-9 pr-4 py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </form>
-          </nav>
-        )}
       </header>
 
       <CartDrawer abierto={drawerAbierto} onCerrar={() => setDrawerAbierto(false)} />
+      <MobileDrawer abierto={menuAbierto} onCerrar={() => setMenuAbierto(false)} />
     </>
   )
 }
