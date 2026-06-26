@@ -7,7 +7,7 @@ const router = Router()
 // GET /api/productos?colegioId=&tipo=&q=&lisos=1&limit=&page=
 router.get('/', async (req, res, next) => {
   try {
-    const { colegioId, tipo, q, lisos, limit = 20, page = 1 } = req.query
+    const { colegioId, tipo, q, lisos, limit = 20, page = 1, orden } = req.query
     const take = Math.min(Number(limit), 100)
     const skip = (Number(page) - 1) * take
 
@@ -28,13 +28,18 @@ router.get('/', async (req, res, next) => {
       ]
     }
 
+    const orderBy =
+      orden === 'precio_asc'  ? { precio: 'asc' } :
+      orden === 'precio_desc' ? { precio: 'desc' } :
+      { createdAt: 'desc' }
+
     const [total, data] = await Promise.all([
       prisma.producto.count({ where }),
       prisma.producto.findMany({
         where,
         take,
         skip,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           colegio: { select: { id: true, nombre: true, slug: true, logo: true } },
           imagenes: { orderBy: { orden: 'asc' }, take: 1 },
