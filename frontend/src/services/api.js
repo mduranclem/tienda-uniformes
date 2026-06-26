@@ -1,4 +1,9 @@
-const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+function getBase() {
+  const hostname = window.location.hostname
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3000/api'
+  return `https://api.${hostname}/api`
+}
+const BASE = getBase()
 
 async function request(path, options = {}) {
   const { headers: extraHeaders, ...restOptions } = options
