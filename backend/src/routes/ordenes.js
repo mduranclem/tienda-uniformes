@@ -153,6 +153,26 @@ router.get('/primera-compra', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// GET /api/ordenes/mis-ordenes — historial del usuario logueado
+router.get('/mis-ordenes', authMiddleware, async (req, res, next) => {
+  try {
+    const ordenes = await prisma.orden.findMany({
+      where: { usuarioId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: {
+          include: {
+            producto: { select: { nombre: true, imagenes: { take: 1, orderBy: { orden: 'asc' } } } },
+            variante: { select: { talle: true, color: true } },
+          },
+        },
+        entrega: { select: { nombre: true, tipo: true } },
+      },
+    })
+    res.json(ordenes)
+  } catch (err) { next(err) }
+})
+
 // GET /api/ordenes/:id — ver detalle de una orden (guest o usuario)
 router.get('/:id', authMiddleware, async (req, res, next) => {
   try {

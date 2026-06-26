@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Search, Menu, User, LogOut, LayoutDashboard, X, GraduationCap } from 'lucide-react'
+import { ShoppingCart, Search, Menu, User, LogOut, LayoutDashboard, X, ClipboardList } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
@@ -55,8 +55,8 @@ export default function Header() {
                     <LayoutDashboard className="w-4 h-4" />
                   </Link>
                 )}
-                <Link to="/mi-cuenta/alumnos" title="Mis alumnos" className="p-1.5 text-zinc-400 hover:text-blue-400 transition-colors">
-                  <GraduationCap className="w-4 h-4" />
+                <Link to="/mi-cuenta/ordenes" title="Mis compras" className="p-1.5 text-zinc-400 hover:text-blue-400 transition-colors">
+                  <ClipboardList className="w-4 h-4" />
                 </Link>
                 <span className="text-sm text-zinc-400 max-w-[120px] truncate">
                   {usuario.nombre ?? usuario.email}
@@ -99,8 +99,8 @@ export default function Header() {
                 {usuario.rol === 'ADMIN' && (
                   <Link to="/admin" onClick={() => setMenuAbierto(false)} className="font-medium text-blue-400">Panel admin</Link>
                 )}
-                <Link to="/mi-cuenta/alumnos" onClick={() => setMenuAbierto(false)} className="font-medium text-zinc-200 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4" /> Mis alumnos
+                <Link to="/mi-cuenta/ordenes" onClick={() => setMenuAbierto(false)} className="font-medium text-zinc-200 flex items-center gap-1.5">
+                  <ClipboardList className="w-4 h-4" /> Mis compras
                 </Link>
                 <button onClick={() => { logout(); setMenuAbierto(false) }} className="text-left text-red-400 font-medium">
                   Cerrar sesión

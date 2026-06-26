@@ -115,6 +115,9 @@ export const ordenesApi = {
   obtener: (id, token) => request(`/ordenes/${id}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   }),
+  misOrdenes: (token) => request('/ordenes/mis-ordenes', {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 }
 
 // ── Banners ───────────────────────────────────────────────────────────────────
