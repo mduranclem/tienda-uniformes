@@ -22,6 +22,7 @@ import AdminEntregasPage from './pages/admin/AdminEntregasPage'
 import AdminColegiosPage from './pages/admin/AdminColegiosPage'
 import CheckoutPage from './pages/CheckoutPage'
 import ConfirmacionPage from './pages/ConfirmacionPage'
+import MisAlumnosPage from './pages/MisAlumnosPage'
 
 export default function App() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/confirmacion/:id" element={<ConfirmacionPage />} />
+                    <Route path="/mi-cuenta/alumnos" element={<MisAlumnosPage />} />
                     <Route path="/auth/callback" element={<AuthCallbackPage />} />
                     <Route path="/auth/nueva-password" element={<NuevaPasswordPage />} />
                   </Routes>

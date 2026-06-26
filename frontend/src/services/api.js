@@ -122,6 +122,24 @@ export const bannersApi = {
   listar: () => request('/banners'),
 }
 
+// ── Alumnos ───────────────────────────────────────────────────────────────────
+function authHeader(token) {
+  return { Authorization: `Bearer ${token}` }
+}
+
+export const alumnosApi = {
+  listar: (token) =>
+    request('/alumnos', { headers: authHeader(token) }),
+  crear: (token, data) =>
+    request('/alumnos', { method: 'POST', body: JSON.stringify(data), headers: authHeader(token) }),
+  actualizar: (token, id, data) =>
+    request(`/alumnos/${id}`, { method: 'PUT', body: JSON.stringify(data), headers: authHeader(token) }),
+  eliminar: (token, id) =>
+    request(`/alumnos/${id}`, { method: 'DELETE', headers: authHeader(token) }),
+  actualizarTalles: (token, id, talles) =>
+    request(`/alumnos/${id}/talles`, { method: 'PUT', body: JSON.stringify({ talles }), headers: authHeader(token) }),
+}
+
 // ── Usuarios ──────────────────────────────────────────────────────────────────
 export const usuariosApi = {
   sync: (token) =>

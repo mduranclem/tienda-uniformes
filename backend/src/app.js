@@ -3,6 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 
+const alumnosRouter = require('./routes/alumnos')
 const bannersRouter = require('./routes/banners')
 const cuponesRouter = require('./routes/cupones')
 const colegiosRouter = require('./routes/colegios')
@@ -36,6 +37,7 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
+app.use('/api/alumnos', alumnosRouter)
 app.use('/api/banners', bannersRouter)
 app.use('/api/cupones', cuponesRouter)
 app.use('/api/colegios', colegiosRouter)

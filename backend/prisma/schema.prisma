@@ -29,6 +29,7 @@ model Colegio {
 
   productos Producto[]
   cupones   Cupon[]
+  alumnos   Alumno[]
 }
 
 // ── Productos ─────────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ model Usuario {
 
   ordenes  Orden[]
   carritos Carrito[]
+  alumnos  Alumno[]
 }
 
 enum RolUsuario {
@@ -254,4 +256,30 @@ enum AplicaA {
   TODO
   COLEGIO
   PRODUCTO
+}
+
+// ── Alumnos ───────────────────────────────────────────────────────────────────
+model Alumno {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  nombre    String
+  colegioId String?
+  colegio   Colegio? @relation(fields: [colegioId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  talles AlumnoTalle[]
+
+  @@index([usuarioId])
+}
+
+model AlumnoTalle {
+  id         String       @id @default(cuid())
+  alumnoId   String
+  alumno     Alumno       @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  tipoPrenda TipoProducto
+  talle      String
+
+  @@unique([alumnoId, tipoPrenda])
 }
