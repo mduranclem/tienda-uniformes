@@ -1,13 +1,13 @@
 const { Router } = require('express')
 const prisma = require('../lib/prisma')
-const { authMiddleware } = require('../middleware/auth')
+const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
 
 const router = Router()
 
 
 // POST /api/ordenes — crea una orden (guest o usuario logueado)
-router.post('/', authMiddleware, async (req, res, next) => {
+router.post('/', authOpcional, async (req, res, next) => {
   try {
     const { items, nombre, email, telefono, entregaId, domicilio, cuponId, aplicarDescuentoBienvenida } = req.body
 
@@ -73,10 +73,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
     const orden = await prisma.$transaction(async (tx) => {
       const nuevaOrden = await tx.orden.create({
         data: {
-          usuarioId: req.usuario?.id ?? null,
-          emailGuest: req.usuario ? null : email,
-          nombreGuest: req.usuario ? null : nombre,
-          telefonoGuest: req.usuario ? null : telefono ?? null,
+          usuarioId: req.user?.id ?? null,
+          emailGuest: req.user ? null : email,
+          nombreGuest: req.user ? null : nombre,
+          telefonoGuest: req.user ? null : telefono ?? null,
           entregaId,
           domicilio: entrega.tipo === 'ENVIO' ? domicilio : null,
           subtotal,
