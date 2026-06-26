@@ -3,8 +3,19 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Banners (carrusel home) ───────────────────────────────────────────────────
+model BannerSlide {
+  id        String   @id @default(cuid())
+  url       String
+  titulo    String?
+  orden     Int      @default(0)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 // ── Colegios ──────────────────────────────────────────────────────────────────
@@ -29,6 +40,8 @@ model Producto {
   precio       Decimal        @db.Decimal(10, 2)
   colegioId    String?
   colegio      Colegio?       @relation(fields: [colegioId], references: [id])
+  precioOferta Decimal?       @db.Decimal(10, 2)
+  cuotas       Int?
   activo       Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -37,6 +50,7 @@ model Producto {
   variantes    Variante[]
   itemsOrden   ItemOrden[]
   itemsCarrito ItemCarrito[]
+  cupones      Cupon[]
 }
 
 enum TipoProducto {
@@ -54,6 +68,7 @@ model ProductImage {
   url        String
   orden      Int      @default(0)
   alt        String?
+  color      String?  // null = imagen genérica (se muestra para todos los colores)
 }
 
 // ── Variantes ─────────────────────────────────────────────────────────────────
@@ -217,6 +232,8 @@ model Cupon {
   aplicaA      AplicaA
   colegioId    String?
   colegio      Colegio?      @relation(fields: [colegioId], references: [id])
+  productoId   String?
+  producto     Producto?     @relation(fields: [productoId], references: [id])
   usosMax      Int?
   usosActuales Int           @default(0)
   minimoCompra Decimal?      @db.Decimal(10, 2)

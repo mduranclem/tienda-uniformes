@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { entregasApi } from '../../services/api'
 import { formatPrecio } from '../../lib/utils'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
@@ -16,34 +17,23 @@ const BADGE_ESTADO = {
   CANCELADA: 'red',
 }
 
-const SIGUIENTE_ESTADO = {
-  PENDIENTE: 'PAGADA',
-  PAGADA: 'PREPARANDO',
-  PREPARANDO: 'LISTA',
-  LISTA: 'ENTREGADA',
-}
-
 function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
   const [orden, setOrden] = useState(null)
   const [nuevoEstado, setNuevoEstado] = useState('')
   const [nota, setNota] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  useEffect(() => {
-    adminApi.obtenerOrden(token, ordenId).then(setOrden)
-  }, [ordenId])
+  useEffect(() => { adminApi.obtenerOrden(token, ordenId).then(setOrden) }, [ordenId])
 
   async function cambiarEstado() {
     if (!nuevoEstado) return
     setGuardando(true)
     await adminApi.cambiarEstadoOrden(token, ordenId, nuevoEstado, nota)
-    setGuardando(false)
-    onActualizado()
-    onCerrar()
+    setGuardando(false); onActualizado(); onCerrar()
   }
 
   if (!orden) return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
       <Spinner className="w-10 h-10" />
     </div>
   )
@@ -51,29 +41,27 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
   const cliente = orden.usuario?.nombre ?? orden.usuario?.email ?? orden.nombreGuest ?? orden.emailGuest ?? 'Invitado'
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <div>
-            <h2 className="font-bold text-gray-900">Orden #{orden.numero}</h2>
-            <p className="text-xs text-gray-500">{cliente}</p>
+            <h2 className="font-bold text-zinc-100">Orden #{orden.numero}</h2>
+            <p className="text-xs text-zinc-500">{cliente}</p>
           </div>
-          <button onClick={onCerrar} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
+          <button onClick={onCerrar} className="text-zinc-500 hover:text-zinc-200 text-2xl leading-none">×</button>
         </div>
 
         <div className="p-5 flex flex-col gap-4">
-          {/* Estado actual */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Estado actual:</span>
+            <span className="text-sm text-zinc-400">Estado actual:</span>
             <Badge variante={BADGE_ESTADO[orden.estado]}>{orden.estado}</Badge>
           </div>
 
-          {/* Items */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Productos</p>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Productos</p>
             <div className="flex flex-col gap-1.5">
               {orden.items.map(item => (
-                <div key={item.id} className="flex justify-between text-sm text-gray-700">
+                <div key={item.id} className="flex justify-between text-sm text-zinc-300">
                   <span>{item.producto.nombre} · Talle {item.variante.talle} × {item.cantidad}</span>
                   <span className="font-medium">{formatPrecio(item.subtotal)}</span>
                 </div>
@@ -81,22 +69,22 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
             </div>
           </div>
 
-          {/* Totales */}
-          <div className="border-t pt-3 flex flex-col gap-1 text-sm text-gray-600">
+          <div className="border-t border-zinc-800 pt-3 flex flex-col gap-1 text-sm text-zinc-400">
             <div className="flex justify-between"><span>Subtotal</span><span>{formatPrecio(orden.subtotal)}</span></div>
-            {Number(orden.descuento) > 0 && <div className="flex justify-between text-green-600"><span>Descuento</span><span>−{formatPrecio(orden.descuento)}</span></div>}
+            {Number(orden.descuento) > 0 && (
+              <div className="flex justify-between text-green-400"><span>Descuento</span><span>−{formatPrecio(orden.descuento)}</span></div>
+            )}
             <div className="flex justify-between"><span>Envío ({orden.entrega?.nombre})</span><span>{formatPrecio(orden.costoEnvio)}</span></div>
-            <div className="flex justify-between font-bold text-gray-900 text-base pt-1 border-t">
+            <div className="flex justify-between font-bold text-zinc-100 text-base pt-1 border-t border-zinc-800">
               <span>Total</span><span>{formatPrecio(orden.total)}</span>
             </div>
           </div>
 
-          {/* Historial */}
           {orden.historial?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Historial</p>
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Historial</p>
               {orden.historial.map(h => (
-                <div key={h.id} className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                <div key={h.id} className="flex items-center gap-2 text-xs text-zinc-500 mb-1">
                   <Badge variante={BADGE_ESTADO[h.estado]}>{h.estado}</Badge>
                   <span>{new Date(h.createdAt).toLocaleDateString('es-AR')}</span>
                   {h.nota && <span>· {h.nota}</span>}
@@ -105,10 +93,9 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
             </div>
           )}
 
-          {/* Cambiar estado */}
           {orden.estado !== 'ENTREGADA' && orden.estado !== 'CANCELADA' && (
-            <div className="border-t pt-3 flex flex-col gap-2">
-              <p className="text-sm font-medium text-gray-700">Cambiar estado</p>
+            <div className="border-t border-zinc-800 pt-3 flex flex-col gap-2">
+              <p className="text-sm font-medium text-zinc-300">Cambiar estado</p>
               <select value={nuevoEstado} onChange={e => setNuevoEstado(e.target.value)} className="input">
                 <option value="">— Seleccionar —</option>
                 {ESTADOS.filter(e => e !== orden.estado).map(e => (
@@ -135,24 +122,33 @@ export default function AdminOrdenesPage() {
   const [total, setTotal] = useState(0)
   const [cargando, setCargando] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroEntrega, setFiltroEntrega] = useState('') // '' | 'ENVIO' | entregaId
+  const [entregas, setEntregas] = useState([])
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
 
   async function cargar() {
     setCargando(true)
     const r = await adminApi.listarOrdenes(token, { estado: filtroEstado })
-    setOrdenes(r.data)
-    setTotal(r.total)
-    setCargando(false)
+    setOrdenes(r.data); setTotal(r.total); setCargando(false)
   }
 
+  useEffect(() => { entregasApi.listar().then(setEntregas) }, [])
   useEffect(() => { if (token) cargar() }, [token, filtroEstado])
+
+  const localesRetiro = entregas.filter(e => e.tipo === 'RETIRO')
+
+  const ordenesFiltradas = ordenes.filter(o => {
+    if (!filtroEntrega) return true
+    if (filtroEntrega === 'ENVIO') return o.entrega?.tipo === 'ENVIO'
+    return o.entregaId === filtroEntrega
+  })
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Órdenes</h1>
-          <p className="text-sm text-gray-500">{total} en total</p>
+          <h1 className="text-xl font-bold text-zinc-100">Órdenes</h1>
+          <p className="text-sm text-zinc-500">{ordenesFiltradas.length} {filtroEntrega ? 'filtradas' : 'en total'}</p>
         </div>
         <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="input w-auto">
           <option value="">Todos los estados</option>
@@ -160,33 +156,86 @@ export default function AdminOrdenesPage() {
         </select>
       </div>
 
+      {/* Filtros de entrega */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {[
+          { id: '', label: 'Todos' },
+          { id: 'ENVIO', label: '🚚 Envío a domicilio' },
+          ...localesRetiro.map(e => ({
+            id: e.id,
+            label: `📍 ${e.nombre.replace(/^Retiro en local\s*[\(\-]?\s*/i, '').replace(/\)$/, '') || e.nombre}`,
+          })),
+        ].map(op => (
+          <button
+            key={op.id}
+            onClick={() => setFiltroEntrega(op.id)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              filtroEntrega === op.id
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-blue-500 hover:text-blue-400'
+            }`}
+          >
+            {op.label}
+          </button>
+        ))}
+      </div>
+
       {cargando ? (
         <div className="flex justify-center py-20"><Spinner className="w-8 h-8" /></div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="border-b border-zinc-800">
               <tr>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fecha</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">#</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Cliente</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Entrega</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Total</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Fecha</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
-              {ordenes.map(o => {
+              {ordenesFiltradas.map(o => {
                 const cliente = o.usuario?.nombre ?? o.usuario?.email ?? o.nombreGuest ?? o.emailGuest ?? 'Invitado'
                 return (
-                  <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">#{o.numero}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[160px] truncate">{cliente}</td>
-                    <td className="px-4 py-3"><Badge variante={BADGE_ESTADO[o.estado]}>{o.estado}</Badge></td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatPrecio(o.total)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
+                  <tr key={o.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-zinc-100">#{o.numero}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => setOrdenSeleccionada(o.id)} className="text-sm text-blue-600 hover:underline font-medium">
+                      <p className="text-sm text-zinc-300">{cliente}</p>
+                      <div className="mt-1 flex flex-col gap-1">
+                        {o.items.map(item => (
+                          <p key={item.id} className="text-xs text-zinc-500 leading-snug">
+                            {item.producto.nombre} · T:{item.variante.talle}{item.variante.color ? ` ${item.variante.color}` : ''} × {item.cantidad}
+                          </p>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {o.entrega?.tipo === 'ENVIO' ? (
+                        <div>
+                          <p className="text-xs font-medium text-zinc-300">Envío a domicilio</p>
+                          {o.domicilio && (
+                            <p className="text-xs text-zinc-500 truncate max-w-[160px]">
+                              {o.domicilio.calle} {o.domicilio.numero}{o.domicilio.piso ? `, ${o.domicilio.piso}` : ''} — {o.domicilio.ciudad}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs font-medium text-zinc-300">Retiro en local</p>
+                          <p className="text-xs text-zinc-500 truncate max-w-[160px]">
+                            {o.entrega?.nombre?.replace(/^Retiro en local\s*[\(\-]?\s*/i, '').replace(/\)$/, '')}
+                          </p>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3"><Badge variante={BADGE_ESTADO[o.estado]}>{o.estado}</Badge></td>
+                    <td className="px-4 py-3 text-sm font-medium text-zinc-100">{formatPrecio(o.total)}</td>
+                    <td className="px-4 py-3 text-xs text-zinc-500">{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => setOrdenSeleccionada(o.id)} className="text-sm text-blue-400 hover:underline font-medium">
                         Ver
                       </button>
                     </td>
@@ -195,16 +244,15 @@ export default function AdminOrdenesPage() {
               })}
             </tbody>
           </table>
-          {!ordenes.length && (
-            <div className="text-center py-16 text-gray-400 text-sm">No hay órdenes aún</div>
+          {!ordenesFiltradas.length && (
+            <div className="text-center py-16 text-zinc-600 text-sm" colSpan={7}>No hay órdenes aún</div>
           )}
         </div>
       )}
 
       {ordenSeleccionada && (
         <ModalOrden ordenId={ordenSeleccionada} token={token}
-          onCerrar={() => setOrdenSeleccionada(null)}
-          onActualizado={cargar} />
+          onCerrar={() => setOrdenSeleccionada(null)} onActualizado={cargar} />
       )}
     </div>
   )

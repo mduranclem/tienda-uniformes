@@ -1,10 +1,10 @@
 const { Router } = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../lib/prisma')
 const { randomUUID } = require('crypto')
 const { authOpcional, authMiddleware } = require('../middleware/auth')
 
 const router = Router()
-const prisma = new PrismaClient()
+
 
 // Obtiene o crea el carrito para el usuario/sesión actual
 async function resolverCarrito(req, res) {

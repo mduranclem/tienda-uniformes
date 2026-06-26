@@ -1,10 +1,10 @@
 const { Router } = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
 
 const router = Router()
-const prisma = new PrismaClient()
+
 
 router.use(authMiddleware, adminOnly)
 
@@ -13,7 +13,10 @@ router.get('/', async (_req, res, next) => {
   try {
     const cupones = await prisma.cupon.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { colegio: { select: { nombre: true } } },
+      include: {
+        colegio: { select: { nombre: true } },
+        producto: { select: { nombre: true } },
+      },
     })
     res.json(cupones)
   } catch (err) { next(err) }
@@ -22,7 +25,7 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/cupones
 router.post('/', async (req, res, next) => {
   try {
-    const { codigo, tipo, valor, aplicaA, colegioId, usosMax, minimoCompra, desde, hasta } = req.body
+    const { codigo, tipo, valor, aplicaA, colegioId, productoId, usosMax, minimoCompra, desde, hasta } = req.body
     if (!codigo || !tipo || valor === undefined || !aplicaA) {
       return res.status(400).json({ mensaje: 'codigo, tipo, valor y aplicaA son requeridos' })
     }
@@ -33,6 +36,7 @@ router.post('/', async (req, res, next) => {
         valor,
         aplicaA,
         colegioId: colegioId || null,
+        productoId: productoId || null,
         usosMax: usosMax ?? null,
         minimoCompra: minimoCompra ?? null,
         desde: desde ? new Date(desde) : null,

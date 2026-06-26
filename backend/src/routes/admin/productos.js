@@ -1,10 +1,10 @@
 const { Router } = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
 
 const router = Router()
-const prisma = new PrismaClient()
+
 
 router.use(authMiddleware, adminOnly)
 
@@ -53,7 +53,7 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, colegioId, activo } = req.body
+    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, colegioId, activo } = req.body
     const producto = await prisma.producto.update({
       where: { id: req.params.id },
       data: {
@@ -61,6 +61,8 @@ router.put('/:id', async (req, res, next) => {
         descripcion,
         tipo,
         precio: precio !== undefined ? precio : undefined,
+        precioOferta: precioOferta !== undefined ? (precioOferta || null) : undefined,
+        cuotas: cuotas !== undefined ? (cuotas || null) : undefined,
         colegioId: colegioId !== undefined ? (colegioId || null) : undefined,
         activo: activo !== undefined ? activo : undefined,
       },
@@ -74,12 +76,17 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// DELETE /api/admin/productos/:id  (soft delete)
+// DELETE /api/admin/productos/:id
 router.delete('/:id', async (req, res, next) => {
   try {
-    await prisma.producto.update({ where: { id: req.params.id }, data: { activo: false } })
+    await prisma.producto.delete({ where: { id: req.params.id } })
     res.status(204).end()
-  } catch (err) { next(err) }
+  } catch (err) {
+    if (err.code === 'P2003' || err.code === 'P2014') {
+      return res.status(409).json({ mensaje: 'No se puede eliminar: el producto tiene pedidos asociados. Podés ocultarlo en cambio.' })
+    }
+    next(err)
+  }
 })
 
 // ── Imágenes ──────────────────────────────────────────────────────────────────
@@ -93,6 +100,22 @@ router.post('/:id/imagenes', async (req, res, next) => {
       data: { productoId: req.params.id, url, alt: alt ?? null, orden: orden ?? 0 },
     })
     res.status(201).json(imagen)
+  } catch (err) { next(err) }
+})
+
+// PUT /api/admin/productos/imagenes/:imagenId
+router.put('/imagenes/:imagenId', async (req, res, next) => {
+  try {
+    const { color, alt, orden } = req.body
+    const imagen = await prisma.productImage.update({
+      where: { id: req.params.imagenId },
+      data: {
+        color: color !== undefined ? (color || null) : undefined,
+        alt: alt !== undefined ? alt : undefined,
+        orden: orden !== undefined ? orden : undefined,
+      },
+    })
+    res.json(imagen)
   } catch (err) { next(err) }
 })
 

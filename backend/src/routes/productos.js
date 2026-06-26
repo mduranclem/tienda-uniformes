@@ -1,8 +1,8 @@
 const { Router } = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../lib/prisma')
 
 const router = Router()
-const prisma = new PrismaClient()
+
 
 // GET /api/productos?colegioId=&tipo=&q=&lisos=1&limit=&page=
 router.get('/', async (req, res, next) => {

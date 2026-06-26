@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { colegiosApi, productosApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import FilterBar from '../components/catalog/FilterBar'
-import { Search } from 'lucide-react'
+import { Search, ChevronLeft } from 'lucide-react'
 
 export default function CatalogoPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -53,18 +53,22 @@ export default function CatalogoPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Catálogo</h1>
+      <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-100 transition-colors mb-4">
+        <ChevronLeft className="w-4 h-4" />
+        Volver al inicio
+      </Link>
+      <h1 className="text-2xl font-bold text-zinc-100 mb-4">Catálogo</h1>
 
       {/* Buscador mobile */}
       <form onSubmit={handleBusqueda} className="sm:hidden mb-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
           <input
             type="search"
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             placeholder="Buscar productos..."
-            className="w-full pl-9 pr-4 py-2 rounded-full border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-4 py-2 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </form>

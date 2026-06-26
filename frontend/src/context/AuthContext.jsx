@@ -18,13 +18,15 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSesion(session)
-      if (event === 'SIGNED_IN' && session) {
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') && session) {
         await sincronizarUsuario(session)
-        // Fusionar carrito guest con el del usuario
-        try { await carritoApi.merge() } catch (_) {}
+        if (event === 'SIGNED_IN') {
+          try { await carritoApi.merge() } catch (_) {}
+        }
       }
       if (event === 'SIGNED_OUT') {
         setUsuario(null)
+        setCargando(false)
       }
     })
 
@@ -35,17 +37,30 @@ export function AuthProvider({ children }) {
     try {
       const data = await usuariosApi.sync(session.access_token)
       setUsuario(data)
-    } catch (_) {
+    } catch (err) {
       setUsuario(null)
     } finally {
       setCargando(false)
     }
   }
 
-  async function loginConMagicLink(email) {
-    const { error } = await supabase.auth.signInWithOtp({
+  async function loginConPassword(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+  }
+
+  async function registrar(email, password, nombre) {
+    const { error } = await supabase.auth.signUp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      password,
+      options: { data: { full_name: nombre } },
+    })
+    if (error) throw error
+  }
+
+  async function recuperarPassword(email) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/nueva-password`,
     })
     if (error) throw error
   }
@@ -57,7 +72,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, sesion, cargando, loginConMagicLink, logout }}>
+    <AuthContext.Provider value={{ usuario, sesion, cargando, loginConPassword, registrar, recuperarPassword, logout }}>
       {children}
     </AuthContext.Provider>
   )

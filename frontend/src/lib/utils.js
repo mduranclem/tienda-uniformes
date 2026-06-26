@@ -18,3 +18,11 @@ export function slugify(texto) {
 export function calcularCuotas(precio, cuotas = 3) {
   return formatPrecio(precio / cuotas)
 }
+
+// Capitaliza la primera letra de cada palabra
+export function titleCase(texto) {
+  if (!texto) return ''
+  return texto
+    .toLowerCase()
+    .replace(/(?:^|\s|-)\S/g, l => l.toUpperCase())
+}

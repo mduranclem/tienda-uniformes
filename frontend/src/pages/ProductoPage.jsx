@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { productosApi } from '../services/api'
 import { useCart } from '../context/CartContext'
 import ImageGallery from '../components/product/ImageGallery'
 import VariantSelector from '../components/product/VariantSelector'
 import Spinner from '../components/ui/Spinner'
-import { formatPrecio, calcularCuotas } from '../lib/utils'
-import { ShoppingCart } from 'lucide-react'
+import { formatPrecio, titleCase } from '../lib/utils'
+import { ShoppingCart, ChevronLeft } from 'lucide-react'
 
 export default function ProductoPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { dispatch } = useCart()
   const [producto, setProducto] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -39,7 +40,8 @@ export default function ProductoPage() {
         nombre: producto.nombre,
         talle: varianteSeleccionada.talle,
         color: varianteSeleccionada.color,
-        precioUnit: Number(producto.precio),
+        precioUnit: Number(producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
+          ? producto.precioOferta : producto.precio),
         imagen: producto.imagenes?.[0]?.url ?? '/placeholder.png',
         cantidad,
       },
@@ -53,34 +55,62 @@ export default function ProductoPage() {
   }
 
   if (!producto) {
-    return <div className="text-center py-20 text-gray-500">Producto no encontrado.</div>
+    return <div className="text-center py-20 text-zinc-500">Producto no encontrado.</div>
   }
 
   const stockVariante = varianteSeleccionada?.stock ?? 0
+  const tieneOferta = producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
+  const precioFinal = tieneOferta ? Number(producto.precioOferta) : Number(producto.precio)
+  const descuentoPct = tieneOferta
+    ? Math.round((1 - Number(producto.precioOferta) / Number(producto.precio)) * 100)
+    : 0
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-100 transition-colors mb-4"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Volver
+      </button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Galería */}
-        <ImageGallery imagenes={producto.imagenes} />
+        <ImageGallery imagenes={producto.imagenes} colorFiltro={varianteSeleccionada?.color ?? null} />
 
         {/* Info */}
         <div className="flex flex-col gap-4">
           {producto.colegio && (
-            <span className="text-sm text-blue-600 font-medium">{producto.colegio.nombre}</span>
+            <span className="text-sm text-blue-400 font-medium">{producto.colegio.nombre}</span>
           )}
-          <h1 className="text-2xl font-bold text-gray-900">{producto.nombre}</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">{titleCase(producto.nombre)}</h1>
 
+          {/* Precio */}
           <div>
-            <p className="text-3xl font-bold text-gray-900">{formatPrecio(producto.precio)}</p>
-            <p className="text-sm text-gray-500 mt-0.5">3 cuotas de {calcularCuotas(producto.precio)}</p>
+            {tieneOferta ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <p className="text-3xl font-bold text-red-400">{formatPrecio(producto.precioOferta)}</p>
+                  <span className="bg-red-500/20 text-red-400 text-sm font-bold px-2 py-0.5 rounded-full border border-red-500/30">
+                    -{descuentoPct}%
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-600 line-through">{formatPrecio(producto.precio)}</p>
+              </>
+            ) : (
+              <p className="text-3xl font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
+            )}
+            {producto.cuotas && (
+              <p className="text-sm text-zinc-500 mt-0.5">
+                {producto.cuotas} cuotas de {formatPrecio(precioFinal / producto.cuotas)}
+              </p>
+            )}
           </div>
 
           {producto.descripcion && (
-            <p className="text-sm text-gray-600 leading-relaxed">{producto.descripcion}</p>
+            <p className="text-sm text-zinc-400 leading-relaxed">{producto.descripcion}</p>
           )}
 
-          {/* Selector de talle */}
           {producto.variantes?.length > 0 && (
             <VariantSelector
               variantes={producto.variantes}
@@ -92,36 +122,36 @@ export default function ProductoPage() {
           {/* Cantidad */}
           {stockVariante > 0 && (
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">Cantidad:</span>
-              <div className="flex items-center border border-gray-300 rounded-lg">
+              <span className="text-sm font-medium text-zinc-300">Cantidad:</span>
+              <div className="flex items-center border border-zinc-700 rounded-lg bg-zinc-900">
                 <button
                   onClick={() => setCantidad(c => Math.max(1, c - 1))}
-                  className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-l-lg"
+                  className="w-9 h-9 flex items-center justify-center text-zinc-300 hover:bg-zinc-800 rounded-l-lg"
                 >
                   −
                 </button>
-                <span className="w-10 text-center text-sm font-medium">{cantidad}</span>
+                <span className="w-10 text-center text-sm font-medium text-zinc-100">{cantidad}</span>
                 <button
                   onClick={() => setCantidad(c => Math.min(stockVariante, c + 1))}
-                  className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-r-lg"
+                  className="w-9 h-9 flex items-center justify-center text-zinc-300 hover:bg-zinc-800 rounded-r-lg"
                 >
                   +
                 </button>
               </div>
-              <span className="text-xs text-gray-400">({stockVariante} disponibles)</span>
+              <span className="text-xs text-zinc-600">({stockVariante} disponibles)</span>
             </div>
           )}
 
-          {/* Botón agregar */}
+          {/* Botón */}
           <button
             onClick={agregarAlCarrito}
             disabled={!varianteSeleccionada || stockVariante === 0}
             className={`flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold text-base transition-colors ${
               stockVariante === 0
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                 : agregado
                 ? 'bg-green-600 text-white'
-                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                : 'bg-blue-600 text-white hover:bg-blue-500'
             }`}
           >
             <ShoppingCart className="w-5 h-5" />

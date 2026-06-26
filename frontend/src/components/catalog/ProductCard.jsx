@@ -1,40 +1,62 @@
 import { Link } from 'react-router-dom'
-import { formatPrecio, calcularCuotas } from '../../lib/utils'
+import { formatPrecio, titleCase } from '../../lib/utils'
 
 export default function ProductCard({ producto }) {
   const imagenPrincipal = producto.imagenes?.[0]?.url ?? '/placeholder.png'
   const stockTotal = producto.variantes?.reduce((acc, v) => acc + v.stock, 0) ?? 0
+  const tieneOferta = producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
+  const descuentoPct = tieneOferta
+    ? Math.round((1 - Number(producto.precioOferta) / Number(producto.precio)) * 100)
+    : 0
 
   return (
     <Link
       to={`/producto/${producto.id}`}
-      className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
+      className="group bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden hover:border-zinc-600 transition-colors flex flex-col"
     >
-      {/* Imagen */}
-      <div className="aspect-square overflow-hidden bg-gray-100">
+      <div className="relative aspect-square overflow-hidden bg-zinc-800">
         <img
           src={imagenPrincipal}
           alt={producto.nombre}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
+        {tieneOferta && (
+          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            -{descuentoPct}%
+          </span>
+        )}
+        {stockTotal === 0 && (
+          <div className="absolute inset-0 bg-zinc-950/60 flex items-center justify-center">
+            <span className="text-xs font-semibold text-zinc-400 bg-zinc-900/80 px-3 py-1 rounded-full">Sin stock</span>
+          </div>
+        )}
       </div>
 
-      {/* Info */}
       <div className="p-3 flex flex-col gap-1 flex-1">
         {producto.colegio && (
-          <span className="text-xs text-blue-600 font-medium">{producto.colegio.nombre}</span>
+          <span className="text-xs text-blue-400 font-medium">{producto.colegio.nombre}</span>
         )}
-        <h3 className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
-          {producto.nombre}
+        <h3 className="text-sm font-medium text-zinc-100 line-clamp-2 leading-snug">
+          {titleCase(producto.nombre)}
         </h3>
         <div className="mt-auto pt-2">
-          <p className="text-base font-bold text-gray-900">{formatPrecio(producto.precio)}</p>
-          <p className="text-xs text-gray-500">3 cuotas de {calcularCuotas(producto.precio)}</p>
+          {tieneOferta ? (
+            <>
+              <p className="text-base font-bold text-red-400">{formatPrecio(producto.precioOferta)}</p>
+              <p className="text-xs text-zinc-600 line-through">{formatPrecio(producto.precio)}</p>
+            </>
+          ) : (
+            <p className="text-base font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
+          )}
+          {producto.cuotas && (
+            <p className="text-xs text-zinc-500">
+              {producto.cuotas} cuotas de {formatPrecio(
+                (tieneOferta ? Number(producto.precioOferta) : Number(producto.precio)) / producto.cuotas
+              )}
+            </p>
+          )}
         </div>
-        {stockTotal === 0 && (
-          <span className="text-xs text-red-500 font-medium">Sin stock</span>
-        )}
       </div>
     </Link>
   )

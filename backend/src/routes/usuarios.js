@@ -1,9 +1,9 @@
 const { Router } = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../lib/prisma')
 const { authMiddleware } = require('../middleware/auth')
 
 const router = Router()
-const prisma = new PrismaClient()
+
 
 // POST /api/usuarios/sync
 // Upsert del usuario en nuestra DB al loguear con Supabase.

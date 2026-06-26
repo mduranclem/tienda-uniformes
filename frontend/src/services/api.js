@@ -1,15 +1,17 @@
 const BASE = '/api'
 
 async function request(path, options = {}) {
+  const { headers: extraHeaders, ...restOptions } = options
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    ...restOptions,
   })
   if (!res.ok) {
     const error = await res.json().catch(() => ({ mensaje: res.statusText }))
     throw new Error(error.mensaje || `Error ${res.status}`)
   }
+  if (res.status === 204) return null
   return res.json()
 }
 
@@ -49,16 +51,22 @@ function adminRequest(path, options = {}, token) {
 }
 
 export const adminApi = {
+  // Colegios
+  listarColegios: (token) => adminRequest('/admin/colegios', {}, token),
+  crearColegio: (token, data) => adminRequest('/admin/colegios', { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarColegio: (token, id, data) => adminRequest(`/admin/colegios/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarColegio: (token, id) => adminRequest(`/admin/colegios/${id}`, { method: 'DELETE' }, token),
   // Productos
   listarProductos: (token) => adminRequest('/admin/productos', {}, token),
   crearProducto: (token, data) => adminRequest('/admin/productos', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarProducto: (token, id, data) => adminRequest(`/admin/productos/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarProducto: (token, id) => adminRequest(`/admin/productos/${id}`, { method: 'DELETE' }, token),
   agregarImagen: (token, productoId, data) => adminRequest(`/admin/productos/${productoId}/imagenes`, { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarImagen: (token, imagenId, data) => adminRequest(`/admin/productos/imagenes/${imagenId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarImagen: (token, imagenId) => adminRequest(`/admin/productos/imagenes/${imagenId}`, { method: 'DELETE' }, token),
   crearVariante: (token, productoId, data) => adminRequest(`/admin/productos/${productoId}/variantes`, { method: 'POST', body: JSON.stringify(data) }, token),
-  actualizarVariante: (token, varianteId, data) => adminRequest(`/admin/variantes/${varianteId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  eliminarVariante: (token, varianteId) => adminRequest(`/admin/variantes/${varianteId}`, { method: 'DELETE' }, token),
+  actualizarVariante: (token, varianteId, data) => adminRequest(`/admin/productos/variantes/${varianteId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarVariante: (token, varianteId) => adminRequest(`/admin/productos/variantes/${varianteId}`, { method: 'DELETE' }, token),
   // Órdenes
   listarOrdenes: (token, params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
@@ -74,6 +82,44 @@ export const adminApi = {
   listarEntregas: (token) => adminRequest('/admin/entregas', {}, token),
   crearEntrega: (token, data) => adminRequest('/admin/entregas', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarEntrega: (token, id, data) => adminRequest(`/admin/entregas/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  // Banners
+  listarBanners: (token) => adminRequest('/admin/banners', {}, token),
+  crearBanner: (token, data) => adminRequest('/admin/banners', { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarBanner: (token, id, data) => adminRequest(`/admin/banners/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarBanner: (token, id) => adminRequest(`/admin/banners/${id}`, { method: 'DELETE' }, token),
+}
+
+// ── Entregas ──────────────────────────────────────────────────────────────────
+export const cuponesApi = {
+  validar: (codigo, subtotal, colegioIds, productoIds, itemsSubtotales) => request('/cupones/validar', {
+    method: 'POST',
+    body: JSON.stringify({ codigo, subtotal, colegioIds, productoIds, itemsSubtotales }),
+  }),
+}
+
+export const entregasApi = {
+  listar: () => request('/entregas'),
+}
+
+// ── Órdenes ───────────────────────────────────────────────────────────────────
+export const primeraCompraApi = {
+  verificar: (email) => request(`/ordenes/primera-compra?email=${encodeURIComponent(email)}`),
+}
+
+export const ordenesApi = {
+  crear: (data, token) => request('/ordenes', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  }),
+  obtener: (id, token) => request(`/ordenes/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  }),
+}
+
+// ── Banners ───────────────────────────────────────────────────────────────────
+export const bannersApi = {
+  listar: () => request('/banners'),
 }
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
