@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { colegiosApi, productosApi, bannersApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
+import FilterBar from '../components/catalog/FilterBar'
 import { ShieldCheck, Truck, BadgeCheck, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 const PLACEHOLDER = 'https://placehold.co/800x800/18181b/3f3f46?text=+'
@@ -141,30 +142,46 @@ function HeroCarrusel({ slides }) {
 
 export default function HomePage() {
   const [novedades, setNovedades] = useState([])
+  const [total, setTotal] = useState(null)
   const [colegios, setColegios] = useState([])
   const [banners, setBanners] = useState([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [filtros, setFiltros] = useState({ colegioId: '', tipo: '', orden: '' })
   const navigate = useNavigate()
 
   useEffect(() => {
-    Promise.all([
-      productosApi.listar({ limit: 8 }),
-      colegiosApi.listar(),
-      bannersApi.listar(),
-    ])
-      .then(([prods, cols, bans]) => {
-        setNovedades(prods.data ?? prods)
+    Promise.all([colegiosApi.listar(), bannersApi.listar()])
+      .then(([cols, bans]) => {
         setColegios(cols.data ?? cols)
         setBanners(bans)
       })
-      .finally(() => setCargando(false))
   }, [])
+
+  useEffect(() => {
+    setCargando(true)
+    const params = { limit: 8 }
+    if (filtros.colegioId && filtros.colegioId !== 'lisos') params.colegioId = filtros.colegioId
+    if (filtros.colegioId === 'lisos') params.lisos = '1'
+    if (filtros.tipo) params.tipo = filtros.tipo
+    if (filtros.orden) params.orden = filtros.orden
+
+    productosApi.listar(params)
+      .then(r => {
+        setNovedades(r.data ?? r)
+        setTotal(r.total ?? null)
+      })
+      .finally(() => setCargando(false))
+  }, [filtros])
 
   function handleBusqueda(e) {
     e.preventDefault()
     if (busqueda.trim()) navigate(`/catalogo?q=${encodeURIComponent(busqueda.trim())}`)
     else navigate('/catalogo')
+  }
+
+  function handleFiltros(nuevos) {
+    setFiltros(prev => ({ ...prev, ...nuevos }))
   }
 
   return (
@@ -193,32 +210,7 @@ export default function HomePage() {
         </form>
       </section>
 
-      {/* Colegios */}
-      {colegios.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 py-6">
-          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-4">Por institución</h2>
-          <div className="flex flex-wrap gap-2">
-            {colegios.map(c => (
-              <Link
-                key={c.id}
-                to={`/catalogo?colegioId=${c.id}`}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full text-sm font-medium text-zinc-300 hover:border-blue-500 hover:text-blue-400 transition-colors"
-              >
-                {c.logo && <img src={c.logo} alt="" className="w-5 h-5 rounded-full object-cover" />}
-                {c.nombre}
-              </Link>
-            ))}
-            <Link
-              to="/catalogo?colegioId=lisos"
-              className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full text-sm font-medium text-zinc-300 hover:border-blue-500 hover:text-blue-400 transition-colors"
-            >
-              Lisos
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {/* Novedades */}
+      {/* Novedades con filtros */}
       <section className="max-w-6xl mx-auto px-4 pb-14">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-zinc-100">Novedades</h2>
@@ -226,6 +218,17 @@ export default function HomePage() {
             Ver todo →
           </Link>
         </div>
+
+        <div className="mb-4">
+          <FilterBar colegios={colegios} filtros={filtros} onChange={handleFiltros} />
+        </div>
+
+        {!cargando && total !== null && (
+          <p className="text-sm text-zinc-500 mb-4">
+            {total === 0 ? 'Sin resultados' : `${total} producto${total !== 1 ? 's' : ''}`}
+          </p>
+        )}
+
         <ProductGrid productos={novedades} cargando={cargando} />
       </section>
     </div>
