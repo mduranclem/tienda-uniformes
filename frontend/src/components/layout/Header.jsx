@@ -25,6 +25,15 @@ export default function Header() {
     <>
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          {/* Burger — izquierda */}
+          <button
+            className="p-1.5 text-zinc-300 hover:text-white transition-colors"
+            onClick={() => setMenuAbierto(true)}
+            aria-label="Abrir menú"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+
           {/* Logo */}
           <Link to="/" className="shrink-0">
             <img src="/logo.png" alt="InCollege" className="h-20 w-auto" />
@@ -82,14 +91,6 @@ export default function Header() {
               )}
             </button>
 
-            {/* Burger */}
-            <button
-              className="p-1.5 text-zinc-300 hover:text-white transition-colors"
-              onClick={() => setMenuAbierto(true)}
-              aria-label="Abrir menú"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
           </div>
         </div>
       </header>
