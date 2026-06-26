@@ -33,6 +33,9 @@ function HeroCarrusel({ slides }) {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
+      {/* Gradiente inferior: funde la imagen hacia el negro de la página */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#09090b] to-transparent pointer-events-none z-[1]" />
+
       <div className="relative max-w-6xl mx-auto px-4 pt-6 pb-28 md:pt-8 md:pb-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
 
