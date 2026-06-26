@@ -42,13 +42,13 @@ export default function MobileDrawer({ abierto, onCerrar }) {
       {/* Backdrop */}
       <div
         onClick={onCerrar}
-        className="sm:hidden fixed inset-0 z-40 bg-black/70 transition-opacity duration-300"
+        className="fixed inset-0 z-40 bg-black/70 transition-opacity duration-300"
         style={{ opacity: abierto ? 1 : 0, pointerEvents: abierto ? 'auto' : 'none' }}
       />
 
       {/* Panel */}
       <aside
-        className="sm:hidden fixed top-0 right-0 h-full w-[82vw] max-w-xs z-50 flex flex-col"
+        className="fixed top-0 right-0 h-full w-[82vw] max-w-sm z-50 flex flex-col"
         style={{
           background: '#111',
           transform: abierto ? 'translateX(0)' : 'translateX(100%)',

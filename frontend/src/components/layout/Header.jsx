@@ -82,13 +82,13 @@ export default function Header() {
               )}
             </button>
 
-            {/* Burger mobile */}
+            {/* Burger */}
             <button
-              className="sm:hidden p-1.5"
+              className="p-1.5 text-zinc-300 hover:text-white transition-colors"
               onClick={() => setMenuAbierto(true)}
               aria-label="Abrir menú"
             >
-              <Menu className="w-6 h-6 text-zinc-300" />
+              <Menu className="w-6 h-6" />
             </button>
           </div>
         </div>
