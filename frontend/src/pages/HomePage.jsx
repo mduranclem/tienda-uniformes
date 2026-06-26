@@ -23,16 +23,24 @@ function HeroCarrusel({ slides }) {
   const slidesSrc = total > 0 ? slides : [{ url: PLACEHOLDER, titulo: '' }]
   const n = slidesSrc.length
 
+  const bgUrl = slidesSrc[idx]?.url ?? PLACEHOLDER
+
   return (
     <section className="relative overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 pt-6 pb-14 sm:pt-8 sm:pb-20">
+      {/* Fondo imagen + overlay — solo mobile */}
+      <div className="absolute inset-0 md:hidden">
+        <img src={bgUrl} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
+
+      <div className="relative max-w-6xl mx-auto px-4 pt-6 pb-28 md:pt-8 md:pb-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
 
           {/* Texto */}
-          <div className="flex flex-col gap-6">
+          <div className="relative z-10 flex flex-col gap-5 md:gap-6">
             <div className="flex items-center gap-1.5">
               <span className="text-yellow-400 text-sm leading-none">⭐⭐⭐⭐⭐</span>
-              <span className="text-xs text-zinc-400">Más de 50 colegios confían en nosotros</span>
+              <span className="text-xs text-zinc-300 md:text-zinc-400">Más de 50 colegios confían en nosotros</span>
             </div>
             <div className="inline-flex">
               <span className="bg-blue-600/20 text-blue-400 text-xs font-semibold px-3 py-1 rounded-full border border-blue-600/30">
@@ -42,7 +50,7 @@ function HeroCarrusel({ slides }) {
             <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
               Uniformes oficiales y básicos lisos
             </h1>
-            <p className="text-zinc-400 text-lg leading-relaxed">
+            <p className="text-zinc-300 md:text-zinc-400 text-lg leading-relaxed">
               Remeras, buzos y más. Encontrá los modelos de tu institución o elegí entre nuestros lisos.
             </p>
 
@@ -61,28 +69,26 @@ function HeroCarrusel({ slides }) {
               </Link>
             </div>
 
-            {/* Trust signals */}
-            <div className="flex flex-wrap gap-4 pt-2">
-              <div className="flex items-center gap-1.5 text-sm text-zinc-500">
-                <Truck className="w-4 h-4 text-zinc-600" />
-                Envíos a todo el país
+            {/* Trust signals — fila única en mobile, wrap en desktop */}
+            <div className="flex flex-row gap-3 pt-2 md:flex-wrap md:gap-4">
+              <div className="flex items-center gap-1 text-xs md:text-sm text-zinc-300 md:text-zinc-500">
+                <Truck className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Envíos</span>
               </div>
-              <div className="flex items-center gap-1.5 text-sm text-zinc-500">
-                <BadgeCheck className="w-4 h-4 text-zinc-600" />
-                Calidad garantizada
+              <div className="flex items-center gap-1 text-xs md:text-sm text-zinc-300 md:text-zinc-500">
+                <BadgeCheck className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Calidad garantizada</span>
               </div>
-              <div className="flex items-center gap-1.5 text-sm text-zinc-500">
-                <ShieldCheck className="w-4 h-4 text-zinc-600" />
-                Pagos seguros
+              <div className="flex items-center gap-1 text-xs md:text-sm text-zinc-300 md:text-zinc-500">
+                <ShieldCheck className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Pagos seguros</span>
               </div>
             </div>
           </div>
 
-          {/* Carrusel */}
-          <div className="relative">
-            {/* Viewport con overflow hidden */}
+          {/* Carrusel — solo desktop */}
+          <div className="hidden md:block relative">
             <div className="aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 relative">
-              {/* Track: cada slide ocupa el 100% del viewport */}
               <div
                 className="flex h-full transition-transform duration-500 ease-in-out"
                 style={{ width: `${n * 100}%`, transform: `translateX(-${(idx * 100) / n}%)` }}
@@ -93,8 +99,6 @@ function HeroCarrusel({ slides }) {
                   </div>
                 ))}
               </div>
-
-              {/* Texto overlay */}
               {slidesSrc[idx]?.titulo && (
                 <div className="absolute bottom-3 left-3 right-3 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-2">
                   <p className="text-white text-sm font-medium truncate">{slidesSrc[idx].titulo}</p>
@@ -102,25 +106,17 @@ function HeroCarrusel({ slides }) {
               )}
             </div>
 
-            {/* Flechas */}
             {total > 1 && (
               <>
-                <button
-                  onClick={anterior}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors z-10"
-                >
+                <button onClick={anterior} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors z-10">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button
-                  onClick={siguiente}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors z-10"
-                >
+                <button onClick={siguiente} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors z-10">
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </>
             )}
 
-            {/* Dots */}
             {total > 1 && (
               <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
                 {slides.map((_, i) => (
@@ -133,6 +129,7 @@ function HeroCarrusel({ slides }) {
               </div>
             )}
           </div>
+
         </div>
       </div>
     </section>
