@@ -41,7 +41,7 @@ function HeroCarrusel({ slides }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
 
           {/* Texto */}
-          <div className="relative z-10 flex flex-col gap-5 md:gap-6">
+          <div className="relative z-10 flex flex-col gap-7 md:gap-6">
             <div className="flex items-center gap-1.5">
               <span className="text-yellow-400 text-sm leading-none">⭐⭐⭐⭐⭐</span>
               <span className="text-xs text-zinc-300 md:text-zinc-400">Más de 50 colegios confían en nosotros</span>
@@ -73,18 +73,21 @@ function HeroCarrusel({ slides }) {
               </Link>
             </div>
 
-            {/* Trust signals — fila única en mobile, wrap en desktop */}
-            <div className="flex flex-row gap-3 pt-2 md:flex-wrap md:gap-4">
-              <div className="flex items-center gap-1 text-xs md:text-sm text-zinc-300 md:text-zinc-500">
-                <Truck className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+            {/* Trust signals — fila única en mobile con fondo, wrap en desktop */}
+            <div className="flex flex-row items-center gap-3 self-start
+              bg-black/50 backdrop-blur-sm rounded-xl px-3 py-2
+              md:bg-transparent md:backdrop-blur-none md:rounded-none md:px-0 md:py-0
+              md:flex-wrap md:gap-4 md:self-auto">
+              <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
+                <Truck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">Envíos</span>
               </div>
-              <div className="flex items-center gap-1 text-xs md:text-sm text-zinc-300 md:text-zinc-500">
-                <BadgeCheck className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+              <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
+                <BadgeCheck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">Calidad garantizada</span>
               </div>
-              <div className="flex items-center gap-1 text-xs md:text-sm text-zinc-300 md:text-zinc-500">
-                <ShieldCheck className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+              <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
+                <ShieldCheck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">Pagos seguros</span>
               </div>
             </div>
@@ -189,7 +192,7 @@ export default function HomePage() {
       <HeroCarrusel slides={banners} />
 
       {/* Buscador principal */}
-      <section className="max-w-2xl mx-auto px-4 -mt-4 relative z-10 mb-6">
+      <section className="max-w-2xl mx-auto px-4 mt-8 md:-mt-4 relative z-10 mb-10 md:mb-6">
         <form onSubmit={handleBusqueda}>
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 w-5 h-5" />
