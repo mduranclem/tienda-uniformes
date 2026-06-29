@@ -7,7 +7,6 @@ import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
 import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
 
-// Talles estándar siempre pre-cargados
 const TALLES_STANDARD = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
 
 function Campo({ label, children }) {
@@ -119,20 +118,60 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
   )
 }
 
+let _rowKey = 0
+function nuevoId() { return ++_rowKey }
+
 function FilaProducto({ producto, colegios, categorias, token, onActualizado }) {
   const [expandido, setExpandido] = useState(false)
   const [editando, setEditando] = useState(false)
   const [subiendoImg, setSubiendoImg] = useState(false)
 
-  // Edición de variantes existentes
+  // Edición de variantes existentes (auto-save on blur)
   const [stockEdit, setStockEdit] = useState({})
   const [precioEdit, setPrecioEdit] = useState({})
 
-  // Filas nuevas: { [talle]: { color, stock, precio } }
-  const [nuevasFilas, setNuevasFilas] = useState({})
+  // Filas nuevas pendientes por talle: { [talle]: [{ _id, color, stock, precio }, ...] }
+  const [nuevasPorTalle, setNuevasPorTalle] = useState({})
 
-  function setNuevaFila(talle, campo, valor) {
-    setNuevasFilas(s => ({ ...s, [talle]: { ...(s[talle] ?? {}), [campo]: valor } }))
+  function agregarFilaNueva(talle) {
+    setNuevasPorTalle(s => ({
+      ...s,
+      [talle]: [...(s[talle] ?? []), { _id: nuevoId(), color: '', stock: '', precio: '' }],
+    }))
+  }
+
+  function actualizarFilaNueva(talle, id, campo, valor) {
+    setNuevasPorTalle(s => ({
+      ...s,
+      [talle]: s[talle].map(r => r._id === id ? { ...r, [campo]: valor } : r),
+    }))
+  }
+
+  function quitarFilaNueva(talle, id) {
+    setNuevasPorTalle(s => ({
+      ...s,
+      [talle]: s[talle].filter(r => r._id !== id),
+    }))
+  }
+
+  async function guardarFilaNueva(talle, id) {
+    const fila = (nuevasPorTalle[talle] ?? []).find(r => r._id === id)
+    if (!fila) return
+    const color = fila.color.trim() || null
+    const stock = Number(fila.stock || 0)
+    if (!color && stock === 0) return
+    try {
+      await adminApi.crearVariante(token, producto.id, {
+        talle,
+        color,
+        stock,
+        precio: fila.precio ? parseFloat(fila.precio) : null,
+      })
+      quitarFilaNueva(talle, id)
+      onActualizado()
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   async function subirImagen(e) {
@@ -169,25 +208,6 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
     onActualizado()
   }
 
-  async function guardarNuevaFila(talle) {
-    const fila = nuevasFilas[talle] ?? {}
-    const color = (fila.color ?? '').trim() || null
-    const stock = Number(fila.stock ?? 0)
-    if (!color && stock === 0) return
-    try {
-      await adminApi.crearVariante(token, producto.id, {
-        talle,
-        color,
-        stock,
-        precio: fila.precio ? parseFloat(fila.precio) : null,
-      })
-      setNuevasFilas(s => { const n = { ...s }; delete n[talle]; return n })
-      onActualizado()
-    } catch (err) {
-      alert(err.message)
-    }
-  }
-
   async function eliminarVariante(varianteId) {
     if (!confirm('¿Eliminar variante?')) return
     await adminApi.eliminarVariante(token, varianteId); onActualizado()
@@ -201,10 +221,8 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
     await adminApi.actualizarProducto(token, producto.id, { activo: !producto.activo }); onActualizado()
   }
 
-  // Talles a mostrar: todos los standard + cualquier talle custom que ya tenga variantes
   const customTalles = [...new Set(producto.variantes.map(v => v.talle))].filter(t => !TALLES_STANDARD.includes(t))
   const todosTalles = [...TALLES_STANDARD, ...customTalles]
-
   const coloresUnicos = [...new Set(producto.variantes.map(v => v.color).filter(Boolean))]
 
   return (
@@ -283,13 +301,13 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                 </div>
               </div>
 
-              {/* Variantes: tabla con todos los talles pre-cargados */}
+              {/* Variantes: todos los talles pre-cargados, N colores por talle */}
               <div>
                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Stock por talle y color</p>
 
                 <div className="rounded-lg border border-zinc-700 overflow-hidden">
                   {/* Cabecera */}
-                  <div className="grid grid-cols-[3rem_1fr_3.5rem_5rem_1.5rem] gap-1 px-3 py-1.5 bg-zinc-800/60 text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">
+                  <div className="grid grid-cols-[3rem_1fr_3.5rem_5rem_2.5rem] gap-1 px-3 py-1.5 bg-zinc-800/60 text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">
                     <span>Talle</span>
                     <span>Color</span>
                     <span className="text-center">Stock</span>
@@ -297,17 +315,16 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                     <span />
                   </div>
 
-                  <div className="divide-y divide-zinc-800/60">
+                  <div className="divide-y divide-zinc-800/40">
                     {todosTalles.map(talle => {
                       const variantesDelTalle = producto.variantes.filter(v => v.talle === talle)
-                      const fila = nuevasFilas[talle] ?? {}
-                      const filaConDatos = (fila.color ?? '').trim() || Number(fila.stock ?? 0) > 0
+                      const filasNuevas = nuevasPorTalle[talle] ?? []
 
                       return (
                         <Fragment key={talle}>
-                          {/* Filas existentes para este talle */}
+                          {/* Variantes ya guardadas */}
                           {variantesDelTalle.map(v => (
-                            <div key={v.id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_1.5rem] gap-1 items-center px-3 py-1.5">
+                            <div key={v.id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_2.5rem] gap-1 items-center px-3 py-1.5">
                               <span className="text-xs font-bold text-zinc-200">{talle}</span>
                               <span className="text-xs text-zinc-300 truncate">{v.color ?? <span className="text-zinc-600 italic">—</span>}</span>
                               <input
@@ -331,36 +348,55 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                             </div>
                           ))}
 
-                          {/* Fila nueva para agregar color a este talle */}
-                          <div className="grid grid-cols-[3rem_1fr_3.5rem_5rem_1.5rem] gap-1 items-center px-3 py-1.5 bg-zinc-900/40">
-                            <span className="text-xs text-zinc-600 font-medium">{variantesDelTalle.length === 0 ? talle : '+'}</span>
-                            <input
-                              type="text"
-                              placeholder="color..."
-                              value={fila.color ?? ''}
-                              onChange={e => setNuevaFila(talle, 'color', e.target.value)}
-                              className="w-full text-xs bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-700"
-                            />
-                            <input
-                              type="number" min="0"
-                              placeholder="0"
-                              value={fila.stock ?? ''}
-                              onChange={e => setNuevaFila(talle, 'stock', e.target.value)}
-                              className="w-full text-xs bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-700"
-                            />
-                            <input
-                              type="number" min="0" step="0.01"
-                              placeholder="base"
-                              value={fila.precio ?? ''}
-                              onChange={e => setNuevaFila(talle, 'precio', e.target.value)}
-                              className="w-full text-xs bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-700"
-                            />
+                          {/* Filas nuevas pendientes (una por cada click en "+ color") */}
+                          {filasNuevas.map(fila => (
+                            <div key={fila._id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_2.5rem] gap-1 items-center px-3 py-1.5 bg-blue-950/20 border-l-2 border-blue-600/40">
+                              <span className="text-xs text-blue-400 font-bold">{talle}</span>
+                              <input
+                                autoFocus
+                                type="text"
+                                placeholder="color..."
+                                value={fila.color}
+                                onChange={e => actualizarFilaNueva(talle, fila._id, 'color', e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && guardarFilaNueva(talle, fila._id)}
+                                className="w-full text-xs bg-zinc-800 border border-blue-600/40 text-zinc-100 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                              />
+                              <input
+                                type="number" min="0"
+                                placeholder="0"
+                                value={fila.stock}
+                                onChange={e => actualizarFilaNueva(talle, fila._id, 'stock', e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && guardarFilaNueva(talle, fila._id)}
+                                className="w-full text-xs bg-zinc-800 border border-blue-600/40 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                              />
+                              <input
+                                type="number" min="0" step="0.01"
+                                placeholder="base"
+                                value={fila.precio}
+                                onChange={e => actualizarFilaNueva(talle, fila._id, 'precio', e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && guardarFilaNueva(talle, fila._id)}
+                                className="w-full text-xs bg-zinc-800 border border-blue-600/40 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                              />
+                              <div className="flex items-center gap-0.5 justify-center">
+                                <button onClick={() => guardarFilaNueva(talle, fila._id)} className="text-green-400 hover:text-green-300 transition-colors">
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => quitarFilaNueva(talle, fila._id)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Botón + color para este talle */}
+                          <div className="flex items-center px-3 py-1 bg-zinc-900/30">
+                            <span className="text-xs text-zinc-600 w-12">{variantesDelTalle.length === 0 && filasNuevas.length === 0 ? talle : ''}</span>
                             <button
-                              onClick={() => guardarNuevaFila(talle)}
-                              disabled={!filaConDatos}
-                              className="flex justify-center text-zinc-700 hover:text-green-400 disabled:opacity-30 transition-colors"
+                              onClick={() => agregarFilaNueva(talle)}
+                              className="flex items-center gap-1 text-[10px] text-zinc-600 hover:text-blue-400 transition-colors"
                             >
-                              <Check className="w-3.5 h-3.5" />
+                              <Plus className="w-3 h-3" />
+                              color para talle {talle}
                             </button>
                           </div>
                         </Fragment>
@@ -370,7 +406,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                 </div>
 
                 <p className="text-[10px] text-zinc-600 mt-1.5">
-                  Precio vacío = usa el precio base ({formatPrecio(producto.precio)}) · Guardá con ✓ la fila nueva
+                  Precio vacío = usa el precio base ({formatPrecio(producto.precio)})
                 </p>
               </div>
 
