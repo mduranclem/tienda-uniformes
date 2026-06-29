@@ -133,16 +133,9 @@ export default function MobileDrawer({ abierto, onCerrar }) {
           </div>
 
           <div style={{ borderBottom: '1px solid #2a2a2a' }}>
-            <a
-              href={WHATSAPP}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onCerrar}
-              className={itemClass}
-              style={{ display: 'flex' }}
-            >
+            <button onClick={() => ir('/contacto')} className={itemClass}>
               Contacto
-            </a>
+            </button>
           </div>
 
           {/* Links de cuenta (solo si está logueado — accesos rápidos) */}

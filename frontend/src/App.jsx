@@ -23,6 +23,8 @@ import AdminColegiosPage from './pages/admin/AdminColegiosPage'
 import CheckoutPage from './pages/CheckoutPage'
 import ConfirmacionPage from './pages/ConfirmacionPage'
 import MisOrdenesPage from './pages/MisOrdenesPage'
+import FaqPage from './pages/FaqPage'
+import ContactoPage from './pages/ContactoPage'
 
 export default function App() {
   return (
@@ -60,6 +62,8 @@ export default function App() {
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/confirmacion/:id" element={<ConfirmacionPage />} />
                     <Route path="/mi-cuenta/ordenes" element={<MisOrdenesPage />} />
+                    <Route path="/faq" element={<FaqPage />} />
+                    <Route path="/contacto" element={<ContactoPage />} />
                     <Route path="/auth/callback" element={<AuthCallbackPage />} />
                     <Route path="/auth/nueva-password" element={<NuevaPasswordPage />} />
                   </Routes>
