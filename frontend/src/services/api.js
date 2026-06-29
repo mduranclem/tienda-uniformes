@@ -25,6 +25,11 @@ export const colegiosApi = {
   listar: () => request('/colegios'),
 }
 
+// ── Categorías ───────────────────────────────────────────────────────────────
+export const categoriasApi = {
+  listar: () => request('/categorias'),
+}
+
 // ── Productos ────────────────────────────────────────────────────────────────
 export const productosApi = {
   listar: (params = {}) => {
@@ -92,6 +97,11 @@ export const adminApi = {
   crearBanner: (token, data) => adminRequest('/admin/banners', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarBanner: (token, id, data) => adminRequest(`/admin/banners/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarBanner: (token, id) => adminRequest(`/admin/banners/${id}`, { method: 'DELETE' }, token),
+  // Categorías
+  listarCategorias: (token) => adminRequest('/admin/categorias', {}, token),
+  crearCategoria: (token, data) => adminRequest('/admin/categorias', { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarCategoria: (token, id, data) => adminRequest(`/admin/categorias/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarCategoria: (token, id) => adminRequest(`/admin/categorias/${id}`, { method: 'DELETE' }, token),
 }
 
 // ── Entregas ──────────────────────────────────────────────────────────────────

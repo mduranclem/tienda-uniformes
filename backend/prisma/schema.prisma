@@ -32,12 +32,21 @@ model Colegio {
   alumnos   Alumno[]
 }
 
+// ── Categorías ────────────────────────────────────────────────────────────────
+model Categoria {
+  id        String   @id @default(cuid())
+  nombre    String   @unique
+  activo    Boolean  @default(true)
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 // ── Productos ─────────────────────────────────────────────────────────────────
 model Producto {
   id           String         @id @default(cuid())
   nombre       String
   descripcion  String?
-  tipo         TipoProducto   @default(REMERA)
+  tipo         String         @default("REMERA")
   precio       Decimal        @db.Decimal(10, 2)
   colegioId    String?
   colegio      Colegio?       @relation(fields: [colegioId], references: [id])
@@ -52,14 +61,6 @@ model Producto {
   itemsOrden   ItemOrden[]
   itemsCarrito ItemCarrito[]
   cupones      Cupon[]
-}
-
-enum TipoProducto {
-  REMERA
-  BUZO
-  PANTALON
-  CAMPERA
-  OTRO
 }
 
 model ProductImage {
@@ -276,10 +277,10 @@ model Alumno {
 }
 
 model AlumnoTalle {
-  id         String       @id @default(cuid())
+  id         String @id @default(cuid())
   alumnoId   String
-  alumno     Alumno       @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
-  tipoPrenda TipoProducto
+  alumno     Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  tipoPrenda String
   talle      String
 
   @@unique([alumnoId, tipoPrenda])
