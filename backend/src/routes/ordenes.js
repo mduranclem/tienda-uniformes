@@ -38,10 +38,10 @@ router.post('/', authOpcional, async (req, res, next) => {
       }
     }
 
-    // Precios tomados de la DB, no del frontend
+    // Precio: variante.precio > producto.precioOferta > producto.precio
     const subtotal = items.reduce((acc, i) => {
       const variante = variantes.find(v => v.id === i.varianteId)
-      const precio = Number(variante.producto.precioOferta ?? variante.producto.precio)
+      const precio = Number(variante.precio ?? variante.producto.precioOferta ?? variante.producto.precio)
       return acc + precio * i.cantidad
     }, 0)
     const costoEnvio = Number(entrega.costo)
@@ -97,7 +97,7 @@ router.post('/', authOpcional, async (req, res, next) => {
           items: {
             create: items.map(i => {
               const variante = variantes.find(v => v.id === i.varianteId)
-              const precioUnit = Number(variante.producto.precioOferta ?? variante.producto.precio)
+              const precioUnit = Number(variante.precio ?? variante.producto.precioOferta ?? variante.producto.precio)
               return {
                 productoId: variante.productoId,
                 varianteId: i.varianteId,

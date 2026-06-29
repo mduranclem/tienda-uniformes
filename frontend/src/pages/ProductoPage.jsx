@@ -87,8 +87,7 @@ export default function ProductoPage() {
         nombre: producto.nombre,
         talle: varianteSeleccionada.talle,
         color: varianteSeleccionada.color,
-        precioUnit: Number(producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
-          ? producto.precioOferta : producto.precio),
+        precioUnit: precioFinal,
         imagen: producto.imagenes?.[0]?.url ?? '/placeholder.png',
         cantidad,
       },
@@ -124,8 +123,10 @@ export default function ProductoPage() {
 
   // ── Precios ─────────────────────────────────────────────────────────────────
   const stockVariante = varianteSeleccionada?.stock ?? 0
-  const tieneOferta = producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
-  const precioFinal = tieneOferta ? Number(producto.precioOferta) : Number(producto.precio)
+  // precio de variante tiene prioridad sobre precio de producto
+  const precioVariante = varianteSeleccionada?.precio != null ? Number(varianteSeleccionada.precio) : null
+  const tieneOferta = !precioVariante && producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
+  const precioFinal = precioVariante ?? (tieneOferta ? Number(producto.precioOferta) : Number(producto.precio))
   const descuentoPct = tieneOferta
     ? Math.round((1 - Number(producto.precioOferta) / Number(producto.precio)) * 100)
     : 0
@@ -152,7 +153,9 @@ export default function ProductoPage() {
 
           {/* Precio */}
           <div>
-            {tieneOferta ? (
+            {precioVariante ? (
+              <p className="text-3xl font-bold text-zinc-100">{formatPrecio(precioVariante)}</p>
+            ) : tieneOferta ? (
               <>
                 <div className="flex items-center gap-2">
                   <p className="text-3xl font-bold text-red-400">{formatPrecio(producto.precioOferta)}</p>

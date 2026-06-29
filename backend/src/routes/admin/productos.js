@@ -132,10 +132,17 @@ router.delete('/imagenes/:imagenId', async (req, res, next) => {
 // POST /api/admin/productos/:id/variantes
 router.post('/:id/variantes', async (req, res, next) => {
   try {
-    const { talle, color, stock, sku } = req.body
+    const { talle, color, stock, sku, precio } = req.body
     if (!talle) return res.status(400).json({ mensaje: 'talle es requerido' })
     const variante = await prisma.variante.create({
-      data: { productoId: req.params.id, talle, color: color ?? null, stock: stock ?? 0, sku: sku ?? null },
+      data: {
+        productoId: req.params.id,
+        talle,
+        color: color ?? null,
+        stock: stock ?? 0,
+        sku: sku ?? null,
+        precio: precio ? parseFloat(precio) : null,
+      },
     })
     res.status(201).json(variante)
   } catch (err) { next(err) }
@@ -144,7 +151,7 @@ router.post('/:id/variantes', async (req, res, next) => {
 // PUT /api/admin/variantes/:varianteId
 router.put('/variantes/:varianteId', async (req, res, next) => {
   try {
-    const { talle, color, stock, sku } = req.body
+    const { talle, color, stock, sku, precio } = req.body
     const variante = await prisma.variante.update({
       where: { id: req.params.varianteId },
       data: {
@@ -152,6 +159,7 @@ router.put('/variantes/:varianteId', async (req, res, next) => {
         color: color !== undefined ? color : undefined,
         stock: stock !== undefined ? Number(stock) : undefined,
         sku: sku !== undefined ? sku : undefined,
+        precio: precio !== undefined ? (precio ? parseFloat(precio) : null) : undefined,
       },
     })
     res.json(variante)

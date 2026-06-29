@@ -76,6 +76,7 @@ router.post('/items', authOpcional, async (req, res, next) => {
     }
 
     const producto = await prisma.producto.findUnique({ where: { id: variante.productoId } })
+    const precioUnit = variante.precio ?? producto.precioOferta ?? producto.precio
 
     const { carrito, nuevoSessionId } = await resolverCarrito(req, res)
     if (nuevoSessionId) setSessionCookie(res, nuevoSessionId)
@@ -100,7 +101,7 @@ router.post('/items', authOpcional, async (req, res, next) => {
           productoId: variante.productoId,
           varianteId,
           cantidad,
-          precioUnit: producto.precio,
+          precioUnit,
         },
       })
     }

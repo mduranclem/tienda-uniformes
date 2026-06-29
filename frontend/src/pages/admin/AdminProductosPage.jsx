@@ -124,6 +124,7 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
   const [editando, setEditando] = useState(false)
   const [subiendoImg, setSubiendoImg] = useState(false)
   const [stockEdit, setStockEdit] = useState({})
+  const [precioEdit, setPrecioEdit] = useState({})
   const [nuevoTalle, setNuevoTalle] = useState('')
   const [nuevoColor, setNuevoColor] = useState('')
 
@@ -151,6 +152,13 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
     const stock = stockEdit[varianteId]; if (stock === undefined) return
     await adminApi.actualizarVariante(token, varianteId, { stock: Number(stock) })
     setStockEdit(s => { const n = { ...s }; delete n[varianteId]; return n })
+    onActualizado()
+  }
+
+  async function guardarPrecio(varianteId) {
+    const precio = precioEdit[varianteId]; if (precio === undefined) return
+    await adminApi.actualizarVariante(token, varianteId, { precio: precio === '' ? null : precio })
+    setPrecioEdit(s => { const n = { ...s }; delete n[varianteId]; return n })
     onActualizado()
   }
 
@@ -260,9 +268,9 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Talles y stock</p>
                 <div className="flex flex-col gap-1.5 mb-2">
                   {producto.variantes.map(v => (
-                    <div key={v.id} className="flex items-center gap-2">
+                    <div key={v.id} className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-medium text-zinc-300 w-10">{v.talle}</span>
-                      {v.color && <span className="text-xs text-zinc-500 w-16">{v.color}</span>}
+                      {v.color && <span className="text-xs text-zinc-500 w-16 truncate">{v.color}</span>}
                       <input type="number" min="0"
                         value={stockEdit[v.id] ?? v.stock}
                         onChange={e => setStockEdit(s => ({ ...s, [v.id]: e.target.value }))}
@@ -270,12 +278,22 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                         className="w-16 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <span className="text-xs text-zinc-600">uds</span>
+                      <span className="text-zinc-700 text-xs">·</span>
+                      <span className="text-xs text-zinc-600">$</span>
+                      <input type="number" min="0" step="0.01"
+                        value={precioEdit[v.id] ?? (v.precio != null ? Number(v.precio) : '')}
+                        onChange={e => setPrecioEdit(s => ({ ...s, [v.id]: e.target.value }))}
+                        onBlur={() => guardarPrecio(v.id)}
+                        placeholder={formatPrecio(producto.precio).replace('$ ', '')}
+                        className="w-24 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                      />
                       <button onClick={() => eliminarVariante(v.id)} className="text-zinc-700 hover:text-red-400 ml-auto transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-zinc-600 mb-2">Precio por talle: dejá vacío para usar el precio del producto ({formatPrecio(producto.precio)})</p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <select value={nuevoTalle} onChange={e => setNuevoTalle(e.target.value)}
                     className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 flex-1 min-w-[100px] focus:outline-none focus:ring-1 focus:ring-blue-500">
