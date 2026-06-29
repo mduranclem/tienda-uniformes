@@ -127,6 +127,7 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
   const [precioEdit, setPrecioEdit] = useState({})
   const [nuevoTalle, setNuevoTalle] = useState('')
   const [nuevoColor, setNuevoColor] = useState('')
+  const [nuevoColorPorTalle, setNuevoColorPorTalle] = useState({})
 
   async function subirImagen(e) {
     const file = e.target.files[0]; if (!file) return
@@ -168,6 +169,13 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
     setNuevoTalle(''); setNuevoColor(''); onActualizado()
   }
 
+  async function agregarColorATalle(talle) {
+    const color = (nuevoColorPorTalle[talle] ?? '').trim() || null
+    await adminApi.crearVariante(token, producto.id, { talle, color, stock: 0 })
+    setNuevoColorPorTalle(s => { const n = { ...s }; delete n[talle]; return n })
+    onActualizado()
+  }
+
   async function cambiarColorImagen(imagenId, color) {
     await adminApi.actualizarImagen(token, imagenId, { color: color || null }); onActualizado()
   }
@@ -180,6 +188,8 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
   async function toggleActivo() {
     await adminApi.actualizarProducto(token, producto.id, { activo: !producto.activo }); onActualizado()
   }
+
+  const tallesUnicos = [...new Set(producto.variantes.map(v => v.talle))]
 
   return (
     <>
@@ -263,40 +273,82 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                 </div>
               </div>
 
-              {/* Variantes / Stock */}
+              {/* Variantes agrupadas por talle → colores */}
               <div>
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Talles y stock</p>
-                <div className="flex flex-col gap-1.5 mb-2">
-                  {producto.variantes.map(v => (
-                    <div key={v.id} className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-zinc-300 w-10">{v.talle}</span>
-                      {v.color && <span className="text-xs text-zinc-500 w-16 truncate">{v.color}</span>}
-                      <input type="number" min="0"
-                        value={stockEdit[v.id] ?? v.stock}
-                        onChange={e => setStockEdit(s => ({ ...s, [v.id]: e.target.value }))}
-                        onBlur={() => guardarStock(v.id)}
-                        className="w-16 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      <span className="text-xs text-zinc-600">uds</span>
-                      <span className="text-zinc-700 text-xs">·</span>
-                      <span className="text-xs text-zinc-600">$</span>
-                      <input type="number" min="0" step="0.01"
-                        value={precioEdit[v.id] ?? (v.precio != null ? Number(v.precio) : '')}
-                        onChange={e => setPrecioEdit(s => ({ ...s, [v.id]: e.target.value }))}
-                        onBlur={() => guardarPrecio(v.id)}
-                        placeholder={formatPrecio(producto.precio).replace('$ ', '')}
-                        className="w-24 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
-                      />
-                      <button onClick={() => eliminarVariante(v.id)} className="text-zinc-700 hover:text-red-400 ml-auto transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">Talles, colores y stock</p>
+
+                {/* Cabecera de columnas */}
+                <div className="flex items-center gap-2 px-3 mb-1">
+                  <span className="text-[10px] text-zinc-600 w-20">Color</span>
+                  <span className="text-[10px] text-zinc-600 w-16 text-center">Stock</span>
+                  <span className="text-[10px] text-zinc-600 w-24 text-center">Precio ($)</span>
                 </div>
-                <p className="text-[10px] text-zinc-600 mb-2">Precio por talle: dejá vacío para usar el precio del producto ({formatPrecio(producto.precio)})</p>
-                <div className="flex items-center gap-2 flex-wrap">
+
+                <div className="flex flex-col gap-2 mb-3">
+                  {tallesUnicos.map(talle => {
+                    const variantesDeTalle = producto.variantes.filter(v => v.talle === talle)
+                    return (
+                      <div key={talle} className="rounded-lg border border-zinc-700 overflow-hidden">
+                        {/* Header del talle */}
+                        <div className="bg-zinc-700/40 px-3 py-1.5">
+                          <span className="text-xs font-bold text-zinc-200">Talle {talle}</span>
+                        </div>
+
+                        {/* Filas de colores */}
+                        <div className="flex flex-col divide-y divide-zinc-800">
+                          {variantesDeTalle.map(v => (
+                            <div key={v.id} className="flex items-center gap-2 px-3 py-2">
+                              <span className="text-xs text-zinc-400 w-20 truncate">
+                                {v.color ?? <span className="text-zinc-600 italic">sin color</span>}
+                              </span>
+                              <input type="number" min="0"
+                                value={stockEdit[v.id] ?? v.stock}
+                                onChange={e => setStockEdit(s => ({ ...s, [v.id]: e.target.value }))}
+                                onBlur={() => guardarStock(v.id)}
+                                className="w-16 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                              <input type="number" min="0" step="0.01"
+                                value={precioEdit[v.id] ?? (v.precio != null ? Number(v.precio) : '')}
+                                onChange={e => setPrecioEdit(s => ({ ...s, [v.id]: e.target.value }))}
+                                onBlur={() => guardarPrecio(v.id)}
+                                placeholder={String(Number(producto.precio))}
+                                className="w-24 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                              />
+                              <button onClick={() => eliminarVariante(v.id)} className="text-zinc-700 hover:text-red-400 ml-auto transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Agregar color a este talle */}
+                        <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/30">
+                          <span className="text-[10px] text-zinc-600 shrink-0">+ color:</span>
+                          <input type="text"
+                            value={nuevoColorPorTalle[talle] ?? ''}
+                            onChange={e => setNuevoColorPorTalle(s => ({ ...s, [talle]: e.target.value }))}
+                            placeholder="ej: azul marino"
+                            className="flex-1 text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                          />
+                          <button onClick={() => agregarColorATalle(talle)}
+                            className="text-[10px] bg-zinc-700 text-zinc-300 px-2 py-1 rounded hover:bg-zinc-600 transition-colors whitespace-nowrap">
+                            Agregar
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p className="text-[10px] text-zinc-600 mb-2">
+                  Precio vacío = usa el precio base del producto ({formatPrecio(producto.precio)})
+                </p>
+
+                {/* Agregar talle nuevo */}
+                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800">
+                  <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">Nuevo talle:</span>
                   <select value={nuevoTalle} onChange={e => setNuevoTalle(e.target.value)}
-                    className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 flex-1 min-w-[100px] focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="">Talle...</option>
                     {TALLES_COMUNES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -305,7 +357,7 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                     className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600" />
                   <button onClick={agregarVariante} disabled={!nuevoTalle}
                     className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded hover:bg-blue-500 disabled:opacity-40 transition-colors">
-                    Agregar
+                    Agregar talle
                   </button>
                 </div>
               </div>
