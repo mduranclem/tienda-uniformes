@@ -22,19 +22,28 @@ router.post('/', authOpcional, async (req, res, next) => {
       return res.status(400).json({ mensaje: 'Completá la dirección de envío' })
     }
 
-    // Verificar stock y obtener variantes
+    // Verificar stock y obtener variantes con precio real de la DB
     const varianteIds = items.map(i => i.varianteId)
-    const variantes = await prisma.variante.findMany({ where: { id: { in: varianteIds } } })
+    const variantes = await prisma.variante.findMany({
+      where: { id: { in: varianteIds } },
+      include: { producto: { select: { precio: true, precioOferta: true, activo: true } } },
+    })
 
     for (const item of items) {
       const variante = variantes.find(v => v.id === item.varianteId)
       if (!variante) return res.status(400).json({ mensaje: `Variante ${item.varianteId} no encontrada` })
+      if (!variante.producto.activo) return res.status(400).json({ mensaje: `Producto no disponible` })
       if (variante.stock < item.cantidad) {
         return res.status(400).json({ mensaje: `Stock insuficiente para el talle ${variante.talle}` })
       }
     }
 
-    const subtotal = items.reduce((acc, i) => acc + i.precioUnit * i.cantidad, 0)
+    // Precios tomados de la DB, no del frontend
+    const subtotal = items.reduce((acc, i) => {
+      const variante = variantes.find(v => v.id === i.varianteId)
+      const precio = Number(variante.producto.precioOferta ?? variante.producto.precio)
+      return acc + precio * i.cantidad
+    }, 0)
     const costoEnvio = Number(entrega.costo)
 
     // Descuento de bienvenida (primera compra)
@@ -86,13 +95,17 @@ router.post('/', authOpcional, async (req, res, next) => {
           cuponId: cuponValido ? cuponId : null,
           estado: 'PENDIENTE',
           items: {
-            create: items.map(i => ({
-              productoId: i.productoId,
-              varianteId: i.varianteId,
-              cantidad: i.cantidad,
-              precioUnit: i.precioUnit,
-              subtotal: i.precioUnit * i.cantidad,
-            })),
+            create: items.map(i => {
+              const variante = variantes.find(v => v.id === i.varianteId)
+              const precioUnit = Number(variante.producto.precioOferta ?? variante.producto.precio)
+              return {
+                productoId: variante.productoId,
+                varianteId: i.varianteId,
+                cantidad: i.cantidad,
+                precioUnit,
+                subtotal: precioUnit * i.cantidad,
+              }
+            }),
           },
         },
         include: { items: true },
