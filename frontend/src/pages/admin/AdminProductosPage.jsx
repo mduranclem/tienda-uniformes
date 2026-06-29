@@ -125,9 +125,11 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
   const [subiendoImg, setSubiendoImg] = useState(false)
   const [stockEdit, setStockEdit] = useState({})
   const [precioEdit, setPrecioEdit] = useState({})
-  const [nuevoTalle, setNuevoTalle] = useState('')
+  // Para agregar talle dentro de un color existente
+  const [nuevoTallePorColor, setNuevoTallePorColor] = useState({})
+  // Para agregar un color nuevo (con su primer talle)
   const [nuevoColor, setNuevoColor] = useState('')
-  const [nuevoColorPorTalle, setNuevoColorPorTalle] = useState({})
+  const [nuevoTalle, setNuevoTalle] = useState('')
 
   async function subirImagen(e) {
     const file = e.target.files[0]; if (!file) return
@@ -163,17 +165,22 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
     onActualizado()
   }
 
-  async function agregarVariante() {
-    if (!nuevoTalle.trim()) return
-    await adminApi.crearVariante(token, producto.id, { talle: nuevoTalle.trim(), color: nuevoColor.trim() || null, stock: 0 })
-    setNuevoTalle(''); setNuevoColor(''); onActualizado()
+  // Agrega un talle nuevo a un color existente
+  async function agregarTalleAColor(color) {
+    const talle = (nuevoTallePorColor[color] ?? '').trim()
+    if (!talle) return
+    await adminApi.crearVariante(token, producto.id, { talle, color, stock: 0 })
+    setNuevoTallePorColor(s => { const n = { ...s }; delete n[color]; return n })
+    onActualizado()
   }
 
-  async function agregarColorATalle(talle) {
-    const color = (nuevoColorPorTalle[talle] ?? '').trim() || null
+  // Agrega un color nuevo con su primer talle
+  async function agregarColorConTalle() {
+    const color = nuevoColor.trim()
+    const talle = nuevoTalle.trim()
+    if (!color || !talle) return
     await adminApi.crearVariante(token, producto.id, { talle, color, stock: 0 })
-    setNuevoColorPorTalle(s => { const n = { ...s }; delete n[talle]; return n })
-    onActualizado()
+    setNuevoColor(''); setNuevoTalle(''); onActualizado()
   }
 
   async function cambiarColorImagen(imagenId, color) {
@@ -189,7 +196,8 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
     await adminApi.actualizarProducto(token, producto.id, { activo: !producto.activo }); onActualizado()
   }
 
-  const tallesUnicos = [...new Set(producto.variantes.map(v => v.talle))]
+  const coloresUnicos = [...new Set(producto.variantes.map(v => v.color).filter(Boolean))]
+  const sinColor = producto.variantes.filter(v => v.color === null)
 
   return (
     <>
@@ -241,12 +249,12 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
         <tr className="border-b border-zinc-800 bg-zinc-800/30">
           <td colSpan={5} className="px-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
               {/* Imágenes */}
               <div>
                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Imágenes</p>
                 <div className="flex flex-wrap gap-3 mb-2">
                   {producto.imagenes.map(img => {
-                    const coloresDisponibles = [...new Set(producto.variantes.map(v => v.color).filter(Boolean))]
                     return (
                       <div key={img.id} className="relative group flex flex-col items-center gap-1">
                         <div className="relative">
@@ -256,11 +264,11 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                             <X className="w-2.5 h-2.5" />
                           </button>
                         </div>
-                        {coloresDisponibles.length > 0 && (
+                        {coloresUnicos.length > 0 && (
                           <select value={img.color ?? ''} onChange={e => cambiarColorImagen(img.id, e.target.value)}
                             className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-1 py-0.5 w-16 focus:outline-none focus:ring-1 focus:ring-blue-500">
                             <option value="">Todos</option>
-                            {coloresDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
+                            {coloresUnicos.map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
                         )}
                       </div>
@@ -273,34 +281,73 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                 </div>
               </div>
 
-              {/* Variantes agrupadas por talle → colores */}
+              {/* Variantes agrupadas por color → talles */}
               <div>
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">Talles, colores y stock</p>
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">Colores y talles</p>
 
-                {/* Cabecera de columnas */}
-                <div className="flex items-center gap-2 px-3 mb-1">
-                  <span className="text-[10px] text-zinc-600 w-20">Color</span>
-                  <span className="text-[10px] text-zinc-600 w-16 text-center">Stock</span>
-                  <span className="text-[10px] text-zinc-600 w-24 text-center">Precio ($)</span>
-                </div>
+                {coloresUnicos.length === 0 && sinColor.length === 0 && (
+                  <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
+                    Sin colores cargados — el producto no se puede agregar al carrito.
+                  </p>
+                )}
 
+                {/* Variantes sin color (legacy) */}
+                {sinColor.length > 0 && (
+                  <div className="rounded-lg border border-zinc-600/50 overflow-hidden mb-2">
+                    <div className="bg-zinc-700/30 px-3 py-1.5">
+                      <span className="text-xs font-bold text-zinc-400 italic">Sin color asignado</span>
+                    </div>
+                    <div className="flex flex-col divide-y divide-zinc-800">
+                      {sinColor.map(v => (
+                        <div key={v.id} className="flex items-center gap-2 px-3 py-2">
+                          <span className="text-xs text-zinc-400 w-16">Talle {v.talle}</span>
+                          <input type="number" min="0"
+                            value={stockEdit[v.id] ?? v.stock}
+                            onChange={e => setStockEdit(s => ({ ...s, [v.id]: e.target.value }))}
+                            onBlur={() => guardarStock(v.id)}
+                            className="w-16 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <input type="number" min="0" step="0.01"
+                            value={precioEdit[v.id] ?? (v.precio != null ? Number(v.precio) : '')}
+                            onChange={e => setPrecioEdit(s => ({ ...s, [v.id]: e.target.value }))}
+                            onBlur={() => guardarPrecio(v.id)}
+                            placeholder={String(Number(producto.precio))}
+                            className="w-24 text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                          />
+                          <button onClick={() => eliminarVariante(v.id)} className="text-zinc-700 hover:text-red-400 ml-auto transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Colores con talles adentro */}
                 <div className="flex flex-col gap-2 mb-3">
-                  {tallesUnicos.map(talle => {
-                    const variantesDeTalle = producto.variantes.filter(v => v.talle === talle)
+                  {coloresUnicos.map(color => {
+                    const variantesDeColor = producto.variantes.filter(v => v.color === color)
                     return (
-                      <div key={talle} className="rounded-lg border border-zinc-700 overflow-hidden">
-                        {/* Header del talle */}
-                        <div className="bg-zinc-700/40 px-3 py-1.5">
-                          <span className="text-xs font-bold text-zinc-200">Talle {talle}</span>
+                      <div key={color} className="rounded-lg border border-zinc-700 overflow-hidden">
+                        {/* Header del color */}
+                        <div className="bg-zinc-700/40 px-3 py-1.5 flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full border border-zinc-500 shrink-0" />
+                          <span className="text-xs font-bold text-zinc-200">{color}</span>
+                          <span className="text-[10px] text-zinc-600 ml-auto">{variantesDeColor.length} talle{variantesDeColor.length !== 1 ? 's' : ''}</span>
                         </div>
 
-                        {/* Filas de colores */}
-                        <div className="flex flex-col divide-y divide-zinc-800">
-                          {variantesDeTalle.map(v => (
-                            <div key={v.id} className="flex items-center gap-2 px-3 py-2">
-                              <span className="text-xs text-zinc-400 w-20 truncate">
-                                {v.color ?? <span className="text-zinc-600 italic">sin color</span>}
-                              </span>
+                        {/* Cabecera columnas */}
+                        <div className="flex items-center gap-2 px-3 pt-1.5 pb-0.5">
+                          <span className="text-[10px] text-zinc-600 w-16">Talle</span>
+                          <span className="text-[10px] text-zinc-600 w-16 text-center">Stock</span>
+                          <span className="text-[10px] text-zinc-600 w-24 text-center">Precio ($)</span>
+                        </div>
+
+                        {/* Filas de talles */}
+                        <div className="flex flex-col divide-y divide-zinc-800/70">
+                          {variantesDeColor.map(v => (
+                            <div key={v.id} className="flex items-center gap-2 px-3 py-1.5">
+                              <span className="text-xs text-zinc-300 font-medium w-16">{v.talle}</span>
                               <input type="number" min="0"
                                 value={stockEdit[v.id] ?? v.stock}
                                 onChange={e => setStockEdit(s => ({ ...s, [v.id]: e.target.value }))}
@@ -321,17 +368,22 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                           ))}
                         </div>
 
-                        {/* Agregar color a este talle */}
+                        {/* Agregar talle a este color */}
                         <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/30">
-                          <span className="text-[10px] text-zinc-600 shrink-0">+ color:</span>
-                          <input type="text"
-                            value={nuevoColorPorTalle[talle] ?? ''}
-                            onChange={e => setNuevoColorPorTalle(s => ({ ...s, [talle]: e.target.value }))}
-                            placeholder="ej: azul marino"
-                            className="flex-1 text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
-                          />
-                          <button onClick={() => agregarColorATalle(talle)}
-                            className="text-[10px] bg-zinc-700 text-zinc-300 px-2 py-1 rounded hover:bg-zinc-600 transition-colors whitespace-nowrap">
+                          <span className="text-[10px] text-zinc-600 shrink-0">+ talle:</span>
+                          <select
+                            value={nuevoTallePorColor[color] ?? ''}
+                            onChange={e => setNuevoTallePorColor(s => ({ ...s, [color]: e.target.value }))}
+                            className="flex-1 text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="">Talle...</option>
+                            {TALLES_COMUNES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <button
+                            onClick={() => agregarTalleAColor(color)}
+                            disabled={!nuevoTallePorColor[color]}
+                            className="text-[10px] bg-zinc-700 text-zinc-300 px-2 py-1 rounded hover:bg-zinc-600 disabled:opacity-40 transition-colors whitespace-nowrap"
+                          >
                             Agregar
                           </button>
                         </div>
@@ -341,26 +393,37 @@ function FilaProducto({ producto, colegios, token, onActualizado }) {
                 </div>
 
                 <p className="text-[10px] text-zinc-600 mb-2">
-                  Precio vacío = usa el precio base del producto ({formatPrecio(producto.precio)})
+                  Precio vacío = usa el precio base ({formatPrecio(producto.precio)})
                 </p>
 
-                {/* Agregar talle nuevo */}
+                {/* Agregar color nuevo */}
                 <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800">
-                  <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">Nuevo talle:</span>
-                  <select value={nuevoTalle} onChange={e => setNuevoTalle(e.target.value)}
-                    className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wide w-full">Nuevo color:</span>
+                  <input
+                    type="text"
+                    placeholder="ej: azul marino"
+                    value={nuevoColor}
+                    onChange={e => setNuevoColor(e.target.value)}
+                    className="flex-1 min-w-[90px] text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
+                  />
+                  <select
+                    value={nuevoTalle}
+                    onChange={e => setNuevoTalle(e.target.value)}
+                    className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
                     <option value="">Talle...</option>
                     {TALLES_COMUNES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  <input type="text" placeholder="Color (opcional)" value={nuevoColor}
-                    onChange={e => setNuevoColor(e.target.value)}
-                    className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600" />
-                  <button onClick={agregarVariante} disabled={!nuevoTalle}
-                    className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded hover:bg-blue-500 disabled:opacity-40 transition-colors">
-                    Agregar talle
+                  <button
+                    onClick={agregarColorConTalle}
+                    disabled={!nuevoColor.trim() || !nuevoTalle}
+                    className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded hover:bg-blue-500 disabled:opacity-40 transition-colors whitespace-nowrap"
+                  >
+                    Agregar color
                   </button>
                 </div>
               </div>
+
             </div>
           </td>
         </tr>

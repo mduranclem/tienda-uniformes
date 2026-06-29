@@ -121,6 +121,9 @@ export default function ProductoPage() {
   const sugerenciaSinStock = varianteSugerida && varianteSugerida.stock === 0
   // Si varianteSugerida === null (talle no existe entre las variantes), no mostramos cartel
 
+  // ── Colores ──────────────────────────────────────────────────────────────────
+  const tieneCargadoColores = producto.variantes.some(v => v.color != null)
+
   // ── Precios ─────────────────────────────────────────────────────────────────
   const stockVariante = varianteSeleccionada?.stock ?? 0
   // precio de variante tiene prioridad sobre precio de producto
@@ -245,20 +248,27 @@ export default function ProductoPage() {
           )}
 
           {/* Botón */}
-          <button
-            onClick={agregarAlCarrito}
-            disabled={!varianteSeleccionada || stockVariante === 0}
-            className={`flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold text-base transition-colors ${
-              stockVariante === 0
-                ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                : agregado
-                ? 'bg-green-600 text-white'
-                : 'bg-blue-600 text-white hover:bg-blue-500'
-            }`}
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {stockVariante === 0 ? 'Sin stock' : agregado ? '¡Agregado!' : 'Agregar al carrito'}
-          </button>
+          {!tieneCargadoColores ? (
+            <div className="flex items-center gap-2 w-full py-3 px-4 rounded-xl bg-zinc-800/60 border border-zinc-700 text-zinc-500 text-sm">
+              <ShoppingCart className="w-5 h-5 shrink-0" />
+              Producto sin colores disponibles por ahora
+            </div>
+          ) : (
+            <button
+              onClick={agregarAlCarrito}
+              disabled={!varianteSeleccionada || stockVariante === 0}
+              className={`flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold text-base transition-colors ${
+                stockVariante === 0
+                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                  : agregado
+                  ? 'bg-green-600 text-white'
+                  : 'bg-blue-600 text-white hover:bg-blue-500'
+              }`}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {stockVariante === 0 ? 'Sin stock' : agregado ? '¡Agregado!' : 'Agregar al carrito'}
+            </button>
+          )}
         </div>
       </div>
     </div>
