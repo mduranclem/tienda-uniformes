@@ -77,6 +77,8 @@ export const adminApi = {
   crearVariante: (token, productoId, data) => adminRequest(`/admin/productos/${productoId}/variantes`, { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarVariante: (token, varianteId, data) => adminRequest(`/admin/productos/variantes/${varianteId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarVariante: (token, varianteId) => adminRequest(`/admin/productos/variantes/${varianteId}`, { method: 'DELETE' }, token),
+  agregarColor: (token, productoId, nombre) => adminRequest(`/admin/productos/${productoId}/colores`, { method: 'POST', body: JSON.stringify({ nombre }) }, token),
+  eliminarColor: (token, colorId) => adminRequest(`/admin/productos/colores/${colorId}`, { method: 'DELETE' }, token),
   // Órdenes
   listarOrdenes: (token, params = {}) => {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()

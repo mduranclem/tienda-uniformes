@@ -16,6 +16,7 @@ router.get('/', async (_req, res, next) => {
       include: {
         colegio: { select: { id: true, nombre: true } },
         imagenes: { orderBy: { orden: 'asc' } },
+        colores: { orderBy: { nombre: 'asc' } },
         variantes: { orderBy: [{ talle: 'asc' }] },
       },
     })
@@ -170,6 +171,31 @@ router.put('/variantes/:varianteId', async (req, res, next) => {
 router.delete('/variantes/:varianteId', async (req, res, next) => {
   try {
     await prisma.variante.delete({ where: { id: req.params.varianteId } })
+    res.status(204).end()
+  } catch (err) { next(err) }
+})
+
+// ── Colores ───────────────────────────────────────────────────────────────────
+
+// POST /api/admin/productos/:id/colores
+router.post('/:id/colores', async (req, res, next) => {
+  try {
+    const { nombre } = req.body
+    if (!nombre?.trim()) return res.status(400).json({ mensaje: 'nombre es requerido' })
+    const color = await prisma.productoColor.create({
+      data: { productoId: req.params.id, nombre: nombre.trim() },
+    })
+    res.status(201).json(color)
+  } catch (err) {
+    if (err.code === 'P2002') return res.status(409).json({ mensaje: 'Ese color ya existe en este producto' })
+    next(err)
+  }
+})
+
+// DELETE /api/admin/productos/colores/:colorId
+router.delete('/colores/:colorId', async (req, res, next) => {
+  try {
+    await prisma.productoColor.delete({ where: { id: req.params.colorId } })
     res.status(204).end()
   } catch (err) { next(err) }
 })

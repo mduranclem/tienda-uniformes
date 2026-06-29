@@ -58,6 +58,7 @@ model Producto {
 
   imagenes     ProductImage[]
   variantes    Variante[]
+  colores      ProductoColor[]
   itemsOrden   ItemOrden[]
   itemsCarrito ItemCarrito[]
   cupones      Cupon[]
@@ -71,6 +72,17 @@ model ProductImage {
   orden      Int      @default(0)
   alt        String?
   color      String?  // null = imagen genérica (se muestra para todos los colores)
+}
+
+// ── Colores por producto ──────────────────────────────────────────────────────
+model ProductoColor {
+  id         String   @id @default(cuid())
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  nombre     String
+  createdAt  DateTime @default(now())
+
+  @@unique([productoId, nombre])
 }
 
 // ── Variantes ─────────────────────────────────────────────────────────────────
