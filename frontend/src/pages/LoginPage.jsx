@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 const MODOS = { LOGIN: 'login', REGISTRO: 'registro', RECUPERAR: 'recuperar' }
 
 export default function LoginPage() {
   const { loginConPassword, registrar, recuperarPassword, usuario } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') || '/'
   const [modo, setModo] = useState(MODOS.LOGIN)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -15,7 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [exito, setExito] = useState('')
 
-  if (usuario) { navigate('/'); return null }
+  if (usuario) { navigate(redirect, { replace: true }); return null }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -23,7 +25,7 @@ export default function LoginPage() {
     try {
       if (modo === MODOS.LOGIN) {
         await loginConPassword(email, password)
-        navigate('/')
+        navigate(redirect, { replace: true })
       } else if (modo === MODOS.REGISTRO) {
         await registrar(email, password, nombre)
         setExito('¡Cuenta creada! Revisá tu email para confirmarla y después iniciá sesión.')

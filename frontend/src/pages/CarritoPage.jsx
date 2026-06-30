@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { formatPrecio } from '../lib/utils'
 import { Trash2, ShoppingCart } from 'lucide-react'
 
 export default function CarritoPage() {
   const { items, totalPrecio, dispatch } = useCart()
+  const { sesion } = useAuth()
 
   if (!items.length) {
     return (
@@ -79,10 +81,10 @@ export default function CarritoPage() {
           <span>{formatPrecio(totalPrecio)}</span>
         </div>
         <Link
-          to="/checkout"
+          to={sesion ? '/checkout' : '/login?redirect=/checkout'}
           className="block w-full text-center bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-500 transition-colors"
         >
-          Continuar con la compra
+          {sesion ? 'Continuar con la compra' : 'Iniciar sesión para comprar'}
         </Link>
         <Link
           to="/catalogo"

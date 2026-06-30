@@ -35,6 +35,7 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
+    if (!sesion) { navigate('/login?redirect=/checkout', { replace: true }); return }
     if (!items.length) { navigate('/carrito', { replace: true }); return }
     entregasApi.listar()
       .then(data => {
