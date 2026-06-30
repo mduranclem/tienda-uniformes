@@ -66,4 +66,10 @@ app.listen(PORT, () => {
   console.log(`Backend corriendo en http://localhost:${PORT}`)
 })
 
+// Mantiene la conexión con Supabase activa para evitar cold starts
+const prisma = require('./lib/prisma')
+setInterval(async () => {
+  try { await prisma.$queryRaw`SELECT 1` } catch (_) {}
+}, 4 * 60 * 1000)
+
 module.exports = app

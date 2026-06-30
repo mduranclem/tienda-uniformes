@@ -5,7 +5,6 @@ const adminOnly = require('../../middleware/adminOnly')
 
 const router = Router()
 
-
 router.use(authMiddleware, adminOnly)
 
 const ESTADOS_VALIDOS = ['PENDIENTE', 'PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA', 'CANCELADA']
@@ -73,17 +72,71 @@ router.put('/:id/estado', async (req, res, next) => {
       return res.status(400).json({ mensaje: `Estado inválido. Válidos: ${ESTADOS_VALIDOS.join(', ')}` })
     }
 
-    const [orden] = await prisma.$transaction([
-      prisma.orden.update({
+    const orden = await prisma.$transaction(async (tx) => {
+      const actual = await tx.orden.findUnique({
+        where: { id: req.params.id },
+        include: { items: true },
+      })
+      if (!actual) throw Object.assign(new Error('Orden no encontrada'), { status: 404 })
+
+      // Al cancelar, restaurar stock (solo si no estaba ya cancelada)
+      if (estado === 'CANCELADA' && actual.estado !== 'CANCELADA') {
+        for (const item of actual.items) {
+          await tx.variante.update({
+            where: { id: item.varianteId },
+            data: { stock: { increment: item.cantidad } },
+          })
+        }
+      }
+
+      const actualizada = await tx.orden.update({
         where: { id: req.params.id },
         data: { estado },
-      }),
-      prisma.historialOrden.create({
+      })
+      await tx.historialOrden.create({
         data: { ordenId: req.params.id, estado, nota: nota ?? null },
-      }),
-    ])
+      })
+      return actualizada
+    })
 
     res.json(orden)
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/ordenes/limpiar-pendientes?horas=48
+// Cancela órdenes PENDIENTE viejas y restaura su stock
+router.post('/limpiar-pendientes', async (req, res, next) => {
+  try {
+    const horas = Number(req.query.horas ?? 48)
+    const corte = new Date(Date.now() - horas * 60 * 60 * 1000)
+
+    const pendientes = await prisma.orden.findMany({
+      where: { estado: 'PENDIENTE', createdAt: { lt: corte } },
+      include: { items: true },
+    })
+
+    let canceladas = 0
+    for (const orden of pendientes) {
+      await prisma.$transaction(async (tx) => {
+        for (const item of orden.items) {
+          await tx.variante.update({
+            where: { id: item.varianteId },
+            data: { stock: { increment: item.cantidad } },
+          })
+        }
+        await tx.orden.update({ where: { id: orden.id }, data: { estado: 'CANCELADA' } })
+        await tx.historialOrden.create({
+          data: {
+            ordenId: orden.id,
+            estado: 'CANCELADA',
+            nota: `Cancelada automáticamente (>${horas}h sin pago)`,
+          },
+        })
+      })
+      canceladas++
+    }
+
+    res.json({ canceladas, mensaje: `${canceladas} orden(es) cancelada(s) y stock restaurado` })
   } catch (err) { next(err) }
 })
 
