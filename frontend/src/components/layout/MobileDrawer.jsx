@@ -115,12 +115,6 @@ export default function MobileDrawer({ abierto, onCerrar }) {
           </div>
 
           <div style={{ borderBottom: '1px solid #2a2a2a' }}>
-            <button onClick={() => ir('/catalogo?q=egresados')} className={itemClass}>
-              Egresados
-            </button>
-          </div>
-
-          <div style={{ borderBottom: '1px solid #2a2a2a' }}>
             <button onClick={() => ir('/catalogo?colegioId=lisos')} className={itemClass}>
               Básicos lisos
             </button>
