@@ -2,6 +2,7 @@ const { Router } = require('express')
 const prisma = require('../lib/prisma')
 const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
+const { notificarNuevoPedido } = require('../services/notificaciones')
 
 const router = Router()
 
@@ -127,11 +128,11 @@ router.post('/', authOpcional, async (req, res, next) => {
       return nuevaOrden
     })
 
-    // Enviar email de confirmación (no bloqueante)
+    // Notificaciones post-orden (no bloqueantes)
     prisma.orden.findUnique({
       where: { id: orden.id },
       include: {
-        usuario: { select: { email: true, nombre: true } },
+        usuario: { select: { email: true, nombre: true, telefono: true } },
         items: {
           include: {
             producto: { select: { nombre: true } },
@@ -141,7 +142,10 @@ router.post('/', authOpcional, async (req, res, next) => {
         entrega: true,
       },
     }).then(ordenCompleta => {
-      if (ordenCompleta) enviarConfirmacionCompra({ ...ordenCompleta, emailGuest: email, nombreGuest: nombre })
+      if (!ordenCompleta) return
+      const datos = { ...ordenCompleta, emailGuest: email, nombreGuest: nombre, telefonoGuest: telefono }
+      enviarConfirmacionCompra(datos)
+      notificarNuevoPedido(datos)
     })
 
     res.status(201).json({ id: orden.id, numero: orden.numero })
