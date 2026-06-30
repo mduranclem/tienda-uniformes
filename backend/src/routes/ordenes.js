@@ -186,8 +186,8 @@ router.get('/mis-ordenes', authMiddleware, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// GET /api/ordenes/:id — ver detalle de una orden (guest o usuario)
-router.get('/:id', authMiddleware, async (req, res, next) => {
+// GET /api/ordenes/:id — ver detalle de una orden (guest o usuario logueado)
+router.get('/:id', authOpcional, async (req, res, next) => {
   try {
     const orden = await prisma.orden.findUnique({
       where: { id: req.params.id },
@@ -202,6 +202,10 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
       },
     })
     if (!orden) return res.status(404).json({ mensaje: 'Orden no encontrada' })
+    // Si hay usuario logueado, verificar que la orden le pertenece
+    if (req.user && orden.usuarioId && orden.usuarioId !== req.user.id) {
+      return res.status(403).json({ mensaje: 'No tenés acceso a esta orden' })
+    }
     res.json(orden)
   } catch (err) { next(err) }
 })
