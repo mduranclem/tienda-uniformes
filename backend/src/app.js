@@ -3,6 +3,8 @@ const express = require('express')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 
+const pagosRouter = require('./routes/pagos')
+const webhooksRouter = require('./routes/webhooks')
 const alumnosRouter = require('./routes/alumnos')
 const bannersRouter = require('./routes/banners')
 const categoriasRouter = require('./routes/categorias')
@@ -36,6 +38,10 @@ app.use(cors({
   },
   credentials: true,
 }))
+
+// Webhook de MP necesita raw body para validar firma — va ANTES de express.json()
+app.use('/api/webhooks/mercadopago', express.raw({ type: 'application/json' }), webhooksRouter)
+
 app.use(express.json())
 app.use(cookieParser())
 
@@ -56,6 +62,7 @@ app.use('/api/admin/ordenes', adminOrdenesRouter)
 app.use('/api/admin/cupones', adminCuponesRouter)
 app.use('/api/admin/entregas', adminEntregasRouter)
 app.use('/api/admin/banners', adminBannersRouter)
+app.use('/api/pagos', pagosRouter)
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 

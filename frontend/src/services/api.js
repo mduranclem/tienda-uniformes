@@ -137,6 +137,16 @@ export const ordenesApi = {
   }),
 }
 
+// ── Pagos ─────────────────────────────────────────────────────────────────────
+export const pagosApi = {
+  crearPreferencia: (token, ordenId) =>
+    request('/pagos/preferencia', {
+      method: 'POST',
+      body: JSON.stringify({ ordenId }),
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+}
+
 // ── Banners ───────────────────────────────────────────────────────────────────
 export const bannersApi = {
   listar: () => request('/banners'),
