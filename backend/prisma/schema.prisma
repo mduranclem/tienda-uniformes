@@ -52,6 +52,7 @@ model Producto {
   colegio      Colegio?       @relation(fields: [colegioId], references: [id])
   precioOferta Decimal?       @db.Decimal(10, 2)
   cuotas       Int?
+  cuotasRecargo Decimal?      @db.Decimal(5, 2) // % de recargo por financiación; null = sin interés
   activo       Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt

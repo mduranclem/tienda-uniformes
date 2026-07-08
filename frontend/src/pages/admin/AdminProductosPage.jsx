@@ -2,7 +2,7 @@ import { useEffect, useState, Fragment } from 'react'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatPrecio } from '../../lib/utils'
+import { formatPrecio, infoCuotas } from '../../lib/utils'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
 import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
@@ -27,6 +27,8 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     precio: producto?.precio ?? '',
     precioOferta: producto?.precioOferta ?? '',
     cuotas: producto?.cuotas ?? '',
+    financiacion: producto?.cuotasRecargo ? 'recargo' : 'sin_interes',
+    cuotasRecargo: producto?.cuotasRecargo ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
   })
@@ -38,11 +40,15 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
   async function handleSubmit(e) {
     e.preventDefault(); setError(''); setGuardando(true)
     try {
+      const { financiacion, ...resto } = form
       const data = {
-        ...form,
+        ...resto,
         precio: parseFloat(form.precio),
         precioOferta: form.precioOferta ? parseFloat(form.precioOferta) : null,
         cuotas: form.cuotas ? parseInt(form.cuotas) : null,
+        cuotasRecargo: form.cuotas && financiacion === 'recargo' && form.cuotasRecargo
+          ? parseFloat(form.cuotasRecargo)
+          : null,
       }
       if (editando) await adminApi.actualizarProducto(token, producto.id, data)
       else await adminApi.crearProducto(token, data)
@@ -83,7 +89,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
               <input type="number" min="0" step="0.01" value={form.precioOferta}
                 onChange={e => set('precioOferta', e.target.value)} className="input" placeholder="Vacío = sin oferta" />
             </Campo>
-            <Campo label="Cuotas sin interés">
+            <Campo label="Cuotas">
               <select value={form.cuotas} onChange={e => set('cuotas', e.target.value)} className="input">
                 <option value="">No mostrar</option>
                 <option value="3">3 cuotas</option>
@@ -93,6 +99,39 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
               </select>
             </Campo>
           </div>
+          {form.cuotas && (
+            <div className="flex flex-col gap-2 bg-zinc-800/50 border border-zinc-700/60 rounded-lg p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Financiación">
+                  <select value={form.financiacion} onChange={e => set('financiacion', e.target.value)} className="input">
+                    <option value="sin_interes">Sin interés</option>
+                    <option value="recargo">Con recargo</option>
+                  </select>
+                </Campo>
+                {form.financiacion === 'recargo' && (
+                  <Campo label="Recargo (%)">
+                    <input type="number" min="0" max="100" step="0.1" value={form.cuotasRecargo}
+                      onChange={e => set('cuotasRecargo', e.target.value)} className="input" placeholder="15" />
+                  </Campo>
+                )}
+              </div>
+              {(() => {
+                const base = parseFloat(form.precioOferta) || parseFloat(form.precio)
+                const preview = infoCuotas(
+                  base,
+                  parseInt(form.cuotas),
+                  form.financiacion === 'recargo' ? parseFloat(form.cuotasRecargo) || 0 : null
+                )
+                return preview ? (
+                  <p className="text-sm text-green-400">
+                    Vista previa: <span className="font-medium">{preview.texto}</span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500">Ingresá el precio para ver la vista previa.</p>
+                )
+              })()}
+            </div>
+          )}
           <Campo label="Colegio">
             <select value={form.colegioId} onChange={e => set('colegioId', e.target.value)} className="input">
               <option value="">— Liso (sin colegio) —</option>

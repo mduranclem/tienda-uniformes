@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { entregasApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
-import { formatPrecio } from '../lib/utils'
+import { formatPrecio, esRosario } from '../lib/utils'
 import Spinner from '../components/ui/Spinner'
 import { ChevronLeft, Truck, MapPin, Tag, X } from 'lucide-react'
 
@@ -35,7 +35,6 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
-    if (!sesion) { navigate('/login?redirect=/checkout', { replace: true }); return }
     if (!items.length) { navigate('/carrito', { replace: true }); return }
     entregasApi.listar()
       .then(data => {
@@ -58,7 +57,9 @@ export default function CheckoutPage() {
 
   const entregaSeleccionada = entregas.find(e => e.id === entregaId)
   const esEnvio = entregaSeleccionada?.tipo === 'ENVIO'
-  const costoEnvio = Number(entregaSeleccionada?.costo ?? 0)
+  // Envío gratis dentro de Rosario (el backend aplica la misma regla)
+  const envioGratisRosario = esEnvio && esRosario(form.ciudad)
+  const costoEnvio = envioGratisRosario ? 0 : Number(entregaSeleccionada?.costo ?? 0)
   const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
   const descuentoCupon = cupon?.descuento ?? 0
   const descuento = descuentoBienvenida + descuentoCupon
@@ -120,7 +121,6 @@ export default function CheckoutPage() {
         telefono: form.telefono || null,
         entregaId,
         cuponId: cupon?.cuponId ?? null,
-        aplicarDescuentoBienvenida: esPrimeraCompra,
         domicilio: esEnvio ? {
           calle: form.calle,
           numero: form.numero,
@@ -152,6 +152,21 @@ export default function CheckoutPage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-zinc-100 mb-6">Finalizar compra</h1>
+
+      {/* Compra como invitado por defecto; login opcional */}
+      {!sesion && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+          <p className="text-sm text-zinc-300">
+            Estás comprando como invitado — solo necesitamos tu email y los datos de entrega.
+          </p>
+          <Link
+            to="/login?redirect=/checkout"
+            className="text-sm text-blue-400 font-medium hover:text-blue-300 whitespace-nowrap"
+          >
+            ¿Ya tenés cuenta? Ingresá
+          </Link>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -231,7 +246,9 @@ export default function CheckoutPage() {
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
-                        {Number(e.costo) === 0 ? 'Gratis' : formatPrecio(e.costo)}
+                        {(e.tipo === 'ENVIO' && esRosario(form.ciudad)) || Number(e.costo) === 0
+                          ? 'Gratis'
+                          : formatPrecio(e.costo)}
                       </span>
                     </label>
                   ))}
@@ -259,7 +276,12 @@ export default function CheckoutPage() {
                   <div>
                     <label className="block text-xs text-zinc-400 mb-1">Ciudad *</label>
                     <input type="text" value={form.ciudad} onChange={e => setField('ciudad', e.target.value)}
-                      className="input w-full" placeholder="Buenos Aires" required={esEnvio} />
+                      className="input w-full" placeholder="Rosario" required={esEnvio} />
+                    {envioGratisRosario && (
+                      <p className="mt-1 text-xs font-medium text-emerald-400">
+                        🎉 Envío gratis en Rosario
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-zinc-400 mb-1">Código postal</label>

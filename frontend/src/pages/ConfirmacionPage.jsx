@@ -26,11 +26,10 @@ export default function ConfirmacionPage() {
   }, [id])
 
   async function handlePagar() {
-    if (!sesion?.access_token) return
     setPagando(true)
     setErrorPago('')
     try {
-      const data = await pagosApi.crearPreferencia(sesion.access_token, id)
+      const data = await pagosApi.crearPreferencia(sesion?.access_token ?? null, id)
       const url = SANDBOX ? data.sandbox_init_point : data.init_point
       window.location.href = url
     } catch (err) {
@@ -172,7 +171,7 @@ export default function ConfirmacionPage() {
       {/* Botón de pago o acciones */}
       <div className="flex flex-col items-center gap-3">
 
-        {esperandoPago && sesion && (
+        {esperandoPago && (
           <>
             {errorPago && (
               <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 w-full">
@@ -191,7 +190,7 @@ export default function ConfirmacionPage() {
           </>
         )}
 
-        {(rechazado || pendiente) && sesion && (
+        {(rechazado || pendiente) && (
           <button
             onClick={handlePagar}
             disabled={pagando}

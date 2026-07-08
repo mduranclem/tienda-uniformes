@@ -3,14 +3,35 @@ const prisma = require('../lib/prisma')
 const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
 const { notificarNuevoPedido } = require('../services/notificaciones')
+const { esRosario } = require('../lib/envios')
 
 const router = Router()
+
+// Estados que cuentan como compra concretada: solo una compra pagada
+// (o posterior) quema el descuento de bienvenida.
+const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
+const DESCUENTO_BIENVENIDA_PCT = 20
+
+async function esPrimeraCompra(email) {
+  const emailNorm = email.trim().toLowerCase()
+  const comprasPrevias = await prisma.orden.count({
+    where: {
+      OR: [
+        // emailGuest histórico puede estar guardado sin normalizar
+        { emailGuest: { equals: emailNorm, mode: 'insensitive' } },
+        { usuario: { email: { equals: emailNorm, mode: 'insensitive' } } },
+      ],
+      estado: { in: ESTADOS_COMPRA },
+    },
+  })
+  return comprasPrevias === 0
+}
 
 
 // POST /api/ordenes — crea una orden (guest o usuario logueado)
 router.post('/', authOpcional, async (req, res, next) => {
   try {
-    const { items, nombre, email, telefono, entregaId, domicilio, cuponId, aplicarDescuentoBienvenida } = req.body
+    const { items, nombre, email, telefono, entregaId, domicilio, cuponId } = req.body
 
     if (!items?.length) return res.status(400).json({ mensaje: 'El carrito está vacío' })
     if (!nombre || !email) return res.status(400).json({ mensaje: 'Nombre y email son requeridos' })
@@ -45,24 +66,16 @@ router.post('/', authOpcional, async (req, res, next) => {
       const precio = Number(variante.precio ?? variante.producto.precioOferta ?? variante.producto.precio)
       return acc + precio * i.cantidad
     }, 0)
-    const costoEnvio = Number(entrega.costo)
+    // Envío gratis dentro de Rosario, siempre
+    const costoEnvio = entrega.tipo === 'ENVIO' && esRosario(domicilio?.ciudad)
+      ? 0
+      : Number(entrega.costo)
 
-    // Descuento de bienvenida (primera compra)
-    let descuentoBienvenida = 0
-    if (aplicarDescuentoBienvenida) {
-      const ordenesPrevias = await prisma.orden.count({
-        where: {
-          OR: [
-            { emailGuest: email.toLowerCase() },
-            { usuario: { email: email.toLowerCase() } },
-          ],
-          estado: { not: 'CANCELADA' },
-        },
-      })
-      if (ordenesPrevias === 0) {
-        descuentoBienvenida = Math.round(subtotal * 20 / 100)
-      }
-    }
+    // Descuento de bienvenida (primera compra): lo decide SIEMPRE el servidor
+    // según el historial del email, nunca un flag del cliente.
+    const descuentoBienvenida = (await esPrimeraCompra(email))
+      ? Math.round(subtotal * DESCUENTO_BIENVENIDA_PCT / 100)
+      : 0
 
     // Validar cupón si se envió
     let descuento = descuentoBienvenida
@@ -84,7 +97,7 @@ router.post('/', authOpcional, async (req, res, next) => {
       const nuevaOrden = await tx.orden.create({
         data: {
           usuarioId: req.user?.id ?? null,
-          emailGuest: req.user ? null : email,
+          emailGuest: req.user ? null : email.trim().toLowerCase(),
           nombreGuest: req.user ? null : nombre,
           telefonoGuest: telefono ?? null,
           entregaId,
@@ -157,16 +170,8 @@ router.get('/primera-compra', async (req, res, next) => {
   try {
     const { email } = req.query
     if (!email) return res.json({ aplica: false })
-    const count = await prisma.orden.count({
-      where: {
-        OR: [
-          { emailGuest: email.toLowerCase() },
-          { usuario: { email: email.toLowerCase() } },
-        ],
-        estado: { not: 'CANCELADA' },
-      },
-    })
-    res.json({ aplica: count === 0, descuentoPct: 20 })
+    const aplica = await esPrimeraCompra(email)
+    res.json({ aplica, descuentoPct: DESCUENTO_BIENVENIDA_PCT })
   } catch (err) { next(err) }
 })
 

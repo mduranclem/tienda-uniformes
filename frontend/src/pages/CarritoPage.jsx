@@ -81,11 +81,19 @@ export default function CarritoPage() {
           <span>{formatPrecio(totalPrecio)}</span>
         </div>
         <Link
-          to={sesion ? '/checkout' : '/login?redirect=/checkout'}
+          to="/checkout"
           className="block w-full text-center bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-500 transition-colors"
         >
-          {sesion ? 'Continuar con la compra' : 'Iniciar sesión para comprar'}
+          Continuar con la compra
         </Link>
+        {!sesion && (
+          <Link
+            to="/login?redirect=/checkout"
+            className="block w-full text-center text-blue-400 text-sm font-medium mt-3 hover:text-blue-300 transition-colors"
+          >
+            ¿Ya tenés cuenta? Ingresá
+          </Link>
+        )}
         <Link
           to="/catalogo"
           className="block w-full text-center text-zinc-400 text-sm font-medium mt-3 hover:text-zinc-200 transition-colors"

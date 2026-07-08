@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { colegiosApi, productosApi, bannersApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import FilterBar from '../components/catalog/FilterBar'
-import { ShieldCheck, Truck, BadgeCheck, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import ColegioSelector, { leerUltimoColegio } from '../components/home/ColegioSelector'
+import { ShieldCheck, Truck, BadgeCheck, ChevronLeft, ChevronRight, Search, ArrowRight } from 'lucide-react'
 
 const PLACEHOLDER = 'https://placehold.co/800x800/18181b/3f3f46?text=+'
 
-function HeroCarrusel({ slides }) {
+function HeroCarrusel({ slides, colegios }) {
   const [idx, setIdx] = useState(0)
   const total = slides.length
 
@@ -26,8 +27,14 @@ function HeroCarrusel({ slides }) {
 
   const bgUrl = slidesSrc[idx]?.url ?? PLACEHOLDER
 
+  // Última elección de colegio (visita anterior), validada contra la lista activa
+  const guardado = leerUltimoColegio()
+  const ultimoColegio = guardado && (guardado.id === 'lisos' || colegios.some(c => c.id === guardado.id))
+    ? guardado
+    : null
+
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative">
       {/* Fondo imagen + overlay — solo mobile */}
       <div className="absolute inset-0 md:hidden">
         <img src={bgUrl} alt="" className="w-full h-full object-cover" />
@@ -41,7 +48,7 @@ function HeroCarrusel({ slides }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
 
           {/* Texto */}
-          <div className="relative z-10 flex flex-col gap-7 md:gap-6">
+          <div className="relative z-20 flex flex-col gap-7 md:gap-6">
             <div className="flex items-center gap-1.5">
               <span className="text-yellow-400 text-sm leading-none">⭐⭐⭐⭐⭐</span>
               <span className="text-xs text-zinc-300 md:text-zinc-400">Más de 50 colegios confían en nosotros</span>
@@ -57,6 +64,20 @@ function HeroCarrusel({ slides }) {
             <p className="text-zinc-300 md:text-zinc-400 text-lg leading-relaxed">
               Remeras, buzos y más. Encontrá los modelos de tu institución o elegí entre nuestros lisos.
             </p>
+
+            {/* Entrada principal: elegir colegio */}
+            <div className="flex flex-col gap-3">
+              <ColegioSelector colegios={colegios} />
+              {ultimoColegio && (
+                <Link
+                  to={`/catalogo?colegioId=${encodeURIComponent(ultimoColegio.id)}`}
+                  className="inline-flex items-center gap-2 self-start bg-blue-600/20 border border-blue-500/30 text-blue-300 font-semibold px-5 py-3 rounded-full hover:bg-blue-600/30 transition-colors text-sm"
+                >
+                  Seguir viendo {ultimoColegio.nombre}
+                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                </Link>
+              )}
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
@@ -74,13 +95,13 @@ function HeroCarrusel({ slides }) {
             </div>
 
             {/* Trust signals — fila única en mobile con fondo, wrap en desktop */}
-            <div className="flex flex-row items-center gap-3 self-start
+            <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1.5 self-start
               bg-black/50 backdrop-blur-sm rounded-xl px-3 py-2
               md:bg-transparent md:backdrop-blur-none md:rounded-none md:px-0 md:py-0
-              md:flex-wrap md:gap-4 md:self-auto">
-              <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
+              md:gap-4 md:self-auto">
+              <div className="flex items-center gap-1 text-[11px] md:text-sm text-emerald-300 md:text-emerald-500">
                 <Truck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">Envíos</span>
+                <span className="whitespace-nowrap">Envío gratis en Rosario</span>
               </div>
               <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
                 <BadgeCheck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
@@ -189,7 +210,7 @@ export default function HomePage() {
 
   return (
     <div>
-      <HeroCarrusel slides={banners} />
+      <HeroCarrusel slides={banners} colegios={colegios} />
 
       {/* Buscador principal */}
       <section className="max-w-2xl mx-auto px-4 mt-8 md:-mt-4 relative z-10 mb-10 md:mb-6">

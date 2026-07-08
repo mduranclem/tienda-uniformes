@@ -143,7 +143,7 @@ export const pagosApi = {
     request('/pagos/preferencia', {
       method: 'POST',
       body: JSON.stringify({ ordenId }),
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     }),
 }
 

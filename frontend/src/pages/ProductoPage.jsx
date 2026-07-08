@@ -5,9 +5,10 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import ImageGallery from '../components/product/ImageGallery'
 import VariantSelector from '../components/product/VariantSelector'
+import StickyAddToCart from '../components/product/StickyAddToCart'
 import Spinner from '../components/ui/Spinner'
-import { formatPrecio, titleCase } from '../lib/utils'
-import { ShoppingCart, ChevronLeft, GraduationCap } from 'lucide-react'
+import { formatPrecio, titleCase, infoCuotas } from '../lib/utils'
+import { ShoppingCart, ChevronLeft, GraduationCap, Truck } from 'lucide-react'
 
 export default function ProductoPage() {
   const { id } = useParams()
@@ -18,6 +19,7 @@ export default function ProductoPage() {
   const [producto, setProducto] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [varianteSeleccionada, setVarianteSeleccionada] = useState(null)
+  const [colorSeleccionado, setColorSeleccionado] = useState(null)
   const [cantidad, setCantidad] = useState(1)
   const [agregado, setAgregado] = useState(false)
 
@@ -30,6 +32,8 @@ export default function ProductoPage() {
     seleccionManual.current = false
     setAlumnoActivoId(null)
     setAlumnos([])
+    setColorSeleccionado(null)
+    setCantidad(1)
   }, [id])
 
   // Cargar producto
@@ -39,8 +43,9 @@ export default function ProductoPage() {
       .then(r => {
         const prod = r.data ?? r
         setProducto(prod)
-        const primera = prod.variantes?.find(v => v.stock > 0)
-        setVarianteSeleccionada(primera ?? prod.variantes?.[0] ?? null)
+        // Sin auto-selección: el cliente elige talle activamente
+        // (salvo sugerencia por talle guardado del alumno, más abajo)
+        setVarianteSeleccionada(null)
       })
       .finally(() => setCargando(false))
   }, [id])
@@ -70,11 +75,20 @@ export default function ProductoPage() {
     if (!variante || variante.stock === 0) return
 
     setVarianteSeleccionada(variante)
+    setColorSeleccionado(variante.color ?? null)
   }, [producto, alumnos])
 
   function handleCambioVariante(v) {
     seleccionManual.current = true
     setVarianteSeleccionada(v)
+    if (v?.color) setColorSeleccionado(v.color)
+  }
+
+  function handleCambioColor(color) {
+    seleccionManual.current = true
+    setColorSeleccionado(color)
+    // Al cambiar de color, el talle se vuelve a elegir explícitamente
+    setVarianteSeleccionada(null)
   }
 
   function agregarAlCarrito() {
@@ -133,9 +147,11 @@ export default function ProductoPage() {
   const descuentoPct = tieneOferta
     ? Math.round((1 - Number(producto.precioOferta) / Number(producto.precio)) * 100)
     : 0
+  const cuotas = infoCuotas(precioFinal, producto.cuotas, producto.cuotasRecargo)
+  const colorActual = colorSeleccionado ?? varianteSeleccionada?.color ?? null
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 pb-28 md:pb-6">
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-100 transition-colors mb-4"
@@ -145,10 +161,10 @@ export default function ProductoPage() {
       </button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Galería */}
-        <ImageGallery imagenes={producto.imagenes} colorFiltro={varianteSeleccionada?.color ?? null} />
+        <ImageGallery imagenes={producto.imagenes} colorFiltro={colorActual} />
 
-        {/* Info */}
-        <div className="flex flex-col gap-4">
+        {/* Info — sticky en desktop mientras se scrollean las fotos */}
+        <div className="flex flex-col gap-4 md:sticky md:top-24 md:self-start">
           {producto.colegio && (
             <span className="text-sm text-blue-400 font-medium">{producto.colegio.nombre}</span>
           )}
@@ -171,11 +187,13 @@ export default function ProductoPage() {
             ) : (
               <p className="text-3xl font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
             )}
-            {producto.cuotas && (
-              <p className="text-sm text-zinc-500 mt-0.5">
-                {producto.cuotas} cuotas de {formatPrecio(precioFinal / producto.cuotas)}
-              </p>
+            {cuotas && (
+              <p className="text-sm text-green-400 mt-0.5">{cuotas.texto}</p>
             )}
+            <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded-full">
+              <Truck className="w-3.5 h-3.5 flex-shrink-0" />
+              Envío gratis en Rosario
+            </div>
           </div>
 
           {producto.descripcion && (
@@ -220,6 +238,8 @@ export default function ProductoPage() {
             <VariantSelector
               variantes={producto.variantes}
               seleccionada={varianteSeleccionada}
+              colorActual={colorActual}
+              onColor={handleCambioColor}
               onChange={handleCambioVariante}
             />
           )}
@@ -258,7 +278,7 @@ export default function ProductoPage() {
               onClick={agregarAlCarrito}
               disabled={!varianteSeleccionada || stockVariante === 0}
               className={`flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl font-semibold text-base transition-colors ${
-                stockVariante === 0
+                !varianteSeleccionada || stockVariante === 0
                   ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                   : agregado
                   ? 'bg-green-600 text-white'
@@ -266,11 +286,27 @@ export default function ProductoPage() {
               }`}
             >
               <ShoppingCart className="w-5 h-5" />
-              {stockVariante === 0 ? 'Sin stock' : agregado ? '¡Agregado!' : 'Agregar al carrito'}
+              {!varianteSeleccionada
+                ? 'Elegí un talle'
+                : stockVariante === 0
+                ? 'Sin stock'
+                : agregado
+                ? '¡Agregado!'
+                : 'Agregar al carrito'}
             </button>
           )}
         </div>
       </div>
+
+      {/* Barra de compra fija — solo mobile */}
+      <StickyAddToCart
+        precioFinal={precioFinal}
+        cuotas={cuotas}
+        varianteSeleccionada={varianteSeleccionada}
+        agregado={agregado}
+        sinColores={!tieneCargadoColores}
+        onAgregar={agregarAlCarrito}
+      />
     </div>
   )
 }
