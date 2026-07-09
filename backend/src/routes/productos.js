@@ -4,10 +4,10 @@ const prisma = require('../lib/prisma')
 const router = Router()
 
 
-// GET /api/productos?colegioId=&tipo=&q=&lisos=1&limit=&page=
+// GET /api/productos?colegioId=&tipo=&q=&lisos=1&colegial=1&limit=&page=
 router.get('/', async (req, res, next) => {
   try {
-    const { colegioId, tipo, q, lisos, limit = 20, page = 1, orden } = req.query
+    const { colegioId, tipo, q, lisos, colegial, limit = 20, page = 1, orden } = req.query
     const take = Math.min(Number(limit), 100)
     const skip = (Number(page) - 1) * take
 
@@ -15,6 +15,8 @@ router.get('/', async (req, res, next) => {
 
     if (lisos === '1') {
       where.colegioId = null
+    } else if (colegial === '1') {
+      where.colegioId = { not: null }
     } else if (colegioId) {
       where.colegioId = colegioId
     }

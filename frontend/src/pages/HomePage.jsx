@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { colegiosApi, productosApi, bannersApi } from '../services/api'
+import { Link } from 'react-router-dom'
+import { colegiosApi, productosApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
-import FilterBar from '../components/catalog/FilterBar'
-import ColegioSelector, { leerUltimoColegio } from '../components/home/ColegioSelector'
-import { ShieldCheck, Truck, BadgeCheck, ChevronLeft, ChevronRight, Search, ArrowRight } from 'lucide-react'
-
-const PLACEHOLDER = 'https://placehold.co/800x800/18181b/3f3f46?text=+'
+import ColegioSelector from '../components/home/ColegioSelector'
+import { Sparkles } from 'lucide-react'
 
 function HeroCarrusel({ slides, colegios }) {
   const [idx, setIdx] = useState(0)
@@ -19,241 +16,146 @@ function HeroCarrusel({ slides, colegios }) {
     return () => clearInterval(t)
   }, [total])
 
-  function anterior() { setIdx(i => (i - 1 + total) % total) }
-  function siguiente() { setIdx(i => (i + 1) % total) }
-
-  const slidesSrc = total > 0 ? slides : [{ url: PLACEHOLDER, titulo: '' }]
-  const n = slidesSrc.length
-
-  const bgUrl = slidesSrc[idx]?.url ?? PLACEHOLDER
-
-  // Última elección de colegio (visita anterior), validada contra la lista activa
-  const guardado = leerUltimoColegio()
-  const ultimoColegio = guardado && (guardado.id === 'lisos' || colegios.some(c => c.id === guardado.id))
-    ? guardado
-    : null
-
   return (
-    <section className="relative">
-      {/* Fondo imagen + overlay — solo mobile */}
-      <div className="absolute inset-0 md:hidden">
-        <img src={bgUrl} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/60" />
+    <section className="bg-zinc-950 flex flex-col gap-2.5 pt-3 pb-4">
+
+      {/* Carrusel de fotos de producto — full-bleed, bajo, fade */}
+      <div className="relative w-full h-[180px] sm:h-[250px] lg:h-[350px] overflow-hidden bg-zinc-900">
+        {total === 0 && <div className="absolute inset-0 bg-zinc-900 animate-pulse" />}
+        {slides.map((s, i) => (
+          <img
+            key={s.id ?? i}
+            src={s.url}
+            alt={s.titulo ?? ''}
+            loading={i === 0 ? undefined : 'lazy'}
+            decoding="async"
+            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out ${
+              i === idx ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ))}
+
+        {total > 1 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 z-10">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                aria-label={`Ver foto ${i + 1}`}
+                className={`rounded-full transition-all ${i === idx ? 'bg-white w-4 h-1.5' : 'bg-white/50 w-1.5 h-1.5'}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Gradiente inferior: funde la imagen hacia el negro de la página */}
-      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#09090b] to-transparent pointer-events-none z-[1] md:hidden" />
-
-      <div className="relative max-w-6xl mx-auto px-4 pt-6 pb-28 md:pt-8 md:pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-
-          {/* Texto */}
-          <div className="relative z-20 flex flex-col gap-7 md:gap-6">
-            <div className="flex items-center gap-1.5">
-              <span className="text-yellow-400 text-sm leading-none">⭐⭐⭐⭐⭐</span>
-              <span className="text-xs text-zinc-300 md:text-zinc-400">Más de 50 colegios confían en nosotros</span>
-            </div>
-            <div className="inline-flex">
-              <span className="bg-blue-600/20 text-blue-400 text-xs font-semibold px-3 py-1 rounded-full border border-blue-600/30">
-                Nueva colección disponible
-              </span>
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
-              Uniformes oficiales y básicos lisos
-            </h1>
-            <p className="text-zinc-300 md:text-zinc-400 text-lg leading-relaxed">
-              Remeras, buzos y más. Encontrá los modelos de tu institución o elegí entre nuestros lisos.
-            </p>
-
-            {/* Entrada principal: elegir colegio */}
-            <div className="flex flex-col gap-3">
-              <ColegioSelector colegios={colegios} />
-              {ultimoColegio && (
-                <Link
-                  to={`/catalogo?colegioId=${encodeURIComponent(ultimoColegio.id)}`}
-                  className="inline-flex items-center gap-2 self-start bg-blue-600/20 border border-blue-500/30 text-blue-300 font-semibold px-5 py-3 rounded-full hover:bg-blue-600/30 transition-colors text-sm"
-                >
-                  Seguir viendo {ultimoColegio.nombre}
-                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
-                </Link>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                to="/catalogo"
-                className="inline-block bg-blue-600 text-white font-bold px-8 py-3 rounded-full hover:bg-blue-500 transition-colors text-base text-center"
-              >
-                Ver ropa colegial
-              </Link>
-              <Link
-                to="/catalogo?colegioId=lisos"
-                className="inline-block bg-zinc-800 text-zinc-200 font-semibold px-8 py-3 rounded-full hover:bg-zinc-700 transition-colors text-base text-center border border-zinc-700"
-              >
-                Ver lisos
-              </Link>
-            </div>
-
-            {/* Trust signals — fila única en mobile con fondo, wrap en desktop */}
-            <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1.5 self-start
-              bg-black/50 backdrop-blur-sm rounded-xl px-3 py-2
-              md:bg-transparent md:backdrop-blur-none md:rounded-none md:px-0 md:py-0
-              md:gap-4 md:self-auto">
-              <div className="flex items-center gap-1 text-[11px] md:text-sm text-emerald-300 md:text-emerald-500">
-                <Truck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">Envío gratis en Rosario</span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
-                <BadgeCheck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">Calidad garantizada</span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] md:text-sm text-zinc-200 md:text-zinc-500">
-                <ShieldCheck className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                <span className="whitespace-nowrap">Pagos seguros</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Carrusel — solo desktop */}
-          <div className="hidden md:block relative">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 relative">
-              <div
-                className="flex h-full transition-transform duration-500 ease-in-out"
-                style={{ width: `${n * 100}%`, transform: `translateX(-${(idx * 100) / n}%)` }}
-              >
-                {slidesSrc.map((s, i) => (
-                  <div key={i} className="h-full flex-shrink-0" style={{ width: `${100 / n}%` }}>
-                    <img src={s.url} alt={s.titulo ?? ''} className="w-full h-full object-cover" />
-                  </div>
-                ))}
-              </div>
-              {slidesSrc[idx]?.titulo && (
-                <div className="absolute bottom-3 left-3 right-3 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-2">
-                  <p className="text-white text-sm font-medium truncate">{slidesSrc[idx].titulo}</p>
-                </div>
-              )}
-            </div>
-
-            {total > 1 && (
-              <>
-                <button onClick={anterior} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors z-10">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button onClick={siguiente} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors z-10">
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </>
-            )}
-
-            {total > 1 && (
-              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {slides.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setIdx(i)}
-                    className={`rounded-full transition-all ${i === idx ? 'bg-blue-500 w-4 h-1.5' : 'bg-zinc-700 w-1.5 h-1.5'}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-        </div>
+      {/* Selector de colegio — compacto */}
+      <div className="px-4">
+        <ColegioSelector colegios={colegios} compact />
       </div>
+
+      {/* Botones de categoría */}
+      <div className="px-4 flex flex-row gap-3">
+        <Link
+          to="/catalogo?colegioId=lisos"
+          className="flex-1 min-h-[48px] flex items-center justify-center rounded-xl bg-white text-zinc-900 font-bold text-base border border-zinc-200 hover:bg-zinc-100 transition-colors"
+        >
+          Lisos
+        </Link>
+        <Link
+          to="/catalogo?colegial=1"
+          className="flex-1 min-h-[48px] flex items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 transition-colors"
+        >
+          Colegial
+        </Link>
+      </div>
+
+      {/* Trust signals — una sola línea compacta */}
+      <p className="px-4 text-center text-[10px] sm:text-xs text-zinc-500 whitespace-nowrap overflow-x-auto">
+        Envío gratis en Rosario · Calidad garantizada · Pagos seguros
+      </p>
+    </section>
+  )
+}
+
+function SeccionProductos({ titulo, subtitulo, productos, cargando, verTodosHref }) {
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10 md:py-12">
+      <div className="flex items-end justify-between gap-4 mb-1">
+        <h2 className="text-xl md:text-2xl font-bold text-zinc-100">{titulo}</h2>
+        <Link to={verTodosHref} className="text-sm text-blue-400 font-medium hover:text-blue-300 whitespace-nowrap">
+          Ver todos →
+        </Link>
+      </div>
+      <p className="text-sm text-zinc-500 mb-5">{subtitulo}</p>
+      <ProductGrid productos={productos} cargando={cargando} />
     </section>
   )
 }
 
 export default function HomePage() {
-  const [novedades, setNovedades] = useState([])
-  const [total, setTotal] = useState(null)
   const [colegios, setColegios] = useState([])
-  const [banners, setBanners] = useState([])
-  const [cargando, setCargando] = useState(true)
-  const [busqueda, setBusqueda] = useState('')
-  const [filtros, setFiltros] = useState({ colegioId: '', tipo: '', orden: '' })
-  const navigate = useNavigate()
+  const [novedades, setNovedades] = useState([])
+  const [colegiales, setColegiales] = useState([])
+  const [lisos, setLisos] = useState([])
+  const [cargandoColegiales, setCargandoColegiales] = useState(true)
+  const [cargandoLisos, setCargandoLisos] = useState(true)
 
   useEffect(() => {
-    Promise.all([colegiosApi.listar(), bannersApi.listar()])
-      .then(([cols, bans]) => {
-        setColegios(cols.data ?? cols)
-        setBanners(bans)
-      })
+    colegiosApi.listar().then(r => setColegios(r.data ?? r))
+
+    // Fotos del hero: productos activos más recientes (mismo criterio que antes)
+    productosApi.listar({ limit: 8 }).then(r => {
+      const data = r.data ?? r
+      setNovedades(data.filter(p => p.imagenes?.[0]?.url))
+    })
+
+    productosApi.listar({ colegial: '1', limit: 6 })
+      .then(r => setColegiales(r.data ?? r))
+      .finally(() => setCargandoColegiales(false))
+
+    productosApi.listar({ lisos: '1', limit: 6 })
+      .then(r => setLisos(r.data ?? r))
+      .finally(() => setCargandoLisos(false))
   }, [])
 
-  useEffect(() => {
-    setCargando(true)
-    const params = { limit: 8 }
-    if (filtros.colegioId && filtros.colegioId !== 'lisos') params.colegioId = filtros.colegioId
-    if (filtros.colegioId === 'lisos') params.lisos = '1'
-    if (filtros.tipo) params.tipo = filtros.tipo
-    if (filtros.orden) params.orden = filtros.orden
-
-    productosApi.listar(params)
-      .then(r => {
-        setNovedades(r.data ?? r)
-        setTotal(r.total ?? null)
-      })
-      .finally(() => setCargando(false))
-  }, [filtros])
-
-  function handleBusqueda(e) {
-    e.preventDefault()
-    if (busqueda.trim()) navigate(`/catalogo?q=${encodeURIComponent(busqueda.trim())}`)
-    else navigate('/catalogo')
-  }
-
-  function handleFiltros(nuevos) {
-    setFiltros(prev => ({ ...prev, ...nuevos }))
-  }
+  const slides = novedades.map(p => ({ id: p.id, url: p.imagenes[0].url, titulo: p.nombre }))
 
   return (
     <div>
-      <HeroCarrusel slides={banners} colegios={colegios} />
+      <HeroCarrusel slides={slides} colegios={colegios} />
 
-      {/* Buscador principal */}
-      <section className="max-w-2xl mx-auto px-4 mt-8 md:-mt-4 relative z-10 mb-10 md:mb-6">
-        <form onSubmit={handleBusqueda}>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 w-5 h-5" />
-            <input
-              type="search"
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar remeras, buzos, colegio..."
-              className="w-full pl-12 pr-32 py-3.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors"
-            >
-              Buscar
-            </button>
-          </div>
-        </form>
-      </section>
+      <SeccionProductos
+        titulo="Ropa Colegial"
+        subtitulo="Encontrá el uniforme de tu institución"
+        productos={colegiales}
+        cargando={cargandoColegiales}
+        verTodosHref="/catalogo?colegial=1"
+      />
 
-      {/* Novedades con filtros */}
+      <SeccionProductos
+        titulo="Básicos Lisos"
+        subtitulo="Remeras y buzos sin escudo, para todos los días"
+        productos={lisos}
+        cargando={cargandoLisos}
+        verTodosHref="/catalogo?colegioId=lisos"
+      />
+
+      {/* Banner de cierre — 20% OFF primera compra */}
       <section className="max-w-6xl mx-auto px-4 pb-14">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-zinc-100">Novedades</h2>
-          <Link to="/catalogo" className="text-sm text-blue-400 font-medium hover:text-blue-300">
-            Ver todo →
+        <div className="bg-gradient-to-r from-blue-600/20 to-emerald-600/20 border border-blue-500/20 rounded-2xl px-6 py-8 md:py-10 flex flex-col items-center text-center gap-3">
+          <Sparkles className="w-7 h-7 text-blue-400" />
+          <h2 className="text-xl md:text-2xl font-bold text-zinc-50">20% OFF en tu primera compra</h2>
+          <p className="text-sm text-zinc-400 max-w-md">
+            El descuento se aplica automáticamente al finalizar tu primera compra.
+          </p>
+          <Link
+            to="/catalogo"
+            className="inline-block bg-blue-600 text-white font-bold px-8 py-3 rounded-full hover:bg-blue-500 transition-colors text-base mt-1"
+          >
+            Comprar ahora
           </Link>
         </div>
-
-        <div className="mb-4">
-          <FilterBar colegios={colegios} filtros={filtros} onChange={handleFiltros} />
-        </div>
-
-        {!cargando && total !== null && (
-          <p className="text-sm text-zinc-500 mb-4">
-            {total === 0 ? 'Sin resultados' : `${total} producto${total !== 1 ? 's' : ''}`}
-          </p>
-        )}
-
-        <ProductGrid productos={novedades} cargando={cargando} />
       </section>
     </div>
   )

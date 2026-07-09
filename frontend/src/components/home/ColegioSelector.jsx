@@ -24,7 +24,7 @@ export function leerUltimoColegio() {
 
 // Combobox con búsqueda para elegir colegio. Al elegir, navega al catálogo
 // filtrado y recuerda la elección para la próxima visita.
-export default function ColegioSelector({ colegios }) {
+export default function ColegioSelector({ colegios, compact = false }) {
   const [query, setQuery] = useState('')
   const [abierto, setAbierto] = useState(false)
   const [activa, setActiva] = useState(0)
@@ -83,11 +83,11 @@ export default function ColegioSelector({ colegios }) {
 
   return (
     <div ref={contRef} className="relative w-full sm:max-w-md">
-      <label htmlFor="colegio-selector" className="block text-sm font-semibold text-white mb-1.5">
+      <label htmlFor="colegio-selector" className={compact ? 'sr-only' : 'block text-sm font-semibold text-white mb-1.5'}>
         ¿De qué colegio sos?
       </label>
       <div className="relative">
-        <School className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400 pointer-events-none" />
+        <School className={`absolute left-4 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
         <input
           id="colegio-selector"
           type="text"
@@ -100,8 +100,10 @@ export default function ColegioSelector({ colegios }) {
           onChange={e => { setQuery(e.target.value); setAbierto(true) }}
           onFocus={() => setAbierto(true)}
           onKeyDown={onKeyDown}
-          placeholder="Buscá tu colegio…"
-          className="w-full pl-12 pr-10 py-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg"
+          placeholder={compact ? '¿De qué colegio sos?' : 'Buscá tu colegio…'}
+          className={`w-full pl-11 pr-10 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            compact ? 'py-2.5 text-sm' : 'py-3.5 text-base shadow-lg'
+          }`}
         />
         <ChevronDown
           className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 pointer-events-none transition-transform ${abierto ? 'rotate-180' : ''}`}

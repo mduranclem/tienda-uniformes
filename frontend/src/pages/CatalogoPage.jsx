@@ -17,6 +17,7 @@ export default function CatalogoPage() {
     colegioId: searchParams.get('colegioId') ?? '',
     tipo: searchParams.get('tipo') ?? '',
     orden: searchParams.get('orden') ?? '',
+    colegial: searchParams.get('colegial') ?? '',
   }
 
   useEffect(() => {
@@ -35,10 +36,12 @@ export default function CatalogoPage() {
   }, [inputBusqueda])
 
   useEffect(() => {
+    let cancelado = false
     setCargando(true)
     const params = {}
     if (filtros.colegioId && filtros.colegioId !== 'lisos') params.colegioId = filtros.colegioId
     if (filtros.colegioId === 'lisos') params.lisos = '1'
+    if (filtros.colegial === '1') params.colegial = '1'
     if (filtros.tipo) params.tipo = filtros.tipo
     if (filtros.orden) params.orden = filtros.orden
     const q = searchParams.get('q')
@@ -46,10 +49,15 @@ export default function CatalogoPage() {
 
     productosApi.listar(params)
       .then(r => {
+        if (cancelado) return
         setProductos(r.data ?? r)
         setTotal(r.total ?? null)
       })
-      .finally(() => setCargando(false))
+      .finally(() => { if (!cancelado) setCargando(false) })
+
+    // Evita que una respuesta vieja (fetch anterior, aún en vuelo) pise
+    // el resultado del filtro/búsqueda más reciente.
+    return () => { cancelado = true }
   }, [searchParams])
 
   function handleFiltros(nuevos) {
@@ -65,7 +73,7 @@ export default function CatalogoPage() {
     setInputBusqueda('')
   }
 
-  const hayFiltros = filtros.colegioId || filtros.tipo || filtros.orden || searchParams.get('q')
+  const hayFiltros = filtros.colegioId || filtros.tipo || filtros.orden || filtros.colegial || searchParams.get('q')
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
