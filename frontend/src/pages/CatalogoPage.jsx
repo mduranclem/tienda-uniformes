@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { colegiosApi, productosApi } from '../services/api'
+import { colegiosApi, productosApi, categoriasApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import FilterBar from '../components/catalog/FilterBar'
 import { Search, ChevronLeft, X } from 'lucide-react'
@@ -9,6 +9,7 @@ export default function CatalogoPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [productos, setProductos] = useState([])
   const [colegios, setColegios] = useState([])
+  const [categorias, setCategorias] = useState([])
   const [total, setTotal] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [inputBusqueda, setInputBusqueda] = useState(searchParams.get('q') ?? '')
@@ -22,6 +23,7 @@ export default function CatalogoPage() {
 
   useEffect(() => {
     colegiosApi.listar().then(r => setColegios(r.data ?? r))
+    categoriasApi.listar().then(r => setCategorias(r.data ?? r))
   }, [])
 
   // Debounce: actualiza la URL 500ms después de que el usuario deja de escribir
@@ -105,7 +107,7 @@ export default function CatalogoPage() {
 
       {/* Filtros */}
       <div className="mb-4">
-        <FilterBar colegios={colegios} filtros={filtros} onChange={handleFiltros} />
+        <FilterBar colegios={colegios} categorias={categorias} filtros={filtros} onChange={handleFiltros} />
       </div>
 
       {/* Contador + limpiar filtros */}
