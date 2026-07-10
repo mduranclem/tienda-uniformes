@@ -9,14 +9,31 @@ function posicionTalle(talle) {
   return i === -1 ? ORDEN_TALLES.length : i
 }
 
+// Precio efectivo de una variante: el propio (si tiene) o el del producto
+// (con oferta si corresponde). Espeja la lógica de ProductoPage.
+function precioEfectivo(variante, producto) {
+  if (variante.precio != null) return { precio: Number(variante.precio), tieneOferta: false }
+  const tieneOferta = producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
+  return { precio: tieneOferta ? Number(producto.precioOferta) : Number(producto.precio), tieneOferta }
+}
+
 export default function ProductCard({ producto }) {
   const imagenPrincipal = producto.imagenes?.[0]?.url ?? '/placeholder.png'
-  const stockTotal = producto.variantes?.reduce((acc, v) => acc + v.stock, 0) ?? 0
-  const tieneOferta = producto.precioOferta && Number(producto.precioOferta) < Number(producto.precio)
+  const variantes = producto.variantes ?? []
+  const stockTotal = variantes.reduce((acc, v) => acc + v.stock, 0)
+
+  // "Desde $X": precio más bajo entre las variantes con stock (o, si ninguna
+  // tiene stock, entre todas) — siempre con el prefijo "Desde" para mantener
+  // consistencia visual aunque haya una sola variante o todas cuesten igual.
+  const variantesConStock = variantes.filter(v => v.stock > 0)
+  const variantesParaPrecio = variantesConStock.length > 0 ? variantesConStock : variantes
+  const opcionesPrecio = variantesParaPrecio.length > 0
+    ? variantesParaPrecio.map(v => precioEfectivo(v, producto))
+    : [precioEfectivo({ precio: null }, producto)]
+  const { precio: precioFinal, tieneOferta } = opcionesPrecio.reduce((min, p) => (p.precio < min.precio ? p : min))
   const descuentoPct = tieneOferta
-    ? Math.round((1 - Number(producto.precioOferta) / Number(producto.precio)) * 100)
+    ? Math.round((1 - precioFinal / Number(producto.precio)) * 100)
     : 0
-  const precioFinal = tieneOferta ? Number(producto.precioOferta) : Number(producto.precio)
   const cuotas = infoCuotas(precioFinal, producto.cuotas, producto.cuotasRecargo)
 
   // Rango de talles disponibles (solo variantes con stock)
@@ -63,14 +80,14 @@ export default function ProductCard({ producto }) {
         <div className="mt-auto pt-2">
           {tieneOferta ? (
             <>
-              <p className="text-base font-bold text-red-400">{formatPrecio(producto.precioOferta)}</p>
+              <p className="text-base font-bold text-red-400">Desde {formatPrecio(precioFinal)}</p>
               <p className="text-xs text-zinc-600 line-through">{formatPrecio(producto.precio)}</p>
             </>
           ) : (
-            <p className="text-base font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
+            <p className="text-base font-bold text-zinc-100">Desde {formatPrecio(precioFinal)}</p>
           )}
           {cuotas && (
-            <p className="text-xs text-green-400">{cuotas.texto}</p>
+            <p className="text-xs text-green-400">Desde {cuotas.texto}</p>
           )}
           {stockTotal > 0 && stockTotal < 5 ? (
             <p className="text-xs font-semibold text-amber-400 mt-0.5">¡Últimas unidades!</p>
