@@ -45,7 +45,7 @@ router.get('/', async (req, res, next) => {
         include: {
           colegio: { select: { id: true, nombre: true, slug: true, logo: true } },
           imagenes: { orderBy: { orden: 'asc' }, take: 1 },
-          variantes: { select: { id: true, talle: true, color: true, stock: true } },
+          variantes: { select: { id: true, talle: true, color: true, stock: true, precio: true } },
         },
       }),
     ])
