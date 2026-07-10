@@ -28,7 +28,7 @@ function CategoriaCard({ to, label, img, fallbackBg }) {
   )
 }
 
-function HeroCarrusel({ slides, colegios, imgLisos, imgColegial }) {
+function HeroCarrusel({ slides, imgLisos, imgColegial }) {
   const [idx, setIdx] = useState(0)
   const total = slides.length
 
@@ -82,11 +82,6 @@ function HeroCarrusel({ slides, colegios, imgLisos, imgColegial }) {
         </p>
       </div>
 
-      {/* Selector de colegio — compacto */}
-      <div className="px-4">
-        <ColegioSelector colegios={colegios} compact />
-      </div>
-
       {/* Cards de categoría */}
       <div className="px-4 flex flex-row gap-3">
         <CategoriaCard
@@ -124,7 +119,7 @@ function HeroCarrusel({ slides, colegios, imgLisos, imgColegial }) {
   )
 }
 
-function SeccionProductos({ titulo, subtitulo, productos, cargando, verTodosHref }) {
+function SeccionProductos({ titulo, subtitulo, productos, cargando, verTodosHref, colegios }) {
   return (
     <section className="max-w-6xl mx-auto px-4 py-10 md:py-12">
       <div className="flex items-end justify-between gap-4 mb-1">
@@ -134,6 +129,11 @@ function SeccionProductos({ titulo, subtitulo, productos, cargando, verTodosHref
         </Link>
       </div>
       <p className="text-sm text-zinc-500 mb-5">{subtitulo}</p>
+      {colegios && (
+        <div className="mb-5">
+          <ColegioSelector colegios={colegios} />
+        </div>
+      )}
       <ProductGrid productos={productos} cargando={cargando} />
     </section>
   )
@@ -171,7 +171,7 @@ export default function HomePage() {
 
   return (
     <div>
-      <HeroCarrusel slides={slides} colegios={colegios} imgLisos={imgLisos} imgColegial={imgColegial} />
+      <HeroCarrusel slides={slides} imgLisos={imgLisos} imgColegial={imgColegial} />
 
       <SeccionProductos
         titulo="Ropa Colegial"
@@ -179,6 +179,7 @@ export default function HomePage() {
         productos={colegiales}
         cargando={cargandoColegiales}
         verTodosHref="/catalogo?colegial=1"
+        colegios={colegios}
       />
 
       <SeccionProductos

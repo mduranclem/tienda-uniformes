@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { colegiosApi, productosApi, categoriasApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import FilterBar from '../components/catalog/FilterBar'
+import ColegioSelector from '../components/home/ColegioSelector'
 import { Search, ChevronLeft, X } from 'lucide-react'
 
 export default function CatalogoPage() {
@@ -85,25 +86,31 @@ export default function CatalogoPage() {
       </Link>
       <h1 className="text-2xl font-bold text-zinc-100 mb-4">Catálogo</h1>
 
-      {/* Buscador — siempre visible */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
-        <input
-          type="search"
-          value={inputBusqueda}
-          onChange={e => setInputBusqueda(e.target.value)}
-          placeholder="Buscar productos..."
-          className="w-full pl-9 pr-10 py-2.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        {inputBusqueda && (
-          <button
-            onClick={limpiarBusqueda}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      {/* Catálogo colegial: selector de colegio en vez del buscador genérico */}
+      {filtros.colegial === '1' ? (
+        <div className="mb-4">
+          <ColegioSelector colegios={colegios} compact />
+        </div>
+      ) : (
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
+          <input
+            type="search"
+            value={inputBusqueda}
+            onChange={e => setInputBusqueda(e.target.value)}
+            placeholder="Buscar productos..."
+            className="w-full pl-9 pr-10 py-2.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {inputBusqueda && (
+            <button
+              onClick={limpiarBusqueda}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="mb-4">
