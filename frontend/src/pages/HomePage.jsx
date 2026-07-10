@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { colegiosApi, productosApi } from '../services/api'
+import { colegiosApi, productosApi, primeraCompraApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
+import { useAuth } from '../context/AuthContext'
 import { Sparkles, Truck, ShieldCheck, Lock } from 'lucide-react'
 
 function CategoriaCard({ to, label, img, fallbackBg }) {
@@ -140,12 +141,15 @@ function SeccionProductos({ titulo, subtitulo, productos, cargando, verTodosHref
 }
 
 export default function HomePage() {
+  const { usuario } = useAuth()
   const [colegios, setColegios] = useState([])
   const [novedades, setNovedades] = useState([])
   const [colegiales, setColegiales] = useState([])
   const [lisos, setLisos] = useState([])
   const [cargandoColegiales, setCargandoColegiales] = useState(true)
   const [cargandoLisos, setCargandoLisos] = useState(true)
+  // Sin sesión no tenemos el email hasta el checkout: se muestra siempre.
+  const [mostrarBannerBienvenida, setMostrarBannerBienvenida] = useState(true)
 
   useEffect(() => {
     colegiosApi.listar().then(r => setColegios(r.data ?? r))
@@ -164,6 +168,14 @@ export default function HomePage() {
       .then(r => setLisos(r.data ?? r))
       .finally(() => setCargandoLisos(false))
   }, [])
+
+  // Con sesión: ocultar el banner si el usuario ya usó el 20% de bienvenida.
+  useEffect(() => {
+    if (!usuario?.email) { setMostrarBannerBienvenida(true); return }
+    primeraCompraApi.verificar(usuario.email)
+      .then(r => setMostrarBannerBienvenida(r.aplica))
+      .catch(() => setMostrarBannerBienvenida(true))
+  }, [usuario])
 
   const slides = novedades.map(p => ({ id: p.id, url: p.imagenes[0].url, titulo: p.nombre }))
   const imgColegial = colegiales[0]?.imagenes?.[0]?.url
@@ -191,21 +203,23 @@ export default function HomePage() {
       />
 
       {/* Banner de cierre — 20% OFF primera compra */}
-      <section className="max-w-6xl mx-auto px-4 pb-14">
-        <div className="bg-gradient-to-r from-blue-600/20 to-emerald-600/20 border border-blue-500/20 rounded-2xl px-6 py-8 md:py-10 flex flex-col items-center text-center gap-3">
-          <Sparkles className="w-7 h-7 text-blue-400" />
-          <h2 className="text-xl md:text-2xl font-bold text-zinc-50">20% OFF en tu primera compra</h2>
-          <p className="text-sm text-zinc-400 max-w-md">
-            El descuento se aplica automáticamente al finalizar tu primera compra.
-          </p>
-          <Link
-            to="/catalogo"
-            className="inline-block bg-blue-600 text-white font-bold px-8 py-3 rounded-full hover:bg-blue-500 transition-colors text-base mt-1"
-          >
-            Comprar ahora
-          </Link>
-        </div>
-      </section>
+      {mostrarBannerBienvenida && (
+        <section className="max-w-6xl mx-auto px-4 pb-14">
+          <div className="bg-gradient-to-r from-blue-600/20 to-emerald-600/20 border border-blue-500/20 rounded-2xl px-6 py-8 md:py-10 flex flex-col items-center text-center gap-3">
+            <Sparkles className="w-7 h-7 text-blue-400" />
+            <h2 className="text-xl md:text-2xl font-bold text-zinc-50">20% OFF en tu primera compra</h2>
+            <p className="text-sm text-zinc-400 max-w-md">
+              El descuento se aplica automáticamente al finalizar tu primera compra.
+            </p>
+            <Link
+              to="/catalogo"
+              className="inline-block bg-blue-600 text-white font-bold px-8 py-3 rounded-full hover:bg-blue-500 transition-colors text-base mt-1"
+            >
+              Comprar ahora
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   )
 }
