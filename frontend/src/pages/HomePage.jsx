@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { colegiosApi, productosApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Truck, ShieldCheck, Lock } from 'lucide-react'
 
 function CategoriaCard({ to, label, img, fallbackBg }) {
   return (
@@ -104,9 +104,22 @@ function HeroCarrusel({ slides, colegios, imgLisos, imgColegial }) {
       </div>
 
       {/* Trust signals — una sola línea compacta */}
-      <p className="px-4 text-center text-[10px] sm:text-xs text-zinc-500 whitespace-nowrap overflow-x-auto">
-        Envío gratis en Rosario · Calidad garantizada · Pagos seguros
-      </p>
+      <div className="px-4 flex items-center justify-center gap-1.5 text-[10px] sm:text-xs text-emerald-400 whitespace-nowrap overflow-x-auto">
+        <span className="flex items-center gap-1">
+          <Truck className="w-3 h-3 flex-shrink-0" />
+          Envío gratis en Rosario
+        </span>
+        <span className="text-zinc-600">·</span>
+        <span className="flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3 flex-shrink-0" />
+          Calidad garantizada
+        </span>
+        <span className="text-zinc-600">·</span>
+        <span className="flex items-center gap-1">
+          <Lock className="w-3 h-3 flex-shrink-0" />
+          Pagos seguros
+        </span>
+      </div>
     </section>
   )
 }
