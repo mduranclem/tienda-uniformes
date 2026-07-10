@@ -1,3 +1,5 @@
+import { posicionTalle } from '../../lib/utils'
+
 export default function VariantSelector({ variantes = [], seleccionada, colorActual, onColor, onChange }) {
   const colores = [...new Set(variantes.map(v => v.color).filter(Boolean))]
   const tieneColores = colores.length > 0
@@ -6,6 +8,7 @@ export default function VariantSelector({ variantes = [], seleccionada, colorAct
     ? variantes.filter(v => v.color === colorActual)
     : variantes
   const talles = [...new Set(variantesFiltradas.map(v => v.talle))]
+    .sort((a, b) => posicionTalle(a) - posicionTalle(b))
 
   function seleccionarTalle(talle) {
     onChange(variantesFiltradas.find(v => v.talle === talle))

@@ -40,6 +40,15 @@ export function infoCuotas(precioFinal, cuotas, cuotasRecargo) {
   return { n, sinInteres, monto, texto }
 }
 
+const ORDEN_TALLES = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
+
+// Posición de un talle para ordenar de más chico a más grande. Los talles
+// no reconocidos van al final, en el orden en que aparezcan.
+export function posicionTalle(talle) {
+  const i = ORDEN_TALLES.indexOf(String(talle).toUpperCase())
+  return i === -1 ? ORDEN_TALLES.length : i
+}
+
 // Capitaliza la primera letra de cada palabra
 export function titleCase(texto) {
   if (!texto) return ''

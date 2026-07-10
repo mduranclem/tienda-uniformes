@@ -1,13 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Truck } from 'lucide-react'
-import { formatPrecio, titleCase, infoCuotas } from '../../lib/utils'
-
-const ORDEN_TALLES = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
-
-function posicionTalle(talle) {
-  const i = ORDEN_TALLES.indexOf(String(talle).toUpperCase())
-  return i === -1 ? ORDEN_TALLES.length : i
-}
+import { formatPrecio, titleCase, infoCuotas, posicionTalle } from '../../lib/utils'
 
 // Precio efectivo de una variante: el propio (si tiene) o el del producto
 // (con oferta si corresponde). Espeja la lógica de ProductoPage.
