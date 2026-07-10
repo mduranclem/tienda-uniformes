@@ -5,7 +5,30 @@ import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
 import { Sparkles } from 'lucide-react'
 
-function HeroCarrusel({ slides, colegios }) {
+function CategoriaCard({ to, label, img, fallbackBg }) {
+  return (
+    <Link
+      to={to}
+      className={`relative flex-1 h-28 sm:h-36 rounded-xl overflow-hidden flex items-center justify-center ${fallbackBg}`}
+    >
+      {img && (
+        <img
+          src={img}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+      <div className="absolute inset-0 bg-black/45" />
+      <span className="relative text-white font-bold text-lg sm:text-xl drop-shadow-md">
+        {label}
+      </span>
+    </Link>
+  )
+}
+
+function HeroCarrusel({ slides, colegios, imgLisos, imgColegial }) {
   const [idx, setIdx] = useState(0)
   const total = slides.length
 
@@ -17,10 +40,10 @@ function HeroCarrusel({ slides, colegios }) {
   }, [total])
 
   return (
-    <section className="bg-zinc-950 flex flex-col gap-2.5 pt-3 pb-4">
+    <section className="bg-zinc-950 flex flex-col gap-2 pt-3 pb-4">
 
       {/* Carrusel de fotos de producto — full-bleed, bajo, fade */}
-      <div className="relative w-full h-[180px] sm:h-[250px] lg:h-[350px] overflow-hidden bg-zinc-900">
+      <div className="relative w-full h-[160px] sm:h-[250px] lg:h-[350px] overflow-hidden bg-zinc-900">
         {total === 0 && <div className="absolute inset-0 bg-zinc-900 animate-pulse" />}
         {slides.map((s, i) => (
           <img
@@ -49,25 +72,35 @@ function HeroCarrusel({ slides, colegios }) {
         )}
       </div>
 
+      {/* Bloque de presentación — compacto */}
+      <div className="px-4 text-center">
+        <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">
+          Uniformes oficiales y básicos lisos
+        </h1>
+        <p className="text-xs sm:text-sm text-zinc-300 line-clamp-2 mt-0.5">
+          Remeras, buzos y más. Encontrá los modelos de tu institución o elegí entre nuestros lisos.
+        </p>
+      </div>
+
       {/* Selector de colegio — compacto */}
       <div className="px-4">
         <ColegioSelector colegios={colegios} compact />
       </div>
 
-      {/* Botones de categoría */}
+      {/* Cards de categoría */}
       <div className="px-4 flex flex-row gap-3">
-        <Link
+        <CategoriaCard
           to="/catalogo?colegioId=lisos"
-          className="flex-1 min-h-[48px] flex items-center justify-center rounded-xl bg-white text-zinc-900 font-bold text-base border border-zinc-200 hover:bg-zinc-100 transition-colors"
-        >
-          Lisos
-        </Link>
-        <Link
+          label="Lisos"
+          img={imgLisos}
+          fallbackBg="bg-zinc-800"
+        />
+        <CategoriaCard
           to="/catalogo?colegial=1"
-          className="flex-1 min-h-[48px] flex items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 transition-colors"
-        >
-          Colegial
-        </Link>
+          label="Colegial"
+          img={imgColegial}
+          fallbackBg="bg-blue-600"
+        />
       </div>
 
       {/* Trust signals — una sola línea compacta */}
@@ -120,10 +153,12 @@ export default function HomePage() {
   }, [])
 
   const slides = novedades.map(p => ({ id: p.id, url: p.imagenes[0].url, titulo: p.nombre }))
+  const imgColegial = colegiales[0]?.imagenes?.[0]?.url
+  const imgLisos = lisos[0]?.imagenes?.[0]?.url
 
   return (
     <div>
-      <HeroCarrusel slides={slides} colegios={colegios} />
+      <HeroCarrusel slides={slides} colegios={colegios} imgLisos={imgLisos} imgColegial={imgColegial} />
 
       <SeccionProductos
         titulo="Ropa Colegial"
