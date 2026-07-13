@@ -2,6 +2,7 @@ const { Router } = require('express')
 const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
+const { notificarOrdenPagada, notificarCambioEstado } = require('../../services/notificaciones')
 
 const router = Router()
 
@@ -99,6 +100,24 @@ router.put('/:id/estado', async (req, res, next) => {
       return actualizada
     })
 
+    // Notificar vía n8n (no bloqueante)
+    prisma.orden.findUnique({
+      where: { id: req.params.id },
+      include: {
+        usuario: { select: { email: true, nombre: true, telefono: true } },
+        items: {
+          include: {
+            producto: { select: { nombre: true } },
+            variante: { select: { talle: true, color: true } },
+          },
+        },
+      },
+    }).then(ordenCompleta => {
+      if (!ordenCompleta) return
+      notificarCambioEstado(ordenCompleta, estado).catch(() => {})
+      if (estado === 'PAGADA') notificarOrdenPagada(ordenCompleta).catch(() => {})
+    })
+
     res.json(orden)
   } catch (err) { next(err) }
 })
@@ -112,7 +131,10 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
 
     const pendientes = await prisma.orden.findMany({
       where: { estado: 'PENDIENTE', createdAt: { lt: corte } },
-      include: { items: true },
+      include: {
+        items: true,
+        usuario: { select: { email: true, nombre: true, telefono: true } },
+      },
     })
 
     let canceladas = 0
@@ -133,6 +155,7 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
           },
         })
       })
+      notificarCambioEstado(orden, 'CANCELADA').catch(() => {})
       canceladas++
     }
 

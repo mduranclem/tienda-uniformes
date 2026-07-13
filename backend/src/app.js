@@ -22,6 +22,8 @@ const adminOrdenesRouter = require('./routes/admin/ordenes')
 const adminCuponesRouter = require('./routes/admin/cupones')
 const adminEntregasRouter = require('./routes/admin/entregas')
 const adminBannersRouter = require('./routes/admin/banners')
+const botRouter = require('./routes/bot')
+const adminBotRouter = require('./routes/admin/bot')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
@@ -63,6 +65,8 @@ app.use('/api/admin/cupones', adminCuponesRouter)
 app.use('/api/admin/entregas', adminEntregasRouter)
 app.use('/api/admin/banners', adminBannersRouter)
 app.use('/api/pagos', pagosRouter)
+app.use('/api/bot', botRouter)
+app.use('/api/admin/bot', adminBotRouter)
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 

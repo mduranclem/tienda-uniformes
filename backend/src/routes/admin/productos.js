@@ -1,10 +1,18 @@
 const { Router } = require('express')
+const multer = require('multer')
+const sharp = require('sharp')
 const prisma = require('../../lib/prisma')
+const supabaseAdmin = require('../../lib/supabaseAdmin')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
+const { verificarAlertasStock } = require('../../services/alertasStock')
 
 const router = Router()
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB de entrada; se comprime igual antes de subir
+})
 
 router.use(authMiddleware, adminOnly)
 
@@ -96,13 +104,48 @@ router.delete('/:id', async (req, res, next) => {
 
 // ── Imágenes ──────────────────────────────────────────────────────────────────
 
+const CACHE_CONTROL_1_ANIO = '31536000'
+const ANCHO_MAX = 1200
+const CALIDAD_WEBP = 80
+
+// Redimensiona (máx 1200px de ancho, sin agrandar) y convierte a WebP calidad 80.
+async function comprimirAWebp(buffer) {
+  return sharp(buffer)
+    .resize({ width: ANCHO_MAX, withoutEnlargement: true })
+    .webp({ quality: CALIDAD_WEBP })
+    .toBuffer()
+}
+
 // POST /api/admin/productos/:id/imagenes
-router.post('/:id/imagenes', async (req, res, next) => {
+// Recibe multipart/form-data con el archivo en el campo "imagen" (+ alt/orden
+// opcionales). Comprime a WebP en el servidor y sube a Supabase Storage con
+// cache de 1 año — el frontend nunca sube directo a Supabase.
+router.post('/:id/imagenes', upload.single('imagen'), async (req, res, next) => {
   try {
-    const { url, alt, orden } = req.body
-    if (!url) return res.status(400).json({ mensaje: 'url es requerida' })
+    if (!req.file) return res.status(400).json({ mensaje: 'imagen es requerida (campo "imagen")' })
+
+    const { alt, orden } = req.body
+    const webpBuffer = await comprimirAWebp(req.file.buffer)
+    const path = `productos/${req.params.id}/${Date.now()}.webp`
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from('productos')
+      .upload(path, webpBuffer, {
+        cacheControl: CACHE_CONTROL_1_ANIO,
+        upsert: true,
+        contentType: 'image/webp',
+      })
+    if (upErr) return res.status(500).json({ mensaje: `Error subiendo a Supabase: ${upErr.message}` })
+
+    const { data: { publicUrl } } = supabaseAdmin.storage.from('productos').getPublicUrl(path)
+
     const imagen = await prisma.productImage.create({
-      data: { productoId: req.params.id, url, alt: alt ?? null, orden: orden ?? 0 },
+      data: {
+        productoId: req.params.id,
+        url: publicUrl,
+        alt: alt ?? null,
+        orden: orden ? Number(orden) : 0,
+      },
     })
     res.status(201).json(imagen)
   } catch (err) { next(err) }
@@ -157,6 +200,10 @@ router.post('/:id/variantes', async (req, res, next) => {
 router.put('/variantes/:varianteId', async (req, res, next) => {
   try {
     const { talle, color, stock, sku, precio } = req.body
+
+    const anterior = await prisma.variante.findUnique({ where: { id: req.params.varianteId } })
+    if (!anterior) return res.status(404).json({ mensaje: 'Variante no encontrada' })
+
     const variante = await prisma.variante.update({
       where: { id: req.params.varianteId },
       data: {
@@ -167,6 +214,11 @@ router.put('/variantes/:varianteId', async (req, res, next) => {
         precio: precio !== undefined ? (precio ? parseFloat(precio) : null) : undefined,
       },
     })
+
+    if (stock !== undefined) {
+      verificarAlertasStock(variante.id, anterior.stock, variante.stock).catch(() => {})
+    }
+
     res.json(variante)
   } catch (err) { next(err) }
 })

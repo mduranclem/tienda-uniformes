@@ -99,6 +99,7 @@ model Variante {
 
   itemsOrden   ItemOrden[]
   itemsCarrito ItemCarrito[]
+  alertas      AlertaStock[]
 
   @@unique([productoId, talle, color])
 }
@@ -297,4 +298,24 @@ model AlumnoTalle {
   talle      String
 
   @@unique([alumnoId, tipoPrenda])
+}
+
+// ── Bot WhatsApp (n8n) ────────────────────────────────────────────────────────
+
+// Config editable desde el admin: horarios, dirección, política de cambios, etc.
+model ConfigTienda {
+  clave String @id
+  valor String
+}
+
+// Suscripciones a "avisame cuando haya stock" para el bot de WhatsApp
+model AlertaStock {
+  id         String   @id @default(cuid())
+  telefono   String
+  varianteId String
+  variante   Variante @relation(fields: [varianteId], references: [id], onDelete: Cascade)
+  notificada Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([varianteId, notificada])
 }

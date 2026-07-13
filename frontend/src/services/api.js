@@ -7,9 +7,11 @@ const BASE = getBase()
 
 async function request(path, options = {}) {
   const { headers: extraHeaders, ...restOptions } = options
+  // FormData: el browser arma su propio Content-Type (con boundary) — no forzar json.
+  const esFormData = restOptions.body instanceof FormData
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { ...(esFormData ? {} : { 'Content-Type': 'application/json' }), ...extraHeaders },
     ...restOptions,
   })
   if (!res.ok) {
@@ -72,6 +74,14 @@ export const adminApi = {
   actualizarProducto: (token, id, data) => adminRequest(`/admin/productos/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarProducto: (token, id) => adminRequest(`/admin/productos/${id}`, { method: 'DELETE' }, token),
   agregarImagen: (token, productoId, data) => adminRequest(`/admin/productos/${productoId}/imagenes`, { method: 'POST', body: JSON.stringify(data) }, token),
+  // Sube el archivo crudo — el backend lo comprime a WebP y lo sube a Supabase Storage.
+  subirImagenProducto: (token, productoId, file, { alt, orden } = {}) => {
+    const form = new FormData()
+    form.append('imagen', file)
+    if (alt) form.append('alt', alt)
+    if (orden !== undefined) form.append('orden', String(orden))
+    return adminRequest(`/admin/productos/${productoId}/imagenes`, { method: 'POST', body: form }, token)
+  },
   actualizarImagen: (token, imagenId, data) => adminRequest(`/admin/productos/imagenes/${imagenId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarImagen: (token, imagenId) => adminRequest(`/admin/productos/imagenes/${imagenId}`, { method: 'DELETE' }, token),
   crearVariante: (token, productoId, data) => adminRequest(`/admin/productos/${productoId}/variantes`, { method: 'POST', body: JSON.stringify(data) }, token),
@@ -104,6 +114,9 @@ export const adminApi = {
   crearCategoria: (token, data) => adminRequest('/admin/categorias', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarCategoria: (token, id, data) => adminRequest(`/admin/categorias/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarCategoria: (token, id) => adminRequest(`/admin/categorias/${id}`, { method: 'DELETE' }, token),
+  // Bot / config tienda
+  obtenerConfigBot: (token) => adminRequest('/admin/bot', {}, token),
+  actualizarConfigBot: (token, data) => adminRequest('/admin/bot', { method: 'PUT', body: JSON.stringify(data) }, token),
 }
 
 // ── Entregas ──────────────────────────────────────────────────────────────────
