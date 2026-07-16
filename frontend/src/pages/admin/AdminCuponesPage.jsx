@@ -162,7 +162,7 @@ export default function AdminCuponesPage() {
       {cargando ? (
         <div className="flex justify-center py-20"><Spinner className="w-8 h-8" /></div>
       ) : (
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-x-auto">
           <table className="w-full text-left">
             <thead className="border-b border-zinc-800">
               <tr>
