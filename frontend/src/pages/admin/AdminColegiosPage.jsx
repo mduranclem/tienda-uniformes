@@ -19,7 +19,7 @@ function ModalColegio({ colegio, token, onGuardado, onCerrar }) {
     const comprimido = await comprimirImagen(file, { maxAncho: 800, maxAlto: 800 })
     const ext = comprimido.name.split('.').pop()
     const path = `colegios/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimido, { upsert: true })
+    const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimido, { upsert: true, cacheControl: '31536000' })
     if (upErr) { setError(upErr.message); setSubiendo(false); return }
     const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
     setLogo(publicUrl)

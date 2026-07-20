@@ -239,7 +239,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
       const comprimida = await comprimirImagen(file)
       const ext = comprimida.name.split('.').pop()
       const path = `productos/${producto.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimida, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimida, { upsert: true, cacheControl: '31536000' })
       if (upErr) throw upErr
       const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
       await adminApi.agregarImagen(token, producto.id, { url: publicUrl, orden: producto.imagenes.length })

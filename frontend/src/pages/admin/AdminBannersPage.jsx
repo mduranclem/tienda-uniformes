@@ -30,7 +30,7 @@ export default function AdminBannersPage() {
       const comprimido = await comprimirImagen(file, { maxAncho: 1920, maxAlto: 1920 })
       const ext = comprimido.name.split('.').pop()
       const path = `banners/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimido, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimido, { upsert: true, cacheControl: '31536000' })
       if (upErr) throw upErr
       const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
       await adminApi.crearBanner(token, { url: publicUrl, orden: slides.length })
