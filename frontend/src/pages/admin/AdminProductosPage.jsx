@@ -3,6 +3,7 @@ import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { formatPrecio, infoCuotas } from '../../lib/utils'
+import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
 import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
@@ -235,9 +236,10 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
     const file = e.target.files[0]; if (!file) return
     setSubiendoImg(true)
     try {
-      const ext = file.name.split('.').pop()
+      const comprimida = await comprimirImagen(file)
+      const ext = comprimida.name.split('.').pop()
       const path = `productos/${producto.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('productos').upload(path, file, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimida, { upsert: true })
       if (upErr) throw upErr
       const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
       await adminApi.agregarImagen(token, producto.id, { url: publicUrl, orden: producto.imagenes.length })

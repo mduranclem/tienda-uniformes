@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
+import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import { Trash2, Upload, GripVertical, Eye, EyeOff } from 'lucide-react'
 
@@ -26,9 +27,10 @@ export default function AdminBannersPage() {
     if (!file) return
     setSubiendo(true)
     try {
-      const ext = file.name.split('.').pop()
+      const comprimido = await comprimirImagen(file, { maxAncho: 1920, maxAlto: 1920 })
+      const ext = comprimido.name.split('.').pop()
       const path = `banners/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('productos').upload(path, file, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimido, { upsert: true })
       if (upErr) throw upErr
       const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
       await adminApi.crearBanner(token, { url: publicUrl, orden: slides.length })

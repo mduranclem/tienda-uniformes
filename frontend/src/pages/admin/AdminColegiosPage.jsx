@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
+import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import { Plus, X, Pencil, Trash2, Upload } from 'lucide-react'
 
@@ -15,9 +16,10 @@ function ModalColegio({ colegio, token, onGuardado, onCerrar }) {
 
   async function subirLogo(file) {
     setSubiendo(true)
-    const ext = file.name.split('.').pop()
+    const comprimido = await comprimirImagen(file, { maxAncho: 800, maxAlto: 800 })
+    const ext = comprimido.name.split('.').pop()
     const path = `colegios/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('productos').upload(path, file, { upsert: true })
+    const { error: upErr } = await supabase.storage.from('productos').upload(path, comprimido, { upsert: true })
     if (upErr) { setError(upErr.message); setSubiendo(false); return }
     const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
     setLogo(publicUrl)
