@@ -4,7 +4,8 @@ import { colegiosApi, productosApi, primeraCompraApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
 import { useAuth } from '../context/AuthContext'
-import { Sparkles, Truck, ShieldCheck, Lock } from 'lucide-react'
+import { Sparkles, Truck, ShieldCheck, Lock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useSwipe } from '../lib/useSwipe'
 
 function CategoriaCard({ to, label, img, fallbackBg }) {
   return (
@@ -40,11 +41,19 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
     return () => clearInterval(t)
   }, [total])
 
+  function siguiente() { setIdx(i => (i + 1) % total) }
+  function anterior() { setIdx(i => (i - 1 + total) % total) }
+  const swipe = useSwipe(siguiente, anterior)
+
   return (
     <section className="bg-zinc-950 flex flex-col gap-2 pt-3 pb-4">
 
       {/* Carrusel de fotos de producto — full-bleed, bajo, fade */}
-      <div className="relative w-full h-[160px] sm:h-[250px] lg:h-[350px] overflow-hidden bg-zinc-900">
+      <div
+        className="relative w-full h-[160px] sm:h-[250px] lg:h-[350px] overflow-hidden bg-zinc-900"
+        onTouchStart={swipe.onTouchStart}
+        onTouchEnd={swipe.onTouchEnd}
+      >
         {total === 0 && <div className="absolute inset-0 bg-zinc-900 animate-pulse" />}
         {slides.map((s, i) => (
           <img
@@ -60,16 +69,32 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
         ))}
 
         {total > 1 && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 z-10">
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                aria-label={`Ver foto ${i + 1}`}
-                className={`rounded-full transition-all ${i === idx ? 'bg-white w-4 h-1.5' : 'bg-white/50 w-1.5 h-1.5'}`}
-              />
-            ))}
-          </div>
+          <>
+            <button
+              onClick={anterior}
+              aria-label="Foto anterior"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 z-10 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={siguiente}
+              aria-label="Foto siguiente"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 z-10 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 z-10">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIdx(i)}
+                  aria-label={`Ver foto ${i + 1}`}
+                  className={`rounded-full transition-all ${i === idx ? 'bg-white w-4 h-1.5' : 'bg-white/50 w-1.5 h-1.5'}`}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
