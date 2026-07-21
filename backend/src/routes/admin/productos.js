@@ -33,9 +33,9 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ mensaje: 'nombre es requerido' })
     }
     const tipoFinal = tipo ?? 'REMERA'
-    const precio = await precioBaseCategoria(prisma, { tipo: tipoFinal, colegial: !!colegioId })
+    const precio = await precioBaseCategoria(prisma, { tipo: tipoFinal })
     if (precio === null) {
-      return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría (Colegial/Liso) antes de crear el producto' })
+      return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría antes de crear el producto' })
     }
     const producto = await prisma.producto.create({
       data: {
@@ -66,14 +66,10 @@ router.put('/:id', async (req, res, next) => {
     const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, colegioId, activo } = req.body
 
     let precio
-    if (tipo !== undefined || colegioId !== undefined) {
-      const actual = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true, colegioId: true } })
-      if (!actual) return res.status(404).json({ mensaje: 'Producto no encontrado' })
-      const tipoFinal = tipo !== undefined ? tipo : actual.tipo
-      const colegioIdFinal = colegioId !== undefined ? (colegioId || null) : actual.colegioId
-      precio = await precioBaseCategoria(prisma, { tipo: tipoFinal, colegial: !!colegioIdFinal })
+    if (tipo !== undefined) {
+      precio = await precioBaseCategoria(prisma, { tipo })
       if (precio === null) {
-        return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría (Colegial/Liso) antes de guardar' })
+        return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría antes de guardar' })
       }
     }
 
@@ -161,9 +157,9 @@ router.post('/:id/variantes', async (req, res, next) => {
 
     let precioFinal = precio ? parseFloat(precio) : null
     if (precioFinal === null) {
-      const producto = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true, colegioId: true } })
+      const producto = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true } })
       if (producto) {
-        precioFinal = await resolverPrecioBanda(prisma, { tipo: producto.tipo, colegial: !!producto.colegioId, talle })
+        precioFinal = await resolverPrecioBanda(prisma, { tipo: producto.tipo, talle })
       }
     }
 
@@ -219,7 +215,7 @@ router.post('/:id/recalcular-precios', async (req, res, next) => {
 
     let actualizadas = 0
     for (const v of producto.variantes) {
-      const precio = await resolverPrecioBanda(prisma, { tipo: producto.tipo, colegial: !!producto.colegioId, talle: v.talle })
+      const precio = await resolverPrecioBanda(prisma, { tipo: producto.tipo, talle: v.talle })
       if (precio !== null) {
         await prisma.variante.update({ where: { id: v.id }, data: { precio } })
         actualizadas++

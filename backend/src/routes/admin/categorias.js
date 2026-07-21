@@ -60,7 +60,7 @@ router.delete('/:id', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── Bandas de precio (por talle, colegial/liso) ─────────────────────────────
+// ── Bandas de precio (por talle) ────────────────────────────────────────────
 
 function talleSolapado(bandasExistentes, talles, excluirId) {
   for (const b of bandasExistentes) {
@@ -85,7 +85,7 @@ router.get('/:id/bandas', async (req, res, next) => {
 // POST /api/admin/categorias/:id/bandas
 router.post('/:id/bandas', async (req, res, next) => {
   try {
-    const { colegial, talles, precio } = req.body
+    const { talles, precio } = req.body
     if (!Array.isArray(talles) || !talles.length) {
       return res.status(400).json({ mensaje: 'talles es requerido' })
     }
@@ -93,14 +93,14 @@ router.post('/:id/bandas', async (req, res, next) => {
       return res.status(400).json({ mensaje: 'precio es requerido' })
     }
     const existentes = await prisma.precioBanda.findMany({
-      where: { categoriaId: req.params.id, colegial: !!colegial },
+      where: { categoriaId: req.params.id },
     })
     const conflicto = talleSolapado(existentes, talles)
     if (conflicto) {
       return res.status(409).json({ mensaje: `El talle ${conflicto} ya está en otra banda` })
     }
     const banda = await prisma.precioBanda.create({
-      data: { categoriaId: req.params.id, colegial: !!colegial, talles, precio: Number(precio) },
+      data: { categoriaId: req.params.id, talles, precio: Number(precio) },
     })
     res.status(201).json(banda)
   } catch (err) { next(err) }
@@ -117,7 +117,7 @@ router.put('/bandas/:bandaId', async (req, res, next) => {
         return res.status(400).json({ mensaje: 'talles no puede estar vacío' })
       }
       const existentes = await prisma.precioBanda.findMany({
-        where: { categoriaId: actual.categoriaId, colegial: actual.colegial },
+        where: { categoriaId: actual.categoriaId },
       })
       const conflicto = talleSolapado(existentes, talles, actual.id)
       if (conflicto) {

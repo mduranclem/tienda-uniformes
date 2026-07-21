@@ -36,10 +36,8 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
   const [cargandoBandas, setCargandoBandas] = useState(true)
 
   const categoriaSeleccionada = categorias.find(c => c.nombre === form.tipo)
-  const colegial = !!form.colegioId
-  const bandasSeccion = bandas.filter(b => b.colegial === colegial)
-  const precioBase = bandasSeccion.length
-    ? Math.min(...bandasSeccion.map(b => Number(b.precio)))
+  const precioBase = bandas.length
+    ? Math.min(...bandas.map(b => Number(b.precio)))
     : null
 
   useEffect(() => {
@@ -105,12 +103,11 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
             <p className="text-xs text-zinc-500">Buscando precios configurados...</p>
           ) : precioBase === null ? (
             <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-              Esta categoría no tiene precios {colegial ? 'colegiales' : 'lisos'} configurados. Cargalos primero en
-              Categorías → {form.tipo} → {colegial ? 'Colegial (bordado)' : 'Liso'}.
+              Esta categoría no tiene precios configurados. Cargalos primero en Categorías → {form.tipo}.
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5 bg-zinc-800/50 border border-zinc-700/60 rounded-lg px-3 py-2">
-              {bandasSeccion.map(b => (
+              {bandas.map(b => (
                 <span key={b.id} className="text-xs text-zinc-300">
                   {b.talles.join(',')}: <span className="text-zinc-100 font-medium">{formatPrecio(b.precio)}</span>
                 </span>

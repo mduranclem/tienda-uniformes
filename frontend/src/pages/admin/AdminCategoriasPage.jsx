@@ -6,13 +6,11 @@ import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 import { Plus, Pencil, Check, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 
-function SeccionBandas({ titulo, colegial, categoriaId, bandas, token, onActualizado }) {
+function SeccionBandas({ categoriaId, bandas, token, onActualizado }) {
   const [tallesSeleccionados, setTallesSeleccionados] = useState([])
   const [precioNueva, setPrecioNueva] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
-
-  const bandasSeccion = bandas.filter(b => b.colegial === colegial)
 
   function toggleTalle(talle) {
     setTallesSeleccionados(s => s.includes(talle) ? s.filter(t => t !== talle) : [...s, talle])
@@ -24,7 +22,6 @@ function SeccionBandas({ titulo, colegial, categoriaId, bandas, token, onActuali
     setError(''); setGuardando(true)
     try {
       await adminApi.crearBanda(token, categoriaId, {
-        colegial,
         talles: tallesSeleccionados,
         precio: parseFloat(precioNueva),
       })
@@ -42,13 +39,13 @@ function SeccionBandas({ titulo, colegial, categoriaId, bandas, token, onActuali
 
   return (
     <div>
-      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">{titulo}</p>
+      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Precios por talle</p>
 
       <div className="flex flex-col gap-1.5 mb-3">
-        {bandasSeccion.length === 0 ? (
+        {bandas.length === 0 ? (
           <p className="text-xs text-amber-400/70 italic">Sin precios cargados</p>
         ) : (
-          bandasSeccion.map(b => (
+          bandas.map(b => (
             <div key={b.id} className="flex items-center justify-between gap-2 bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-1.5">
               <div className="flex flex-wrap items-center gap-1">
                 {b.talles.map(t => (
@@ -171,9 +168,8 @@ function FilaCategoria({ categoria, token, editandoId, editNombre, setEditandoId
             {cargandoBandas ? (
               <div className="flex justify-center py-6"><Spinner className="w-6 h-6" /></div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <SeccionBandas titulo="Colegial (bordado)" colegial={true} categoriaId={categoria.id} bandas={bandas} token={token} onActualizado={cargarBandas} />
-                <SeccionBandas titulo="Liso" colegial={false} categoriaId={categoria.id} bandas={bandas} token={token} onActualizado={cargarBandas} />
+              <div className="max-w-md">
+                <SeccionBandas categoriaId={categoria.id} bandas={bandas} token={token} onActualizado={cargarBandas} />
               </div>
             )}
           </td>

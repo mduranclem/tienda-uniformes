@@ -43,12 +43,12 @@ model Categoria {
   preciosBanda PrecioBanda[]
 }
 
-// Precio de una categoría por rango de talles, separado por colegial/liso
+// Precio de una categoría por rango de talles (cada categoría ya es específica,
+// ej. "CHOMBA BORDADA" vs "CHOMBA LISA" son categorías separadas)
 model PrecioBanda {
   id          String    @id @default(cuid())
   categoriaId String
   categoria   Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
-  colegial    Boolean
   talles      String[]
   precio      Decimal   @db.Decimal(10, 2)
   createdAt   DateTime  @default(now())
