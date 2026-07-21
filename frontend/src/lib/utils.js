@@ -40,7 +40,8 @@ export function infoCuotas(precioFinal, cuotas, cuotasRecargo) {
   return { n, sinInteres, monto, texto }
 }
 
-const ORDEN_TALLES = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
+export const TALLES_STANDARD = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
+const ORDEN_TALLES = TALLES_STANDARD
 
 // Posición de un talle para ordenar de más chico a más grande. Los talles
 // no reconocidos van al final, en el orden en que aparezcan.

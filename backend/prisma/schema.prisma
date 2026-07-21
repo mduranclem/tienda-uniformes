@@ -39,6 +39,19 @@ model Categoria {
   activo    Boolean  @default(true)
   orden     Int      @default(0)
   createdAt DateTime @default(now())
+
+  preciosBanda PrecioBanda[]
+}
+
+// Precio de una categoría por rango de talles, separado por colegial/liso
+model PrecioBanda {
+  id          String    @id @default(cuid())
+  categoriaId String
+  categoria   Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  colegial    Boolean
+  talles      String[]
+  precio      Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
 }
 
 // ── Productos ─────────────────────────────────────────────────────────────────

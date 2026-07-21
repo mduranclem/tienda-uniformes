@@ -2,13 +2,11 @@ import { useEffect, useState, Fragment } from 'react'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatPrecio, infoCuotas } from '../../lib/utils'
+import { formatPrecio, infoCuotas, TALLES_STANDARD } from '../../lib/utils'
 import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
-import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check } from 'lucide-react'
-
-const TALLES_STANDARD = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
+import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, RefreshCw } from 'lucide-react'
 
 function Campo({ label, children }) {
   return (
@@ -25,7 +23,6 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     nombre: producto?.nombre ?? '',
     descripcion: producto?.descripcion ?? '',
     tipo: producto?.tipo ?? (categorias[0]?.nombre ?? 'REMERA'),
-    precio: producto?.precio ?? '',
     precioOferta: producto?.precioOferta ?? '',
     cuotas: producto?.cuotas ?? '',
     financiacion: producto?.cuotasRecargo ? 'recargo' : 'sin_interes',
@@ -35,6 +32,23 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
   })
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const [bandas, setBandas] = useState([])
+  const [cargandoBandas, setCargandoBandas] = useState(true)
+
+  const categoriaSeleccionada = categorias.find(c => c.nombre === form.tipo)
+  const colegial = !!form.colegioId
+  const bandasSeccion = bandas.filter(b => b.colegial === colegial)
+  const precioBase = bandasSeccion.length
+    ? Math.min(...bandasSeccion.map(b => Number(b.precio)))
+    : null
+
+  useEffect(() => {
+    if (!categoriaSeleccionada) { setBandas([]); setCargandoBandas(false); return }
+    setCargandoBandas(true)
+    adminApi.listarBandas(token, categoriaSeleccionada.id)
+      .then(setBandas)
+      .finally(() => setCargandoBandas(false))
+  }, [categoriaSeleccionada?.id])
 
   function set(campo, valor) { setForm(f => ({ ...f, [campo]: valor })) }
 
@@ -44,7 +58,6 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
       const { financiacion, ...resto } = form
       const data = {
         ...resto,
-        precio: parseFloat(form.precio),
         precioOferta: form.precioOferta ? parseFloat(form.precioOferta) : null,
         cuotas: form.cuotas ? parseInt(form.cuotas) : null,
         cuotasRecargo: form.cuotas && financiacion === 'recargo' && form.cuotasRecargo
@@ -80,11 +93,31 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
                 {categorias.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
               </select>
             </Campo>
-            <Campo label="Precio *">
-              <input required type="number" min="0" step="0.01" value={form.precio}
-                onChange={e => set('precio', e.target.value)} className="input" placeholder="8500" />
+            <Campo label="Colegio">
+              <select value={form.colegioId} onChange={e => set('colegioId', e.target.value)} className="input">
+                <option value="">— Liso (sin colegio) —</option>
+                {colegios.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
             </Campo>
           </div>
+
+          {cargandoBandas ? (
+            <p className="text-xs text-zinc-500">Buscando precios configurados...</p>
+          ) : precioBase === null ? (
+            <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              Esta categoría no tiene precios {colegial ? 'colegiales' : 'lisos'} configurados. Cargalos primero en
+              Categorías → {form.tipo} → {colegial ? 'Colegial (bordado)' : 'Liso'}.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 bg-zinc-800/50 border border-zinc-700/60 rounded-lg px-3 py-2">
+              {bandasSeccion.map(b => (
+                <span key={b.id} className="text-xs text-zinc-300">
+                  {b.talles.join(',')}: <span className="text-zinc-100 font-medium">{formatPrecio(b.precio)}</span>
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Precio oferta">
               <input type="number" min="0" step="0.01" value={form.precioOferta}
@@ -117,7 +150,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
                 )}
               </div>
               {(() => {
-                const base = parseFloat(form.precioOferta) || parseFloat(form.precio)
+                const base = parseFloat(form.precioOferta) || precioBase
                 const preview = infoCuotas(
                   base,
                   parseInt(form.cuotas),
@@ -133,12 +166,6 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
               })()}
             </div>
           )}
-          <Campo label="Colegio">
-            <select value={form.colegioId} onChange={e => set('colegioId', e.target.value)} className="input">
-              <option value="">— Liso (sin colegio) —</option>
-              {colegios.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-          </Campo>
           {editando && (
             <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
               <input type="checkbox" checked={form.activo} onChange={e => set('activo', e.target.checked)} className="accent-blue-500" />
@@ -148,7 +175,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
           {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onCerrar} className="btn-secundario">Cancelar</button>
-            <button type="submit" disabled={guardando} className="btn-primario">
+            <button type="submit" disabled={guardando || cargandoBandas || precioBase === null} className="btn-primario">
               {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear producto'}
             </button>
           </div>
@@ -165,6 +192,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
   const [expandido, setExpandido] = useState(false)
   const [editando, setEditando] = useState(false)
   const [subiendoImg, setSubiendoImg] = useState(false)
+  const [recalculando, setRecalculando] = useState(false)
 
   // Edición de variantes existentes
   const [stockEdit, setStockEdit] = useState({})
@@ -270,6 +298,16 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
   async function eliminarVariante(varianteId) {
     if (!confirm('¿Eliminar variante?')) return
     await adminApi.eliminarVariante(token, varianteId); onActualizado()
+  }
+
+  async function recalcularPrecios() {
+    setRecalculando(true)
+    try {
+      const { actualizadas } = await adminApi.recalcularPrecios(token, producto.id)
+      onActualizado()
+      alert(`${actualizadas} variante(s) actualizadas con el precio de banda vigente.`)
+    } catch (err) { alert(err.message) }
+    finally { setRecalculando(false) }
   }
 
   async function cambiarColorImagen(imagenId, color) {
@@ -406,7 +444,18 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
               {/* ── Tabla de variantes ── */}
               <div>
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Stock por talle y color</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Stock por talle y color</p>
+                  <button
+                    onClick={recalcularPrecios}
+                    disabled={recalculando}
+                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-400 disabled:opacity-40 transition-colors"
+                    title="Reaplica el precio de banda vigente a cada variante según su talle"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${recalculando ? 'animate-spin' : ''}`} />
+                    Recalcular precios
+                  </button>
+                </div>
 
                 {coloresProducto.length === 0 && (
                   <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
@@ -521,7 +570,8 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                 </div>
 
                 <p className="text-[10px] text-zinc-600 mt-1.5">
-                  Precio vacío = usa el precio base ({formatPrecio(producto.precio)})
+                  Precio vacío = usa el precio de la banda configurada para esta categoría y talle
+                  (si no hay banda, usa el precio base: {formatPrecio(producto.precio)})
                 </p>
               </div>
 

@@ -104,6 +104,12 @@ export const adminApi = {
   crearCategoria: (token, data) => adminRequest('/admin/categorias', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarCategoria: (token, id, data) => adminRequest(`/admin/categorias/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarCategoria: (token, id) => adminRequest(`/admin/categorias/${id}`, { method: 'DELETE' }, token),
+  // Precios por banda (categoría + talle)
+  listarBandas: (token, categoriaId) => adminRequest(`/admin/categorias/${categoriaId}/bandas`, {}, token),
+  crearBanda: (token, categoriaId, data) => adminRequest(`/admin/categorias/${categoriaId}/bandas`, { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarBanda: (token, bandaId, data) => adminRequest(`/admin/categorias/bandas/${bandaId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarBanda: (token, bandaId) => adminRequest(`/admin/categorias/bandas/${bandaId}`, { method: 'DELETE' }, token),
+  recalcularPrecios: (token, productoId) => adminRequest(`/admin/productos/${productoId}/recalcular-precios`, { method: 'POST' }, token),
 }
 
 // ── Entregas ──────────────────────────────────────────────────────────────────

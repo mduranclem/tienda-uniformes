@@ -2,6 +2,7 @@ const { Router } = require('express')
 const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
+const { resolverPrecioBanda, precioBaseCategoria } = require('../../lib/preciosBanda')
 
 const router = Router()
 
@@ -27,15 +28,20 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, colegioId, imagenes, variantes } = req.body
-    if (!nombre || !precio) {
-      return res.status(400).json({ mensaje: 'nombre y precio son requeridos' })
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, colegioId, imagenes, variantes } = req.body
+    if (!nombre) {
+      return res.status(400).json({ mensaje: 'nombre es requerido' })
+    }
+    const tipoFinal = tipo ?? 'REMERA'
+    const precio = await precioBaseCategoria(prisma, { tipo: tipoFinal, colegial: !!colegioId })
+    if (precio === null) {
+      return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría (Colegial/Liso) antes de crear el producto' })
     }
     const producto = await prisma.producto.create({
       data: {
         nombre,
         descripcion: descripcion ?? null,
-        tipo: tipo ?? 'REMERA',
+        tipo: tipoFinal,
         precio,
         precioOferta: precioOferta || null,
         cuotas: cuotas || null,
@@ -57,14 +63,27 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, colegioId, activo } = req.body
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, colegioId, activo } = req.body
+
+    let precio
+    if (tipo !== undefined || colegioId !== undefined) {
+      const actual = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true, colegioId: true } })
+      if (!actual) return res.status(404).json({ mensaje: 'Producto no encontrado' })
+      const tipoFinal = tipo !== undefined ? tipo : actual.tipo
+      const colegioIdFinal = colegioId !== undefined ? (colegioId || null) : actual.colegioId
+      precio = await precioBaseCategoria(prisma, { tipo: tipoFinal, colegial: !!colegioIdFinal })
+      if (precio === null) {
+        return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría (Colegial/Liso) antes de guardar' })
+      }
+    }
+
     const producto = await prisma.producto.update({
       where: { id: req.params.id },
       data: {
         nombre,
         descripcion,
         tipo,
-        precio: precio !== undefined ? precio : undefined,
+        precio,
         precioOferta: precioOferta !== undefined ? (precioOferta || null) : undefined,
         cuotas: cuotas !== undefined ? (cuotas || null) : undefined,
         cuotasRecargo: cuotasRecargo !== undefined ? (cuotasRecargo || null) : undefined,
@@ -139,6 +158,15 @@ router.post('/:id/variantes', async (req, res, next) => {
   try {
     const { talle, color, stock, sku, precio } = req.body
     if (!talle) return res.status(400).json({ mensaje: 'talle es requerido' })
+
+    let precioFinal = precio ? parseFloat(precio) : null
+    if (precioFinal === null) {
+      const producto = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true, colegioId: true } })
+      if (producto) {
+        precioFinal = await resolverPrecioBanda(prisma, { tipo: producto.tipo, colegial: !!producto.colegioId, talle })
+      }
+    }
+
     const variante = await prisma.variante.create({
       data: {
         productoId: req.params.id,
@@ -146,7 +174,7 @@ router.post('/:id/variantes', async (req, res, next) => {
         color: color ?? null,
         stock: stock ?? 0,
         sku: sku ?? null,
-        precio: precio ? parseFloat(precio) : null,
+        precio: precioFinal,
       },
     })
     res.status(201).json(variante)
@@ -176,6 +204,28 @@ router.delete('/variantes/:varianteId', async (req, res, next) => {
   try {
     await prisma.variante.delete({ where: { id: req.params.varianteId } })
     res.status(204).end()
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/productos/:id/recalcular-precios
+// Reaplica el precio de la banda vigente a cada variante del producto según su talle.
+router.post('/:id/recalcular-precios', async (req, res, next) => {
+  try {
+    const producto = await prisma.producto.findUnique({
+      where: { id: req.params.id },
+      include: { variantes: true },
+    })
+    if (!producto) return res.status(404).json({ mensaje: 'Producto no encontrado' })
+
+    let actualizadas = 0
+    for (const v of producto.variantes) {
+      const precio = await resolverPrecioBanda(prisma, { tipo: producto.tipo, colegial: !!producto.colegioId, talle: v.talle })
+      if (precio !== null) {
+        await prisma.variante.update({ where: { id: v.id }, data: { precio } })
+        actualizadas++
+      }
+    }
+    res.json({ actualizadas })
   } catch (err) { next(err) }
 })
 
