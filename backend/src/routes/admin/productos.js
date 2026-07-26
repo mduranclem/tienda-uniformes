@@ -1,18 +1,11 @@
 const { Router } = require('express')
-const multer = require('multer')
-const sharp = require('sharp')
 const prisma = require('../../lib/prisma')
-const supabaseAdmin = require('../../lib/supabaseAdmin')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
 const { verificarAlertasStock } = require('../../services/alertasStock')
+const { resolverPrecioBanda, precioBaseCategoria } = require('../../lib/preciosBanda')
 
 const router = Router()
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB de entrada; se comprime igual antes de subir
-})
 
 router.use(authMiddleware, adminOnly)
 
@@ -35,15 +28,20 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, imagenes, variantes } = req.body
-    if (!nombre || !precio) {
-      return res.status(400).json({ mensaje: 'nombre y precio son requeridos' })
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, imagenes, variantes } = req.body
+    if (!nombre) {
+      return res.status(400).json({ mensaje: 'nombre es requerido' })
+    }
+    const tipoFinal = tipo ?? 'REMERA'
+    const precio = await precioBaseCategoria(prisma, { tipo: tipoFinal })
+    if (precio === null) {
+      return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría antes de crear el producto' })
     }
     const producto = await prisma.producto.create({
       data: {
         nombre,
         descripcion: descripcion ?? null,
-        tipo: tipo ?? 'REMERA',
+        tipo: tipoFinal,
         precio,
         precioOferta: precioOferta || null,
         cuotas: cuotas || null,
@@ -66,14 +64,23 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, activo } = req.body
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, activo } = req.body
+
+    let precio
+    if (tipo !== undefined) {
+      precio = await precioBaseCategoria(prisma, { tipo })
+      if (precio === null) {
+        return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría antes de guardar' })
+      }
+    }
+
     const producto = await prisma.producto.update({
       where: { id: req.params.id },
       data: {
         nombre,
         descripcion,
         tipo,
-        precio: precio !== undefined ? precio : undefined,
+        precio,
         precioOferta: precioOferta !== undefined ? (precioOferta || null) : undefined,
         cuotas: cuotas !== undefined ? (cuotas || null) : undefined,
         cuotasRecargo: cuotasRecargo !== undefined ? (cuotasRecargo || null) : undefined,
@@ -106,45 +113,19 @@ router.delete('/:id', async (req, res, next) => {
 
 // ── Imágenes ──────────────────────────────────────────────────────────────────
 
-const CACHE_CONTROL_1_ANIO = '31536000'
-const ANCHO_MAX = 1200
-const CALIDAD_WEBP = 80
-
-// Redimensiona (máx 1200px de ancho, sin agrandar) y convierte a WebP calidad 80.
-async function comprimirAWebp(buffer) {
-  return sharp(buffer)
-    .resize({ width: ANCHO_MAX, withoutEnlargement: true })
-    .webp({ quality: CALIDAD_WEBP })
-    .toBuffer()
-}
-
 // POST /api/admin/productos/:id/imagenes
-// Recibe multipart/form-data con el archivo en el campo "imagen" (+ alt/orden
-// opcionales). Comprime a WebP en el servidor y sube a Supabase Storage con
-// cache de 1 año — el frontend nunca sube directo a Supabase.
-router.post('/:id/imagenes', upload.single('imagen'), async (req, res, next) => {
+// El archivo se comprime en el navegador (frontend/src/lib/imageCompress.js) y
+// se sube directo a Supabase Storage con cache de 1 año; acá solo se registra
+// la URL resultante.
+router.post('/:id/imagenes', async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ mensaje: 'imagen es requerida (campo "imagen")' })
-
-    const { alt, orden } = req.body
-    const webpBuffer = await comprimirAWebp(req.file.buffer)
-    const path = `productos/${req.params.id}/${Date.now()}.webp`
-
-    const { error: upErr } = await supabaseAdmin.storage
-      .from('productos')
-      .upload(path, webpBuffer, {
-        cacheControl: CACHE_CONTROL_1_ANIO,
-        upsert: true,
-        contentType: 'image/webp',
-      })
-    if (upErr) return res.status(500).json({ mensaje: `Error subiendo a Supabase: ${upErr.message}` })
-
-    const { data: { publicUrl } } = supabaseAdmin.storage.from('productos').getPublicUrl(path)
+    const { url, alt, orden } = req.body
+    if (!url) return res.status(400).json({ mensaje: 'url es requerida' })
 
     const imagen = await prisma.productImage.create({
       data: {
         productoId: req.params.id,
-        url: publicUrl,
+        url,
         alt: alt ?? null,
         orden: orden ? Number(orden) : 0,
       },
@@ -184,6 +165,15 @@ router.post('/:id/variantes', async (req, res, next) => {
   try {
     const { talle, color, stock, sku, precio } = req.body
     if (!talle) return res.status(400).json({ mensaje: 'talle es requerido' })
+
+    let precioFinal = precio ? parseFloat(precio) : null
+    if (precioFinal === null) {
+      const producto = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true } })
+      if (producto) {
+        precioFinal = await resolverPrecioBanda(prisma, { tipo: producto.tipo, talle })
+      }
+    }
+
     const variante = await prisma.variante.create({
       data: {
         productoId: req.params.id,
@@ -191,7 +181,7 @@ router.post('/:id/variantes', async (req, res, next) => {
         color: color ?? null,
         stock: stock ?? 0,
         sku: sku ?? null,
-        precio: precio ? parseFloat(precio) : null,
+        precio: precioFinal,
       },
     })
     res.status(201).json(variante)
@@ -230,6 +220,28 @@ router.delete('/variantes/:varianteId', async (req, res, next) => {
   try {
     await prisma.variante.delete({ where: { id: req.params.varianteId } })
     res.status(204).end()
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/productos/:id/recalcular-precios
+// Reaplica el precio de la banda vigente a cada variante del producto según su talle.
+router.post('/:id/recalcular-precios', async (req, res, next) => {
+  try {
+    const producto = await prisma.producto.findUnique({
+      where: { id: req.params.id },
+      include: { variantes: true },
+    })
+    if (!producto) return res.status(404).json({ mensaje: 'Producto no encontrado' })
+
+    let actualizadas = 0
+    for (const v of producto.variantes) {
+      const precio = await resolverPrecioBanda(prisma, { tipo: producto.tipo, talle: v.talle })
+      if (precio !== null) {
+        await prisma.variante.update({ where: { id: v.id }, data: { precio } })
+        actualizadas++
+      }
+    }
+    res.json({ actualizadas })
   } catch (err) { next(err) }
 })
 
