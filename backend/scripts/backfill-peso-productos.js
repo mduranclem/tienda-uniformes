@@ -4,18 +4,24 @@
 //   cd backend
 //   node -r dotenv/config scripts/backfill-peso-productos.js
 //   node -r dotenv/config scripts/backfill-peso-productos.js --dry-run
+//   node -r dotenv/config scripts/backfill-peso-productos.js --recalcular
 //
 // Idempotente: solo toca filas con `pesoGramos` en null, así que correrlo dos
 // veces no pisa nada de lo que hayas ajustado a mano desde el admin.
+//
+// --recalcular recalcula TODOS los productos, incluidos los que ya tienen peso.
+// Pisa cualquier ajuste manual: usalo solo después de cambiar las reglas de
+// estimación en lib/pesos.js.
 
 const prisma = require('../src/lib/prisma')
-const { pesoDeProducto } = require('../src/lib/pesos')
+const { pesoPorTipo } = require('../src/lib/pesos')
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run')
+  const recalcular = process.argv.includes('--recalcular')
 
   const productos = await prisma.producto.findMany({
-    where: { pesoGramos: null },
+    where: recalcular ? {} : { pesoGramos: null },
     select: { id: true, nombre: true, tipo: true, pesoGramos: true },
   })
 
@@ -25,14 +31,22 @@ async function main() {
     return
   }
 
-  console.log(`${productos.length} producto(s) sin peso.${dryRun ? ' (simulación)' : ''}\n`)
+  console.log(
+    `${productos.length} producto(s)${recalcular ? ' a recalcular' : ' sin peso'}.` +
+    `${dryRun ? ' (simulación)' : ''}\n`
+  )
 
   for (const producto of productos) {
-    const peso = pesoDeProducto(producto)
+    // Siempre se estima por tipo: si se usara pesoDeProducto, un producto que ya
+    // tiene peso devolvería el suyo y --recalcular no cambiaría nada.
+    const peso = pesoPorTipo(producto.tipo)
     if (!dryRun) {
       await prisma.producto.update({ where: { id: producto.id }, data: { pesoGramos: peso } })
     }
-    console.log(`${dryRun ? '·' : '✓'} ${producto.nombre} (${producto.tipo}) → ${peso} g`)
+    const antes = producto.pesoGramos !== null && producto.pesoGramos !== peso
+      ? ` (antes ${producto.pesoGramos} g)`
+      : ''
+    console.log(`${dryRun ? '·' : '✓'} ${producto.nombre} (${producto.tipo}) → ${peso} g${antes}`)
   }
 
   console.log(

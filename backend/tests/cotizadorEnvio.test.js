@@ -6,7 +6,7 @@ const assert = require('node:assert/strict')
 
 const { normalizarCP } = require('../src/services/cotizadorEnvio/cp')
 const { elegirZona, precioParaPeso } = require('../src/services/cotizadorEnvio/tablaZonasLogica')
-const { pesoDelEnvio, pesoDeProducto, PESO_EMBALAJE } = require('../src/lib/pesos')
+const { pesoDelEnvio, pesoDeProducto, pesoPorTipo, PESO_EMBALAJE, PESO_DEFECTO } = require('../src/lib/pesos')
 
 const santaFe = {
   nombre: 'Santa Fe',
@@ -112,11 +112,32 @@ test('estima por tipo cuando el producto no tiene peso cargado', () => {
 })
 
 test('cae al peso por defecto ante un tipo desconocido', () => {
-  assert.equal(pesoDeProducto({ tipo: 'PARAGUAS', pesoGramos: null }), 300)
+  assert.equal(pesoDeProducto({ tipo: 'PARAGUAS', pesoGramos: null }), PESO_DEFECTO)
 })
 
 test('ignora un peso cargado inválido y estima por tipo', () => {
   assert.equal(pesoDeProducto({ tipo: 'BUZO', pesoGramos: 0 }), 500)
+})
+
+// `tipo` es el nombre de la categoría, texto libre cargado desde el admin.
+// Estos son los valores reales que hay hoy en la base.
+test('reconoce la prenda dentro del nombre completo de la categoría', () => {
+  assert.equal(pesoPorTipo('CAMPERA CANGURO CON FRISA BORDADO'), 800)
+  assert.equal(pesoPorTipo('BUZO CUELLO RED CON FRISA BORDADO'), 500)
+  assert.equal(pesoPorTipo('BUZO ACETATO'), 500)
+  assert.equal(pesoPorTipo('CHOMBA BORDADA'), 200)
+  assert.equal(pesoPorTipo('REMERA ESTAMPADA'), 180)
+  assert.equal(pesoPorTipo('CHALECO LISO POLAR'), 400)
+  assert.equal(pesoPorTipo('CAMPERA LISA POLAR'), 800)
+})
+
+test('una regla más específica gana sobre la general', () => {
+  assert.equal(pesoPorTipo('REMERA MANGAS LARGAS LISA'), 220)
+  assert.equal(pesoPorTipo('REMERA LISA'), 180)
+})
+
+test('tolera tildes y minúsculas en el nombre de la categoría', () => {
+  assert.equal(pesoPorTipo('pantalón de gimnasia'), 400)
 })
 
 test('suma el embalaje una sola vez por envío, no por prenda', () => {
