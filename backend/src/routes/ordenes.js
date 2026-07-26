@@ -4,6 +4,7 @@ const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
 const { notificarNuevoPedido } = require('../services/notificaciones')
 const { esRosario } = require('../lib/envios')
+const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
 
 const router = Router()
 
@@ -66,10 +67,34 @@ router.post('/', authOpcional, async (req, res, next) => {
       const precio = Number(variante.precio ?? variante.producto.precioOferta ?? variante.producto.precio)
       return acc + precio * i.cantidad
     }, 0)
-    // Envío gratis dentro de Rosario, siempre
-    const costoEnvio = entrega.tipo === 'ENVIO' && esRosario(domicilio?.ciudad)
-      ? 0
-      : Number(entrega.costo)
+    // El costo de envío lo decide SIEMPRE el servidor, igual que los precios y
+    // el descuento: se recotiza acá con los items reales de la orden y nunca se
+    // acepta un costo mandado por el cliente.
+    let costoEnvio = 0
+    let servicioEnvio = null
+    if (entrega.tipo === 'ENVIO') {
+      if (esRosario(domicilio?.ciudad)) {
+        // Envío gratis dentro de Rosario, siempre
+        servicioEnvio = OPCION_ROSARIO.codigo
+      } else if (entrega.cotizado) {
+        try {
+          const { opciones } = await cotizarPedido({
+            items,
+            cp: domicilio?.cp,
+            ciudad: domicilio?.ciudad,
+          })
+          costoEnvio = opciones[0].precio
+          servicioEnvio = opciones[0].codigo
+        } catch (err) {
+          // Sin cotización no se crea la orden: es preferible perder la venta a
+          // despachar al interior cobrando $0.
+          if (err.esErrorCotizacion) return res.status(422).json({ mensaje: err.message })
+          throw err
+        }
+      } else {
+        costoEnvio = Number(entrega.costo)
+      }
+    }
 
     // Descuento de bienvenida (primera compra): lo decide SIEMPRE el servidor
     // según el historial del email, nunca un flag del cliente.
@@ -101,6 +126,7 @@ router.post('/', authOpcional, async (req, res, next) => {
           nombreGuest: req.user ? null : nombre,
           telefonoGuest: telefono ?? null,
           entregaId,
+          servicioEnvio,
           domicilio: entrega.tipo === 'ENVIO' ? domicilio : null,
           subtotal,
           costoEnvio,

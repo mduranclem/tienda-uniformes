@@ -1,7 +1,7 @@
 import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Spinner from '../ui/Spinner'
-import { Package, ShoppingBag, Tag, Truck, Images, School, LayoutList, MessageCircle } from 'lucide-react'
+import { Package, ShoppingBag, Tag, Truck, Images, School, LayoutList, MessageCircle, Map } from 'lucide-react'
 
 const links = [
   { to: '/admin/colegios', label: 'Colegios', icon: School },
@@ -10,6 +10,7 @@ const links = [
   { to: '/admin/ordenes', label: 'Órdenes', icon: ShoppingBag },
   { to: '/admin/cupones', label: 'Cupones', icon: Tag },
   { to: '/admin/entregas', label: 'Entregas', icon: Truck },
+  { to: '/admin/envios', label: 'Zonas de envío', icon: Map },
   { to: '/admin/banners', label: 'Carrusel', icon: Images },
   { to: '/admin/bot', label: 'Bot WhatsApp', icon: MessageCircle },
 ]

@@ -104,6 +104,16 @@ export const adminApi = {
   listarEntregas: (token) => adminRequest('/admin/entregas', {}, token),
   crearEntrega: (token, data) => adminRequest('/admin/entregas', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarEntrega: (token, id, data) => adminRequest(`/admin/entregas/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  // Zonas de envío
+  listarZonasEnvio: (token) => adminRequest('/admin/envios/zonas', {}, token),
+  crearZonaEnvio: (token, data) => adminRequest('/admin/envios/zonas', { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarZonaEnvio: (token, id, data) => adminRequest(`/admin/envios/zonas/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarZonaEnvio: (token, id) => adminRequest(`/admin/envios/zonas/${id}`, { method: 'DELETE' }, token),
+  crearRangoCP: (token, zonaId, data) => adminRequest(`/admin/envios/zonas/${zonaId}/rangos`, { method: 'POST', body: JSON.stringify(data) }, token),
+  eliminarRangoCP: (token, id) => adminRequest(`/admin/envios/rangos/${id}`, { method: 'DELETE' }, token),
+  crearTarifaEnvio: (token, zonaId, data) => adminRequest(`/admin/envios/zonas/${zonaId}/tarifas`, { method: 'POST', body: JSON.stringify(data) }, token),
+  eliminarTarifaEnvio: (token, id) => adminRequest(`/admin/envios/tarifas/${id}`, { method: 'DELETE' }, token),
+  probarEnvio: (token, data) => adminRequest('/admin/envios/probar', { method: 'POST', body: JSON.stringify(data) }, token),
   // Banners
   listarBanners: (token) => adminRequest('/admin/banners', {}, token),
   crearBanner: (token, data) => adminRequest('/admin/banners', { method: 'POST', body: JSON.stringify(data) }, token),
@@ -129,6 +139,15 @@ export const cuponesApi = {
 
 export const entregasApi = {
   listar: () => request('/entregas'),
+}
+
+// ── Envíos ────────────────────────────────────────────────────────────────────
+// El peso lo calcula el backend a partir de los varianteId: no se manda desde acá.
+export const enviosApi = {
+  cotizar: ({ cp, ciudad, items }) => request('/envios/cotizar', {
+    method: 'POST',
+    body: JSON.stringify({ cp, ciudad, items }),
+  }),
 }
 
 // ── Órdenes ───────────────────────────────────────────────────────────────────

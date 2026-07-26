@@ -19,6 +19,7 @@ import AdminOrdenesPage from './pages/admin/AdminOrdenesPage'
 import AdminCuponesPage from './pages/admin/AdminCuponesPage'
 import AdminBannersPage from './pages/admin/AdminBannersPage'
 import AdminEntregasPage from './pages/admin/AdminEntregasPage'
+import AdminEnviosPage from './pages/admin/AdminEnviosPage'
 import AdminColegiosPage from './pages/admin/AdminColegiosPage'
 import AdminCategoriasPage from './pages/admin/AdminCategoriasPage'
 import AdminBotPage from './pages/admin/AdminBotPage'
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="cupones" element={<AdminCuponesPage />} />
               <Route path="colegios" element={<AdminColegiosPage />} />
               <Route path="entregas" element={<AdminEntregasPage />} />
+              <Route path="envios" element={<AdminEnviosPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
               <Route path="categorias" element={<AdminCategoriasPage />} />
               <Route path="bot" element={<AdminBotPage />} />

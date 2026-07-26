@@ -35,7 +35,7 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, colegioId, imagenes, variantes } = req.body
+    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, imagenes, variantes } = req.body
     if (!nombre || !precio) {
       return res.status(400).json({ mensaje: 'nombre y precio son requeridos' })
     }
@@ -48,6 +48,7 @@ router.post('/', async (req, res, next) => {
         precioOferta: precioOferta || null,
         cuotas: cuotas || null,
         cuotasRecargo: cuotasRecargo || null,
+        pesoGramos: pesoGramos ? Number(pesoGramos) : null,
         colegioId: colegioId || null,
         imagenes: imagenes?.length ? { create: imagenes } : undefined,
         variantes: variantes?.length ? { create: variantes } : undefined,
@@ -65,7 +66,7 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, colegioId, activo } = req.body
+    const { nombre, descripcion, tipo, precio, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, activo } = req.body
     const producto = await prisma.producto.update({
       where: { id: req.params.id },
       data: {
@@ -76,6 +77,7 @@ router.put('/:id', async (req, res, next) => {
         precioOferta: precioOferta !== undefined ? (precioOferta || null) : undefined,
         cuotas: cuotas !== undefined ? (cuotas || null) : undefined,
         cuotasRecargo: cuotasRecargo !== undefined ? (cuotasRecargo || null) : undefined,
+        pesoGramos: pesoGramos !== undefined ? (pesoGramos ? Number(pesoGramos) : null) : undefined,
         colegioId: colegioId !== undefined ? (colegioId || null) : undefined,
         activo: activo !== undefined ? activo : undefined,
       },

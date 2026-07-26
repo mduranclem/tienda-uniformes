@@ -1,7 +1,6 @@
 import { useEffect, useState, Fragment } from 'react'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { supabase } from '../../lib/supabaseClient'
 import { formatPrecio, infoCuotas } from '../../lib/utils'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
@@ -29,6 +28,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     cuotas: producto?.cuotas ?? '',
     financiacion: producto?.cuotasRecargo ? 'recargo' : 'sin_interes',
     cuotasRecargo: producto?.cuotasRecargo ?? '',
+    pesoGramos: producto?.pesoGramos ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
   })
@@ -49,6 +49,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
         cuotasRecargo: form.cuotas && financiacion === 'recargo' && form.cuotasRecargo
           ? parseFloat(form.cuotasRecargo)
           : null,
+        pesoGramos: form.pesoGramos ? parseInt(form.pesoGramos) : null,
       }
       if (editando) await adminApi.actualizarProducto(token, producto.id, data)
       else await adminApi.crearProducto(token, data)
@@ -132,6 +133,14 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
               })()}
             </div>
           )}
+          <Campo label="Peso (gramos)">
+            <input type="number" min="1" step="1" value={form.pesoGramos}
+              onChange={e => set('pesoGramos', e.target.value)} className="input" placeholder="Ej: 200" />
+            <p className="mt-1 text-xs text-zinc-500">
+              Peso de la prenda sin embalaje. Se usa para calcular el envío fuera de Rosario.
+              Si lo dejás vacío se estima según el tipo de prenda.
+            </p>
+          </Campo>
           <Campo label="Colegio">
             <select value={form.colegioId} onChange={e => set('colegioId', e.target.value)} className="input">
               <option value="">— Liso (sin colegio) —</option>
@@ -235,12 +244,9 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
     const file = e.target.files[0]; if (!file) return
     setSubiendoImg(true)
     try {
-      const ext = file.name.split('.').pop()
-      const path = `productos/${producto.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('productos').upload(path, file, { upsert: true })
-      if (upErr) throw upErr
-      const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(path)
-      await adminApi.agregarImagen(token, producto.id, { url: publicUrl, orden: producto.imagenes.length })
+      // El backend comprime a WebP (máx 1200px, calidad 80) y sube a Supabase
+      // Storage con cache de 1 año — acá solo mandamos el archivo original.
+      await adminApi.subirImagenProducto(token, producto.id, file, { orden: producto.imagenes.length })
       onActualizado()
     } catch (err) { alert('Error al subir imagen: ' + err.message) }
     finally { setSubiendoImg(false) }

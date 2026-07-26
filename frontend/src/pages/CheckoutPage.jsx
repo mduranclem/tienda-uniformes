@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { entregasApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
+import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
 import { formatPrecio, esRosario } from '../lib/utils'
 import Spinner from '../components/ui/Spinner'
 import { ChevronLeft, Truck, MapPin, Tag, X } from 'lucide-react'
@@ -22,6 +22,9 @@ export default function CheckoutPage() {
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
+  const [cotizacion, setCotizacion] = useState(null)
+  const [cotizando, setCotizando] = useState(false)
+  const [errorCotizacion, setErrorCotizacion] = useState('')
 
   const [form, setForm] = useState({
     nombre: usuario?.nombre ?? '',
@@ -59,7 +62,17 @@ export default function CheckoutPage() {
   const esEnvio = entregaSeleccionada?.tipo === 'ENVIO'
   // Envío gratis dentro de Rosario (el backend aplica la misma regla)
   const envioGratisRosario = esEnvio && esRosario(form.ciudad)
-  const costoEnvio = envioGratisRosario ? 0 : Number(entregaSeleccionada?.costo ?? 0)
+  // Entregas marcadas como "cotizado": el precio sale del CP y el peso, no de un
+  // costo fijo. Rosario se resuelve antes y nunca llega a cotizarse.
+  const envioCotizado = esEnvio && Boolean(entregaSeleccionada?.cotizado) && !envioGratisRosario
+  const costoEnvio = envioGratisRosario
+    ? 0
+    : envioCotizado
+      ? Number(cotizacion?.precio ?? 0)
+      : Number(entregaSeleccionada?.costo ?? 0)
+  // Sin cotización no se puede comprar: es preferible perder la venta a
+  // despachar al interior cobrando $0.
+  const faltaCotizacion = envioCotizado && (cotizando || !cotizacion)
   const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
   const descuentoCupon = cupon?.descuento ?? 0
   const descuento = descuentoBienvenida + descuentoCupon
@@ -73,6 +86,41 @@ export default function CheckoutPage() {
     }, 600)
     return () => clearTimeout(t)
   }, [form.email])
+
+  // Cotiza el envío cuando cambia el CP. Mismo patrón de guarda `cancelado` que
+  // CatalogoPage: sin él, una respuesta lenta de un CP viejo puede pisar a la
+  // del CP que el cliente terminó de escribir, y mostrar un precio equivocado.
+  useEffect(() => {
+    if (!envioCotizado) {
+      setCotizacion(null); setErrorCotizacion(''); setCotizando(false)
+      return
+    }
+    if (!/\d{4}/.test(form.cp.trim())) {
+      setCotizacion(null); setErrorCotizacion(''); setCotizando(false)
+      return
+    }
+
+    let cancelado = false
+    setCotizando(true)
+    setErrorCotizacion('')
+
+    const t = setTimeout(() => {
+      enviosApi.cotizar({
+        cp: form.cp.trim(),
+        ciudad: form.ciudad,
+        items: items.map(i => ({ varianteId: i.varianteId, cantidad: i.cantidad })),
+      })
+        .then(r => { if (!cancelado) setCotizacion(r.opciones?.[0] ?? null) })
+        .catch(err => {
+          if (cancelado) return
+          setCotizacion(null)
+          setErrorCotizacion(err.message)
+        })
+        .finally(() => { if (!cancelado) setCotizando(false) })
+    }, 500)
+
+    return () => { cancelado = true; clearTimeout(t) }
+  }, [envioCotizado, form.cp, form.ciudad, items])
 
   async function aplicarCupon() {
     if (!codigoInput.trim()) return
@@ -105,6 +153,12 @@ export default function CheckoutPage() {
     }
     if (esEnvio && (!form.calle.trim() || !form.ciudad.trim())) {
       setError('Completá la dirección de envío.'); return
+    }
+    if (envioCotizado && !/\d{4}/.test(form.cp.trim())) {
+      setError('Ingresá tu código postal para calcular el envío.'); return
+    }
+    if (faltaCotizacion) {
+      setError(errorCotizacion || 'Esperá a que terminemos de calcular el envío.'); return
     }
 
     setEnviando(true)
@@ -246,9 +300,13 @@ export default function CheckoutPage() {
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
-                        {(e.tipo === 'ENVIO' && esRosario(form.ciudad)) || Number(e.costo) === 0
+                        {(e.tipo === 'ENVIO' && esRosario(form.ciudad)) || (!e.cotizado && Number(e.costo) === 0)
                           ? 'Gratis'
-                          : formatPrecio(e.costo)}
+                          : e.cotizado
+                            ? (entregaId === e.id && cotizacion
+                                ? formatPrecio(cotizacion.precio)
+                                : <span className="font-normal text-zinc-500">Según tu CP</span>)
+                            : formatPrecio(e.costo)}
                       </span>
                     </label>
                   ))}
@@ -284,9 +342,26 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1">Código postal</label>
+                    <label className="block text-xs text-zinc-400 mb-1">
+                      Código postal {envioCotizado && '*'}
+                    </label>
                     <input type="text" value={form.cp} onChange={e => setField('cp', e.target.value)}
-                      className="input w-full" placeholder="1043" />
+                      className="input w-full" placeholder="1043" required={envioCotizado} />
+                    {envioCotizado && cotizando && (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+                        <Spinner className="w-3 h-3" /> Calculando envío...
+                      </p>
+                    )}
+                    {envioCotizado && !cotizando && cotizacion && (
+                      <p className="mt-1 text-xs text-zinc-400">
+                        {cotizacion.nombre}: <span className="font-medium text-zinc-200">{formatPrecio(cotizacion.precio)}</span>
+                      </p>
+                    )}
+                    {envioCotizado && !cotizando && errorCotizacion && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        {errorCotizacion} Escribinos por WhatsApp y lo resolvemos.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -380,7 +455,12 @@ export default function CheckoutPage() {
                 )}
                 <div className="flex justify-between text-zinc-400">
                   <span>Envío</span>
-                  <span>{costoEnvio === 0 ? 'Gratis' : formatPrecio(costoEnvio)}</span>
+                  <span>
+                    {cotizando ? 'Calculando...'
+                      : faltaCotizacion ? '—'
+                      : costoEnvio === 0 ? 'Gratis'
+                      : formatPrecio(costoEnvio)}
+                  </span>
                 </div>
                 <div className="flex justify-between font-bold text-zinc-100 text-base mt-1">
                   <span>Total</span>
@@ -396,7 +476,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={enviando || !entregaId}
+                disabled={enviando || !entregaId || faltaCotizacion}
                 className="mt-4 w-full btn-primario flex items-center justify-center gap-2 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviando ? <><Spinner className="w-4 h-4" /> Procesando...</> : 'Confirmar pedido'}
