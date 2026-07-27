@@ -10,6 +10,25 @@ Son **tres nodos**.
 [Webhook] → [Filtrar sin teléfono] → [Enviar WhatsApp]
 ```
 
+## Importarlo ya armado
+
+En vez de crear los nodos a mano, están en `bot/workflow-avisos-estado.json`:
+
+1. Abrí el contenido del archivo y copiá todo.
+2. En n8n, entrá a un workflow nuevo y **pegá con Ctrl+V sobre el canvas**.
+   (También sirve el menú *⋯ → Import from clipboard*.)
+3. Aparecen los tres nodos ya conectados.
+4. Abrí **Enviar WhatsApp** y elegí tu credencial y el `phoneNumberId`. Es lo
+   único que queda por completar, porque son datos de tu cuenta.
+5. Activá el workflow.
+
+Si usás un nodo de WhatsApp distinto al oficial (Evolution API, por ejemplo),
+borrá ese tercer nodo, poné el tuyo en su lugar y mapeale
+`{{ $json.body.telefono }}` y `{{ $json.body.mensaje }}`.
+
+El resto de esta guía explica qué hace cada nodo, por si preferís armarlos a mano
+o entender qué estás importando.
+
 ## 1. Webhook
 
 - **Tipo:** Webhook
