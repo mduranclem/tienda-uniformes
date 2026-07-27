@@ -53,9 +53,18 @@ async function main() {
     return
   }
 
-  // Sin parámetro: ALTER TABLE no acepta placeholders para identificadores.
-  // TABLA y DUENO_ESPERADO son constantes de este archivo, no entran del exterior.
-  await prisma.$executeRawUnsafe(`ALTER TABLE "${TABLA}" OWNER TO ${DUENO_ESPERADO}`)
+  // Para transferir la propiedad hay que SER el dueño. `postgres` es miembro de
+  // `tienda_app`, pero la membresía es NOINHERIT: tener el rol no alcanza, hay
+  // que asumirlo con SET ROLE. Va todo en una transacción porque de lo contrario
+  // cada consulta podría salir por una conexión distinta del pool y el SET ROLE
+  // se perdería.
+  //
+  // Los identificadores van interpolados porque ALTER TABLE / SET ROLE no
+  // aceptan parámetros; son constantes de este archivo, no entran del exterior.
+  await prisma.$transaction(async tx => {
+    await tx.$executeRawUnsafe(`SET LOCAL ROLE ${antes.dueno}`)
+    await tx.$executeRawUnsafe(`ALTER TABLE "${TABLA}" OWNER TO ${DUENO_ESPERADO}`)
+  })
 
   const despues = await estado()
   console.log(`✓ Ahora: dueño "${despues.dueno}", ¿puede escribir?: ${despues.puede_escribir}`)
@@ -65,6 +74,13 @@ async function main() {
 
 main().catch(async err => {
   console.error('Error:', err.message)
+  if (/must be owner|permission denied/i.test(err.message)) {
+    console.error(
+      '\nSi falla también así, corré esto desde el SQL Editor de Supabase, que\n' +
+      'tiene permisos de administrador:\n\n' +
+      `  ALTER TABLE "${TABLA}" OWNER TO ${DUENO_ESPERADO};\n`
+    )
+  }
   await prisma.$disconnect()
   process.exit(1)
 })
