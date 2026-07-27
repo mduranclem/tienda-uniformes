@@ -4,6 +4,7 @@
 const { postConReintentos } = require('../lib/httpRetry')
 const prisma = require('../lib/prisma')
 const { esRosario } = require('../lib/envios')
+const { aWhatsapp } = require('../lib/telefono')
 const { componerMensaje, ESTADOS_QUE_NOTIFICAN_POR_DEFECTO } = require('./mensajesEstado')
 
 // Cómo recibe el cliente el pedido. Se deriva del tipo de entrega y de la
@@ -147,7 +148,12 @@ async function notificarCambioEstado(orden, estadoNuevo) {
     estado: estadoNuevo,
     cliente,
     email,
+    // telefono es lo que escribió el cliente; telefonoWhatsapp es ese mismo
+    // número en formato internacional (5493417434552), que es el único que
+    // acepta WhatsApp. Es null si no se pudo interpretar: en ese caso no hay
+    // que mandar nada, porque escribirle a un número equivocado es peor.
     telefono,
+    telefonoWhatsapp: aWhatsapp(telefono),
     tipoEntrega: orden.entrega?.tipo ?? null,
     modoEnvio,
     puntoRetiro,

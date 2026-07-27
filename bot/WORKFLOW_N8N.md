@@ -43,17 +43,22 @@ creciente si n8n no responde, así que un corte breve no pierde el mensaje.
 ## 2. Filtrar sin teléfono
 
 - **Tipo:** IF (o Filter)
-- **Condición:** `{{ $json.telefono }}` — *is not empty* **y** *not equals* `—`
+- **Condición:** `{{ $json.body.telefonoWhatsapp }}` — *is not empty*
 
-Existe checkout de invitado, y aunque el teléfono es obligatorio en el
-formulario, hay pedidos viejos sin él. Sin este filtro, esos pedidos harían
-fallar el nodo de WhatsApp y ensuciarían el historial de ejecuciones.
+`telefonoWhatsapp` viene en `null` cuando el número que cargó el cliente no se
+pudo interpretar. Sin este filtro se intentaría enviar a un destinatario vacío.
 
 ## 3. Enviar WhatsApp
 
-- **Tipo:** el nodo de WhatsApp que uses (WhatsApp Business Cloud, Evolution API, etc.)
-- **Destinatario:** `{{ $json.telefono }}`
-- **Mensaje:** `{{ $json.mensaje }}`
+- **Tipo:** el nodo de WhatsApp que uses (Evolution API, WhatsApp Business Cloud, etc.)
+- **Destinatario:** `{{ $json.body.telefonoWhatsapp }}`
+- **Mensaje:** `{{ $json.body.mensaje }}`
+
+**Usá `telefonoWhatsapp`, no `telefono`.** El segundo es lo que escribió el
+cliente —"0341 15 743-4552", "+54 9 341..."— y ningún proveedor lo acepta así.
+El primero es ese mismo número normalizado a `5493417434552`.
+
+En Evolution API los campos se llaman *Numero Do Destinatario* y *Mensagem*.
 
 **Eso es todo.** No hay que escribir condiciones por estado ni armar textos: el
 campo `mensaje` ya viene redactado y con formato de WhatsApp (`*negrita*` y

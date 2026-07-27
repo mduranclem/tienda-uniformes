@@ -27,7 +27,7 @@
           "conditions": [
             {
               "id": "tiene-telefono",
-              "leftValue": "={{ $json.body.telefono }}",
+              "leftValue": "={{ $json.body.telefonoWhatsapp }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -37,7 +37,7 @@
             },
             {
               "id": "telefono-real",
-              "leftValue": "={{ $json.body.telefono }}",
+              "leftValue": "={{ $json.body.telefonoWhatsapp }}",
               "rightValue": "—",
               "operator": {
                 "type": "string",
@@ -55,13 +55,13 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [240, 0],
-      "notes": "Hay pedidos viejos sin teléfono. Sin este filtro fallaría el envío y ensuciaría el historial de ejecuciones."
+      "notes": "telefonoWhatsapp viene null si el número que cargó el cliente no se pudo interpretar. Sin este filtro se intentaría enviar a un destinatario vacío."
     },
     {
       "parameters": {
         "operation": "send",
         "phoneNumberId": "",
-        "recipientPhoneNumber": "={{ $json.body.telefono }}",
+        "recipientPhoneNumber": "={{ $json.body.telefonoWhatsapp }}",
         "textBody": "={{ $json.body.mensaje }}",
         "additionalFields": {}
       },
