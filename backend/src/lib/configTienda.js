@@ -12,6 +12,7 @@ const CLAVES = [
   'tiempoEnvioRosario',
   'tiempoEnvioFueraRosario',
   'webhookStockAlert',
+  'tablaTallesUrl',
 ]
 
 async function leerConfigTienda() {

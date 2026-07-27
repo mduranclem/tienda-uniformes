@@ -1,5 +1,6 @@
 const { Router } = require('express')
 const prisma = require('../lib/prisma')
+const { urlTablaTalles } = require('../lib/tablaTalles')
 
 const router = Router()
 
@@ -70,7 +71,9 @@ router.get('/:id', async (req, res, next) => {
     if (!producto || !producto.activo) {
       return res.status(404).json({ mensaje: 'Producto no encontrado' })
     }
-    res.json(producto)
+    // null si esta prenda no tiene tabla de talles: el frontend solo pregunta
+    // si vino una URL, no qué tipos la tienen.
+    res.json({ ...producto, tablaTallesUrl: await urlTablaTalles(producto.tipo) })
   } catch (err) {
     next(err)
   }

@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import ImageGallery from '../components/product/ImageGallery'
 import VariantSelector from '../components/product/VariantSelector'
+import TablaTalles from '../components/product/TablaTalles'
 import StickyAddToCart from '../components/product/StickyAddToCart'
 import Spinner from '../components/ui/Spinner'
 import { formatPrecio, titleCase, infoCuotas } from '../lib/utils'
@@ -235,13 +236,17 @@ export default function ProductoPage() {
           )}
 
           {producto.variantes?.length > 0 && (
-            <VariantSelector
-              variantes={producto.variantes}
-              seleccionada={varianteSeleccionada}
-              colorActual={colorActual}
-              onColor={handleCambioColor}
-              onChange={handleCambioVariante}
-            />
+            <div className="flex flex-col gap-3">
+              <VariantSelector
+                variantes={producto.variantes}
+                seleccionada={varianteSeleccionada}
+                colorActual={colorActual}
+                onColor={handleCambioColor}
+                onChange={handleCambioVariante}
+              />
+              {/* Solo llega URL en las prendas que tienen tabla */}
+              <TablaTalles url={producto.tablaTallesUrl} />
+            </div>
           )}
 
           {/* Cantidad */}
