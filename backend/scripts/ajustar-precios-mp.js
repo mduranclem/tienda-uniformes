@@ -1,10 +1,9 @@
 // Ajusta las bandas de precio para que, después de los descuentos de Mercado
 // Pago, entre en la cuenta el precio actual de lista.
 //
-// Uso:
-//   cd backend
-//   node -r dotenv/config scripts/ajustar-precios-mp.js            (simulación)
-//   node -r dotenv/config scripts/ajustar-precios-mp.js --aplicar  (escribe)
+// Uso (desde cualquier carpeta):
+//   node backend/scripts/ajustar-precios-mp.js            (simulación)
+//   node backend/scripts/ajustar-precios-mp.js --aplicar  (escribe)
 //
 // ⚠️ NO ES IDEMPOTENTE: cada corrida con --aplicar vuelve a recargar sobre el
 // precio ya recargado. Por eso la simulación es el modo por defecto.
@@ -12,6 +11,10 @@
 // El cálculo divide, no suma. Si a $30.000 le sumás 25,12% obtenés $37.536,
 // pero la comisión se cobra sobre ESE total, así que te quedan $28.108. Para
 // recibir $30.000 hay que cobrar $30.000 / (1 - 0,2512) = $40.064.
+
+// El .env se busca por la ubicación del script y no por el directorio actual,
+// para que no importe desde dónde se ejecute.
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') })
 
 const prisma = require('../src/lib/prisma')
 
