@@ -34,10 +34,16 @@ export function infoCuotas(precioFinal, cuotas, cuotasRecargo) {
   const recargo = Number(cuotasRecargo ?? 0)
   const sinInteres = !recargo
   const monto = (Number(precioFinal) * (1 + recargo / 100)) / n
+  // "Hasta" y no "desde": el cliente puede pagar en 1, 2 o hasta n cuotas, y n
+  // es el máximo. Decir "desde" invierte el sentido de la promoción.
   const texto = sinInteres
-    ? `${n} cuotas sin interés de ${formatPrecio(monto)}`
-    : `${n} cuotas de ${formatPrecio(monto)}`
-  return { n, sinInteres, monto, texto }
+    ? `Hasta ${n} cuotas sin interés de ${formatPrecio(monto)}`
+    : `Hasta ${n} cuotas de ${formatPrecio(monto)}`
+  // Versión sin monto, para lugares donde el precio varía según el talle.
+  const textoCorto = sinInteres
+    ? `Hasta ${n} cuotas sin interés`
+    : `Hasta ${n} cuotas`
+  return { n, sinInteres, monto, texto, textoCorto }
 }
 
 export const TALLES_STANDARD = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']

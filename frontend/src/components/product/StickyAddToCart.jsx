@@ -22,8 +22,10 @@ export default function StickyAddToCart({ precioFinal, cuotas, varianteSeleccion
       <div className="flex items-center gap-3">
         <div className="min-w-0 shrink-0 max-w-[45%]">
           <p className="text-lg font-bold text-zinc-100 leading-tight">{formatPrecio(precioFinal)}</p>
+          {/* textoCorto: en la barra fija el espacio es mínimo y la versión con
+              el monto se cortaba a la mitad. El precio ya está justo arriba. */}
           {cuotas ? (
-            <p className="text-[11px] text-green-400 leading-tight truncate">{cuotas.texto}</p>
+            <p className="text-[11px] font-bold text-green-400 leading-tight truncate">{cuotas.textoCorto}</p>
           ) : varianteSeleccionada ? (
             <p className="text-[11px] text-zinc-500 leading-tight truncate">
               Talle {varianteSeleccionada.talle}{varianteSeleccionada.color ? ` · ${varianteSeleccionada.color}` : ''}

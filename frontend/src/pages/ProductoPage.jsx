@@ -9,7 +9,7 @@ import TablaTalles from '../components/product/TablaTalles'
 import StickyAddToCart from '../components/product/StickyAddToCart'
 import Spinner from '../components/ui/Spinner'
 import { formatPrecio, titleCase, infoCuotas } from '../lib/utils'
-import { ShoppingCart, ChevronLeft, GraduationCap, Truck } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, GraduationCap, Truck, CreditCard } from 'lucide-react'
 
 export default function ProductoPage() {
   const { id } = useParams()
@@ -189,7 +189,10 @@ export default function ProductoPage() {
               <p className="text-3xl font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
             )}
             {cuotas && (
-              <p className="text-sm text-green-400 mt-0.5">{cuotas.texto}</p>
+              <p className="mt-2 inline-flex items-center gap-1.5 bg-green-500/25 border border-green-400/50 text-green-300 text-sm font-bold px-3 py-1.5 rounded-lg">
+                <CreditCard className="w-4 h-4 flex-shrink-0" />
+                {cuotas.texto}
+              </p>
             )}
             <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded-full">
               <Truck className="w-3.5 h-3.5 flex-shrink-0" />

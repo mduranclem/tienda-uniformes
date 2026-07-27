@@ -52,8 +52,16 @@ export default function App() {
             {/* Tienda pública */}
             <Route path="/*" element={
               <div className="min-h-screen flex flex-col relative" style={{ background: 'linear-gradient(rgba(9,9,11,0.75), rgba(9,9,11,0.75)), url(/fondo.png)', backgroundSize: '100% auto', backgroundPosition: 'top center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'scroll' }}>
-                <div className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 text-white text-center py-2 px-4 text-sm font-semibold tracking-wide">
-                  🎉 20% OFF en tu primera compra — se aplica solo al finalizar
+                {/* Barra de promos, visible en toda la tienda. Se mantiene en
+                    UNA sola línea en mobile: el hero está calculado para entrar
+                    en la primera pantalla y cada línea de más lo empuja fuera.
+                    Si cambiás la cantidad de cuotas de los productos, actualizá
+                    también este texto. */}
+                <div className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 text-white text-center py-2 px-3 text-[11px] sm:text-sm font-semibold tracking-wide whitespace-nowrap overflow-x-auto">
+                  <span>🎉 20% OFF <span className="hidden sm:inline">en tu </span>1<sup>ra</sup> compra</span>
+                  <span className="mx-2 text-white/40">·</span>
+                  <span>💳 Hasta 3 cuotas sin interés</span>
+                  <span className="hidden md:inline font-normal text-white/70"> (el 20% se aplica al finalizar)</span>
                 </div>
                 <Header />
                 <main className="flex-1">
