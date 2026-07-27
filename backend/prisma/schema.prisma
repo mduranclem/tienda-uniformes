@@ -187,6 +187,11 @@ model Orden {
   entregaId      String?
   entrega        Entrega?    @relation(fields: [entregaId], references: [id])
   servicioEnvio  String?     // código del servicio cotizado, ej. "tabla:santa-fe"
+  // Día y franja acordados para la entrega a domicilio en Rosario.
+  // null en retiro en local y en envíos al interior (los reparte Andreani en
+  // su propia ventana y no se le puede prometer horario al cliente).
+  entregaFecha   DateTime?
+  entregaFranja  String?     // "10-12" | "12-14" | "14-16"
   domicilio      Json?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt

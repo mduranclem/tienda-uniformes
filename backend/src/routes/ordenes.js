@@ -5,6 +5,7 @@ const { enviarConfirmacionCompra } = require('../services/email')
 const { notificarNuevoPedido } = require('../services/notificaciones')
 const { esRosario } = require('../lib/envios')
 const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
+const { esFechaValida, esFranjaValida, FRANJAS } = require('../lib/agendaEntrega')
 
 const router = Router()
 
@@ -33,6 +34,8 @@ async function esPrimeraCompra(email) {
 router.post('/', authOpcional, async (req, res, next) => {
   try {
     const { items, nombre, email, telefono, entregaId, domicilio, cuponId } = req.body
+    const entregaFechaCruda = req.body.entregaFecha
+    const entregaFranjaCruda = req.body.entregaFranja
 
     if (!items?.length) return res.status(400).json({ mensaje: 'El carrito está vacío' })
     if (!nombre || !email) return res.status(400).json({ mensaje: 'Nombre y email son requeridos' })
@@ -70,6 +73,25 @@ router.post('/', authOpcional, async (req, res, next) => {
     // El costo de envío lo decide SIEMPRE el servidor, igual que los precios y
     // el descuento: se recotiza acá con los items reales de la orden y nunca se
     // acepta un costo mandado por el cliente.
+    // Día y franja de entrega: solo para envíos a domicilio en Rosario, que son
+    // los que reparte la tienda. Al interior lo lleva Andreani en su propia
+    // ventana y prometer un horario sería mentirle al cliente.
+    const coordinaEntrega = entrega.tipo === 'ENVIO' && esRosario(domicilio?.ciudad)
+    let entregaFecha = null
+    let entregaFranja = null
+    if (coordinaEntrega) {
+      entregaFecha = entregaFechaCruda ? new Date(entregaFechaCruda) : null
+      entregaFranja = entregaFranjaCruda ?? null
+      // Se revalida en el servidor aunque el frontend ya limite las opciones,
+      // por el mismo criterio que precios, stock y descuentos.
+      if (!esFechaValida(entregaFecha)) {
+        return res.status(400).json({ mensaje: 'Elegí un día de entrega válido (de lunes a viernes, desde mañana)' })
+      }
+      if (!esFranjaValida(entregaFranja)) {
+        return res.status(400).json({ mensaje: `Elegí una franja horaria: ${FRANJAS.join(', ')}` })
+      }
+    }
+
     let costoEnvio = 0
     let servicioEnvio = null
     if (entrega.tipo === 'ENVIO') {
@@ -127,6 +149,8 @@ router.post('/', authOpcional, async (req, res, next) => {
           telefonoGuest: telefono ?? null,
           entregaId,
           servicioEnvio,
+          entregaFecha,
+          entregaFranja,
           domicilio: entrega.tipo === 'ENVIO' ? domicilio : null,
           subtotal,
           costoEnvio,

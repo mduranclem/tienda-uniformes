@@ -14,6 +14,19 @@ const CAMPOS = [
   { clave: 'webhookStockAlert', label: 'URL del webhook de alertas de stock', placeholder: 'https://...n8n.cloud/webhook/...' },
 ]
 
+// Estados de pedido que pueden avisar al cliente por WhatsApp.
+// PREPARANDO viene desactivado: no le pide una acción al cliente ni le da
+// información que no tenga, y cada mensaje de más gasta la paciencia de la que
+// dependen los que sí importan.
+const ESTADOS_NOTIFICABLES = [
+  { valor: 'PAGADA', label: 'Pago confirmado' },
+  { valor: 'PREPARANDO', label: 'Preparando el pedido' },
+  { valor: 'LISTA', label: 'Listo para retirar / sale a entregarse' },
+  { valor: 'ENTREGADA', label: 'Entregado' },
+  { valor: 'CANCELADA', label: 'Cancelado' },
+]
+const ESTADOS_POR_DEFECTO = 'PAGADA,LISTA,ENTREGADA,CANCELADA'
+
 export default function AdminBotPage() {
   const { sesion } = useAuth()
   const token = sesion?.access_token
@@ -81,6 +94,39 @@ export default function AdminBotPage() {
             )}
           </div>
         ))}
+
+        <div className="flex flex-col gap-2 pt-3 border-t border-zinc-800">
+          <label className="text-xs font-medium text-zinc-400">
+            Avisar al cliente por WhatsApp cuando el pedido pase a...
+          </label>
+          <p className="text-xs text-zinc-600 -mt-1">
+            El mensaje lo arma la tienda según sea retiro, envío en Rosario o Andreani.
+          </p>
+          {ESTADOS_NOTIFICABLES.map(({ valor, label }) => {
+            const activos = (form.estadosQueNotifican || ESTADOS_POR_DEFECTO).split(',').map(s => s.trim())
+            const marcado = activos.includes(valor)
+            return (
+              <label key={valor} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={marcado}
+                  onChange={() => {
+                    const siguiente = marcado
+                      ? activos.filter(e => e !== valor)
+                      : [...activos, valor]
+                    // Se guarda en el orden del ciclo del pedido, no en el de clic
+                    const ordenados = ESTADOS_NOTIFICABLES
+                      .map(e => e.valor)
+                      .filter(e => siguiente.includes(e))
+                    set('estadosQueNotifican', ordenados.join(','))
+                  }}
+                  className="accent-blue-500"
+                />
+                {label}
+              </label>
+            )
+          })}
+        </div>
 
         {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
         {guardado && <p className="text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">Guardado correctamente</p>}

@@ -221,6 +221,14 @@ export default function AdminOrdenesPage() {
                               {o.domicilio.calle} {o.domicilio.numero}{o.domicilio.piso ? `, ${o.domicilio.piso}` : ''} — {o.domicilio.ciudad}
                             </p>
                           )}
+                          {/* Día y franja acordados, para armar el recorrido */}
+                          {o.entregaFecha && (
+                            <p className="text-xs font-medium text-blue-400">
+                              📅 {new Date(o.entregaFecha).toLocaleDateString('es-AR', {
+                                timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short',
+                              })} · {o.entregaFranja} hs
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <div>

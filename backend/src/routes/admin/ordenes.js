@@ -105,6 +105,9 @@ router.put('/:id/estado', async (req, res, next) => {
       where: { id: req.params.id },
       include: {
         usuario: { select: { email: true, nombre: true, telefono: true } },
+        // entrega es imprescindible: sin ella el aviso no distingue retiro de
+        // envío y le prometería un retiro a quien pidió entrega a domicilio.
+        entrega: true,
         items: {
           include: {
             producto: { select: { nombre: true } },
@@ -133,6 +136,7 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
       where: { estado: 'PENDIENTE', createdAt: { lt: corte } },
       include: {
         items: true,
+        entrega: true,
         usuario: { select: { email: true, nombre: true, telefono: true } },
       },
     })

@@ -13,6 +13,9 @@ const CLAVES = [
   'tiempoEnvioFueraRosario',
   'webhookStockAlert',
   'tablaTallesUrl',
+  // Estados de orden que disparan WhatsApp al cliente, separados por coma.
+  // Vacío = se usan los de mensajesEstado.ESTADOS_QUE_NOTIFICAN_POR_DEFECTO.
+  'estadosQueNotifican',
 ]
 
 async function leerConfigTienda() {

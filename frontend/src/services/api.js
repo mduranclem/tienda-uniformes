@@ -137,6 +137,8 @@ export const cuponesApi = {
 
 export const entregasApi = {
   listar: () => request('/entregas'),
+  // Días y franjas disponibles para coordinar la entrega en Rosario.
+  agenda: () => request('/entregas/agenda'),
 }
 
 // ── Envíos ────────────────────────────────────────────────────────────────────

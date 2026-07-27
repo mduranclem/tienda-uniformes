@@ -2,6 +2,29 @@
 // (3 intentos con backoff) y nunca lanzan — se llaman fire-and-forget.
 
 const { postConReintentos } = require('../lib/httpRetry')
+const prisma = require('../lib/prisma')
+const { esRosario } = require('../lib/envios')
+const { componerMensaje, ESTADOS_QUE_NOTIFICAN_POR_DEFECTO } = require('./mensajesEstado')
+
+// Cómo recibe el cliente el pedido. Se deriva del tipo de entrega y de la
+// ciudad, reusando el mismo esRosario() que ya usan el checkout y la creación
+// de la orden: no se introduce una segunda definición de "es Rosario".
+function modoDeEnvio(orden) {
+  if (orden.entrega?.tipo !== 'ENVIO') return 'RETIRO'
+  return esRosario(orden.domicilio?.ciudad) ? 'ROSARIO' : 'INTERIOR'
+}
+
+// Estados que avisan, configurables desde /admin/bot.
+async function estadosQueNotifican() {
+  try {
+    const fila = await prisma.configTienda.findUnique({ where: { clave: 'estadosQueNotifican' } })
+    const lista = (fila?.valor ?? '').split(',').map(s => s.trim()).filter(Boolean)
+    return lista.length ? lista : ESTADOS_QUE_NOTIFICAN_POR_DEFECTO
+  } catch (_) {
+    // Si la config no se puede leer, mejor avisar de más que quedarse mudo.
+    return ESTADOS_QUE_NOTIFICAN_POR_DEFECTO
+  }
+}
 
 function datosCliente(orden) {
   const cliente = orden.usuario
@@ -92,12 +115,32 @@ async function notificarOrdenPagada(orden) {
   await postConReintentos(url, payload, { tag: 'n8n:orden-pagada' })
 }
 
-// Notifica cualquier cambio de estado de una orden.
+// Notifica un cambio de estado de una orden, con el mensaje de WhatsApp ya
+// redactado para que n8n solo tenga que reenviarlo.
+//
+// No dispara para los estados que no le sirven al cliente (PREPARANDO no le
+// pide una acción ni le da información nueva, y cada mensaje de más gasta la
+// paciencia de la que dependen los que sí importan).
 async function notificarCambioEstado(orden, estadoNuevo) {
   const url = process.env.WEBHOOK_ORDEN_ESTADO
   if (!url) return
 
+  const estados = await estadosQueNotifican()
+  if (!estados.includes(estadoNuevo)) return
+
   const { cliente, telefono, email } = datosCliente(orden)
+  const modoEnvio = modoDeEnvio(orden)
+  const puntoRetiro = modoEnvio === 'RETIRO' ? (orden.entrega?.nombre ?? null) : null
+
+  const mensaje = componerMensaje({
+    estado: estadoNuevo,
+    modoEnvio,
+    numero: orden.numero,
+    puntoRetiro,
+    entregaFecha: orden.entregaFecha,
+    entregaFranja: orden.entregaFranja,
+  })
+  if (!mensaje) return
 
   const payload = {
     numero: orden.numero,
@@ -105,6 +148,13 @@ async function notificarCambioEstado(orden, estadoNuevo) {
     cliente,
     email,
     telefono,
+    tipoEntrega: orden.entrega?.tipo ?? null,
+    modoEnvio,
+    puntoRetiro,
+    entregaFecha: orden.entregaFecha ?? null,
+    entregaFranja: orden.entregaFranja ?? null,
+    // Texto listo para mandar por WhatsApp tal cual viene.
+    mensaje,
   }
 
   await postConReintentos(url, payload, { tag: 'n8n:orden-estado' })

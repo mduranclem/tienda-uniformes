@@ -22,6 +22,7 @@ export default function CheckoutPage() {
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
+  const [agenda, setAgenda] = useState(null)
   const [cotizacion, setCotizacion] = useState(null)
   const [cotizando, setCotizando] = useState(false)
   const [errorCotizacion, setErrorCotizacion] = useState('')
@@ -35,6 +36,8 @@ export default function CheckoutPage() {
     piso: '',
     ciudad: '',
     cp: '',
+    entregaFecha: '',
+    entregaFranja: '',
   })
 
   useEffect(() => {
@@ -45,6 +48,9 @@ export default function CheckoutPage() {
         if (data.length > 0) setEntregaId(data[0].id)
       })
       .finally(() => setCargando(false))
+    // Los días hábiles los calcula el backend, para que el checkout ofrezca
+    // exactamente los mismos que después valida al crear la orden.
+    entregasApi.agenda().then(setAgenda).catch(() => {})
   }, [])
 
   // Actualiza nombre/email si el usuario carga después
@@ -73,6 +79,10 @@ export default function CheckoutPage() {
   // Sin cotización no se puede comprar: es preferible perder la venta a
   // despachar al interior cobrando $0.
   const faltaCotizacion = envioCotizado && (cotizando || !cotizacion)
+  // Solo se coordina día y horario en las entregas que hace la tienda. Los
+  // envíos al interior los reparte Andreani en su propia ventana.
+  const coordinaEntrega = esEnvio && envioGratisRosario
+  const faltaCoordinar = coordinaEntrega && (!form.entregaFecha || !form.entregaFranja)
   const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
   const descuentoCupon = cupon?.descuento ?? 0
   const descuento = descuentoBienvenida + descuentoCupon
@@ -160,6 +170,9 @@ export default function CheckoutPage() {
     if (faltaCotizacion) {
       setError(errorCotizacion || 'Esperá a que terminemos de calcular el envío.'); return
     }
+    if (faltaCoordinar) {
+      setError('Elegí el día y el horario en que querés recibir el pedido.'); return
+    }
 
     setEnviando(true)
     try {
@@ -174,6 +187,8 @@ export default function CheckoutPage() {
         email: form.email,
         telefono: form.telefono || null,
         entregaId,
+        entregaFecha: coordinaEntrega ? form.entregaFecha : null,
+        entregaFranja: coordinaEntrega ? form.entregaFranja : null,
         cuponId: cupon?.cuponId ?? null,
         domicilio: esEnvio ? {
           calle: form.calle,
@@ -363,6 +378,44 @@ export default function CheckoutPage() {
                       </p>
                     )}
                   </div>
+
+                  {/* Coordinación de la entrega: solo en Rosario, que es donde
+                      reparte la tienda. Al interior lo lleva Andreani. */}
+                  {coordinaEntrega && (
+                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 mt-1 border-t border-zinc-800">
+                      <p className="sm:col-span-2 text-xs text-zinc-400">
+                        ¿Cuándo querés recibirlo? Entregamos de lunes a viernes, de 10 a 16 hs.
+                      </p>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Día *</label>
+                        <select
+                          value={form.entregaFecha}
+                          onChange={e => setField('entregaFecha', e.target.value)}
+                          className="input w-full"
+                          required={coordinaEntrega}
+                        >
+                          <option value="">Elegí un día</option>
+                          {(agenda?.fechas ?? []).map(f => (
+                            <option key={f.valor} value={f.valor}>{f.etiqueta}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Horario *</label>
+                        <select
+                          value={form.entregaFranja}
+                          onChange={e => setField('entregaFranja', e.target.value)}
+                          className="input w-full"
+                          required={coordinaEntrega}
+                        >
+                          <option value="">Elegí un horario</option>
+                          {(agenda?.franjas ?? []).map(f => (
+                            <option key={f.valor} value={f.valor}>{f.etiqueta}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -476,7 +529,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={enviando || !entregaId || faltaCotizacion}
+                disabled={enviando || !entregaId || faltaCotizacion || faltaCoordinar}
                 className="mt-4 w-full btn-primario flex items-center justify-center gap-2 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviando ? <><Spinner className="w-4 h-4" /> Procesando...</> : 'Confirmar pedido'}
