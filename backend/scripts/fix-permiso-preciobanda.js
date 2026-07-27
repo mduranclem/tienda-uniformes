@@ -62,9 +62,11 @@ async function main() {
 
     await prisma.$executeRawUnsafe(`GRANT ALL ON TABLE "${TABLA}" TO ${BENEFICIARIO}`)
 
+    // has_table_privilege parsea el nombre como identificador SQL: sin comillas
+    // lo pasa a minúsculas y no encuentra "PrecioBanda".
     const [despues] = await prisma.$queryRawUnsafe(
       `SELECT has_table_privilege($1, $2, 'UPDATE') AS puede_escribir`,
-      BENEFICIARIO, TABLA
+      BENEFICIARIO, `"${TABLA}"`
     )
     console.log(`✓ ${BENEFICIARIO} puede escribir ${TABLA}: ${despues.puede_escribir}`)
     console.log('\nYa se pueden editar precios desde /admin/categorias y correr ajustar-precios-mp.js.')
