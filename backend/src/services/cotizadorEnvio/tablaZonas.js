@@ -21,8 +21,10 @@ async function cotizar({ cp, pesoGramos }) {
   const precio = precioParaPeso(zona, pesoGramos)
 
   return [{
+    // El código deja registrado de dónde salió el precio (tabla propia vs API).
     codigo: `tabla:${slug(zona.nombre)}`,
-    nombre: `Envío a domicilio — ${zona.nombre}`,
+    // El nombre es lo que ve el cliente: el correo que lleva el paquete.
+    nombre: `Andreani — ${zona.nombre}`,
     precio,
     plazoDias: null,
   }]
