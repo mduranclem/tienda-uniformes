@@ -132,8 +132,21 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
     const horas = Number(req.query.horas ?? 48)
     const corte = new Date(Date.now() - horas * 60 * 60 * 1000)
 
+    // Las órdenes en efectivo viven pendientes hasta que la persona pasa por el
+    // local, así que con 48 h se cancelarían solas: quien compra un viernes y
+    // va el lunes se encontraría el pedido cancelado. Se les da 7 días.
+    const HORAS_EFECTIVO = Number(req.query.horasEfectivo ?? 24 * 7)
+    const corteEfectivo = new Date(Date.now() - HORAS_EFECTIVO * 60 * 60 * 1000)
+
     const pendientes = await prisma.orden.findMany({
-      where: { estado: 'PENDIENTE', createdAt: { lt: corte } },
+      where: {
+        estado: 'PENDIENTE',
+        OR: [
+          { metodoPago: 'efectivo', createdAt: { lt: corteEfectivo } },
+          { metodoPago: { not: 'efectivo' }, createdAt: { lt: corte } },
+          { metodoPago: null, createdAt: { lt: corte } },
+        ],
+      },
       include: {
         items: true,
         entrega: true,
@@ -155,7 +168,9 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
           data: {
             ordenId: orden.id,
             estado: 'CANCELADA',
-            nota: `Cancelada automáticamente (>${horas}h sin pago)`,
+            nota: orden.metodoPago === 'efectivo'
+              ? `Cancelada automáticamente (>${HORAS_EFECTIVO}h sin retirar ni pagar)`
+              : `Cancelada automáticamente (>${horas}h sin pago)`,
           },
         })
       })

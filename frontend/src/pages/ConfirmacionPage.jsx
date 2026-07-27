@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { ordenesApi, pagosApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { formatPrecio } from '../lib/utils'
+import { formatPrecio, esRosario } from '../lib/utils'
 import Spinner from '../components/ui/Spinner'
-import { CheckCircle2, Package, CreditCard, Clock, XCircle, AlertCircle } from 'lucide-react'
+import { CheckCircle2, Package, CreditCard, Clock, XCircle, AlertCircle, Banknote } from 'lucide-react'
 
 const SANDBOX = import.meta.env.VITE_MP_SANDBOX === 'true'
 
@@ -54,7 +54,14 @@ export default function ConfirmacionPage() {
   const yaPagada = orden.estado === 'PAGADA' || estadoPago === 'aprobado'
   const rechazado = estadoPago === 'rechazado'
   const pendiente = estadoPago === 'pendiente'
-  const esperandoPago = !yaPagada && !rechazado && !pendiente && orden.estado === 'PENDIENTE'
+  // En efectivo no hay nada que cobrar online: se paga en el local.
+  const esEfectivo = orden.metodoPago === 'efectivo'
+  const esperandoPago = !yaPagada && !rechazado && !pendiente && !esEfectivo && orden.estado === 'PENDIENTE'
+  const esperandoRetiro = esEfectivo && !yaPagada
+  // Envío fuera de Rosario sin costo cobrado: se acuerda aparte.
+  const envioACotizar = orden.entrega?.tipo === 'ENVIO'
+    && !esRosario(orden.domicilio?.ciudad)
+    && Number(orden.costoEnvio) === 0
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
@@ -97,7 +104,9 @@ export default function ConfirmacionPage() {
           }
         </div>
         <h1 className="text-2xl font-bold text-zinc-100 mb-1">
-          {yaPagada ? '¡Pedido confirmado!' : 'Tu pedido está listo para pagar'}
+          {yaPagada ? '¡Pedido confirmado!'
+            : esperandoRetiro ? '¡Pedido reservado!'
+            : 'Tu pedido está listo para pagar'}
         </h1>
         <p className="text-zinc-400 text-sm">
           Orden <span className="font-semibold text-zinc-200">#{orden.numero}</span>
@@ -147,8 +156,17 @@ export default function ConfirmacionPage() {
           )}
           <div className="flex justify-between text-zinc-400">
             <span>Envío</span>
-            <span>{Number(orden.costoEnvio) === 0 ? 'Gratis' : formatPrecio(orden.costoEnvio)}</span>
+            <span>
+              {envioACotizar
+                ? <span className="text-amber-400">A cotizar</span>
+                : Number(orden.costoEnvio) === 0 ? 'Gratis' : formatPrecio(orden.costoEnvio)}
+            </span>
           </div>
+          {envioACotizar && (
+            <p className="text-xs text-amber-400/80">
+              Te pasamos el costo del envío por WhatsApp antes de despacharlo.
+            </p>
+          )}
           <div className="flex justify-between font-bold text-zinc-100 text-base mt-1">
             <span>Total</span><span>{formatPrecio(orden.total)}</span>
           </div>
@@ -167,6 +185,23 @@ export default function ConfirmacionPage() {
           </p>
         )}
       </div>
+
+      {/* Pago en efectivo: no hay nada que cobrar online, solo instrucciones */}
+      {esperandoRetiro && (
+        <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-4 mb-6">
+          <Banknote className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-300">Pagás al retirar, en efectivo</p>
+            <p className="text-xs text-amber-400/90 mt-1">
+              Te guardamos el pedido en <span className="font-semibold">{orden.entrega.nombre}</span>.
+              Te avisamos por WhatsApp cuando esté listo para que pases a buscarlo y abonarlo.
+            </p>
+            <p className="text-xs text-amber-400/70 mt-2">
+              Si no pasás a retirarlo dentro de los 7 días, el pedido se cancela y se libera el stock.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Botón de pago o acciones */}
       <div className="flex flex-col items-center gap-3">

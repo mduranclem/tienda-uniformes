@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
 import { formatPrecio, esRosario } from '../lib/utils'
 import Spinner from '../components/ui/Spinner'
-import { ChevronLeft, Truck, MapPin, Tag, X } from 'lucide-react'
+import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { items, totalPrecio, dispatch } = useCart()
@@ -22,6 +22,7 @@ export default function CheckoutPage() {
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
+  const [metodoPago, setMetodoPago] = useState('mercadopago')
   const [agenda, setAgenda] = useState(null)
   const [cotizacion, setCotizacion] = useState(null)
   const [cotizando, setCotizando] = useState(false)
@@ -83,6 +84,11 @@ export default function CheckoutPage() {
   // envíos al interior los reparte Andreani en su propia ventana.
   const coordinaEntrega = esEnvio && envioGratisRosario
   const faltaCoordinar = coordinaEntrega && (!form.entregaFecha || !form.entregaFranja)
+  // Envío fuera de Rosario sin tarifas cargadas: se acuerda el costo después,
+  // por WhatsApp. Dentro de Rosario siempre es gratis y no entra acá.
+  const envioACotizar = esEnvio && !envioGratisRosario && !entregaSeleccionada?.cotizado
+  // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
+  const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
   const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
   const descuentoCupon = cupon?.descuento ?? 0
   const descuento = descuentoBienvenida + descuentoCupon
@@ -131,6 +137,11 @@ export default function CheckoutPage() {
 
     return () => { cancelado = true; clearTimeout(t) }
   }, [envioCotizado, form.cp, form.ciudad, items])
+
+  // Si cambia a envío a domicilio, el efectivo deja de ser una opción válida.
+  useEffect(() => {
+    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('mercadopago')
+  }, [puedePagarEfectivo, metodoPago])
 
   async function aplicarCupon() {
     if (!codigoInput.trim()) return
@@ -187,6 +198,7 @@ export default function CheckoutPage() {
         email: form.email,
         telefono: form.telefono || null,
         entregaId,
+        metodoPago,
         entregaFecha: coordinaEntrega ? form.entregaFecha : null,
         entregaFranja: coordinaEntrega ? form.entregaFranja : null,
         cuponId: cupon?.cuponId ?? null,
@@ -315,13 +327,15 @@ export default function CheckoutPage() {
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
-                        {(e.tipo === 'ENVIO' && esRosario(form.ciudad)) || (!e.cotizado && Number(e.costo) === 0)
-                          ? 'Gratis'
-                          : e.cotizado
-                            ? (entregaId === e.id && cotizacion
-                                ? formatPrecio(cotizacion.precio)
-                                : <span className="font-normal text-zinc-500">Según tu CP</span>)
-                            : formatPrecio(e.costo)}
+                        {e.tipo === 'RETIRO'
+                          ? (Number(e.costo) === 0 ? 'Gratis' : formatPrecio(e.costo))
+                          : esRosario(form.ciudad)
+                            ? 'Gratis'
+                            : e.cotizado
+                              ? (entregaId === e.id && cotizacion
+                                  ? formatPrecio(cotizacion.precio)
+                                  : <span className="font-normal text-zinc-500">Según tu CP</span>)
+                              : <span className="font-normal text-amber-400">A cotizar</span>}
                       </span>
                     </label>
                   ))}
@@ -353,6 +367,12 @@ export default function CheckoutPage() {
                     {envioGratisRosario && (
                       <p className="mt-1 text-xs font-medium text-emerald-400">
                         🎉 Envío gratis en Rosario
+                      </p>
+                    )}
+                    {envioACotizar && form.ciudad.trim() && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        Fuera de Rosario el envío se cotiza aparte: te pasamos el costo
+                        por WhatsApp antes de despacharlo.
                       </p>
                     )}
                   </div>
@@ -417,6 +437,49 @@ export default function CheckoutPage() {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Forma de pago */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+              <h2 className="text-base font-semibold text-zinc-100 mb-4">Forma de pago</h2>
+              <div className="flex flex-col gap-2">
+                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  metodoPago === 'mercadopago' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                }`}>
+                  <input type="radio" name="metodoPago" value="mercadopago"
+                    checked={metodoPago === 'mercadopago'}
+                    onChange={() => setMetodoPago('mercadopago')}
+                    className="accent-blue-500" />
+                  <CreditCard className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-100">Mercado Pago</p>
+                    <p className="text-xs text-zinc-500">Tarjeta, débito o dinero en cuenta. Hasta 3 cuotas sin interés.</p>
+                  </div>
+                </label>
+
+                {/* Solo con retiro: con envío a domicilio no hay dónde cobrar. */}
+                {puedePagarEfectivo && (
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    metodoPago === 'efectivo' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                  }`}>
+                    <input type="radio" name="metodoPago" value="efectivo"
+                      checked={metodoPago === 'efectivo'}
+                      onChange={() => setMetodoPago('efectivo')}
+                      className="accent-blue-500" />
+                    <Banknote className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-zinc-100">Efectivo al retirar</p>
+                      <p className="text-xs text-zinc-500">Pagás cuando pasás a buscar el pedido por el local.</p>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              {!puedePagarEfectivo && esEnvio && (
+                <p className="mt-3 text-xs text-zinc-500">
+                  El pago en efectivo está disponible solo si retirás por uno de nuestros locales.
+                </p>
               )}
             </div>
           </div>
@@ -511,6 +574,7 @@ export default function CheckoutPage() {
                   <span>
                     {cotizando ? 'Calculando...'
                       : faltaCotizacion ? '—'
+                      : envioACotizar ? <span className="text-amber-400">A cotizar</span>
                       : costoEnvio === 0 ? 'Gratis'
                       : formatPrecio(costoEnvio)}
                   </span>
@@ -536,7 +600,9 @@ export default function CheckoutPage() {
               </button>
 
               <p className="mt-2 text-xs text-center text-zinc-600">
-                Vas a poder pagar en el siguiente paso
+                {metodoPago === 'efectivo'
+                  ? 'Reservamos tu pedido y pagás al retirarlo'
+                  : 'Vas a poder pagar en el siguiente paso'}
               </p>
             </div>
           </div>

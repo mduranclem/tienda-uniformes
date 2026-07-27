@@ -14,6 +14,10 @@ const router = Router()
 const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
 const DESCUENTO_BIENVENIDA_PCT = 20
 
+// Efectivo solo tiene sentido si el cliente pasa por el local. Con envío a
+// domicilio no hay dónde cobrarle.
+const METODOS_PAGO = ['mercadopago', 'efectivo']
+
 async function esPrimeraCompra(email) {
   const emailNorm = email.trim().toLowerCase()
   const comprasPrevias = await prisma.orden.count({
@@ -36,6 +40,7 @@ router.post('/', authOpcional, async (req, res, next) => {
     const { items, nombre, email, telefono, entregaId, domicilio, cuponId } = req.body
     const entregaFechaCruda = req.body.entregaFecha
     const entregaFranjaCruda = req.body.entregaFranja
+    const metodoPago = req.body.metodoPago ?? 'mercadopago'
 
     if (!items?.length) return res.status(400).json({ mensaje: 'El carrito está vacío' })
     if (!nombre || !email) return res.status(400).json({ mensaje: 'Nombre y email son requeridos' })
@@ -46,6 +51,15 @@ router.post('/', authOpcional, async (req, res, next) => {
 
     if (entrega.tipo === 'ENVIO' && (!domicilio?.calle || !domicilio?.ciudad)) {
       return res.status(400).json({ mensaje: 'Completá la dirección de envío' })
+    }
+
+    if (!METODOS_PAGO.includes(metodoPago)) {
+      return res.status(400).json({ mensaje: 'Método de pago no válido' })
+    }
+    // Se revalida acá y no solo en el frontend: manipular el navegador para
+    // pedir efectivo con envío a domicilio dejaría un pedido que nadie cobra.
+    if (metodoPago === 'efectivo' && entrega.tipo !== 'RETIRO') {
+      return res.status(400).json({ mensaje: 'El pago en efectivo solo está disponible si retirás por el local' })
     }
 
     // Verificar stock y obtener variantes con precio real de la DB
@@ -148,6 +162,7 @@ router.post('/', authOpcional, async (req, res, next) => {
           nombreGuest: req.user ? null : nombre,
           telefonoGuest: telefono ?? null,
           entregaId,
+          metodoPago,
           servicioEnvio,
           entregaFecha,
           entregaFranja,
