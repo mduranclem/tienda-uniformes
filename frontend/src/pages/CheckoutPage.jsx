@@ -82,11 +82,17 @@ export default function CheckoutPage() {
   const faltaCotizacion = envioCotizado && (cotizando || !cotizacion)
   // Solo se coordina día y horario en las entregas que hace la tienda. Los
   // envíos al interior los reparte Andreani en su propia ventana.
-  const coordinaEntrega = esEnvio && envioGratisRosario
+  const coordinaEntrega = esEnvio && Boolean(entregaSeleccionada?.soloRosario)
   const faltaCoordinar = coordinaEntrega && (!form.entregaFecha || !form.entregaFranja)
   // Envío fuera de Rosario sin tarifas cargadas: se acuerda el costo después,
   // por WhatsApp. Dentro de Rosario siempre es gratis y no entra acá.
-  const envioACotizar = esEnvio && !envioGratisRosario && !entregaSeleccionada?.cotizado
+  const envioACotizar = esEnvio && !entregaSeleccionada?.soloRosario && !entregaSeleccionada?.cotizado
+  // La dirección tiene que corresponder a la opción elegida: cada una cubre una
+  // zona con precio distinto.
+  const ciudadCargada = form.ciudad.trim().length > 0
+  const zonaNoCoincide = esEnvio && ciudadCargada && (
+    entregaSeleccionada?.soloRosario !== esRosario(form.ciudad)
+  )
   // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
   const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
   const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
@@ -180,6 +186,12 @@ export default function CheckoutPage() {
     }
     if (faltaCotizacion) {
       setError(errorCotizacion || 'Esperá a que terminemos de calcular el envío.'); return
+    }
+    if (zonaNoCoincide) {
+      setError(entregaSeleccionada?.soloRosario
+        ? 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".'
+        : 'Para direcciones de Rosario elegí "Envío a domicilio en Rosario", que es gratis.')
+      return
     }
     if (faltaCoordinar) {
       setError('Elegí el día y el horario en que querés recibir el pedido.'); return
@@ -327,15 +339,15 @@ export default function CheckoutPage() {
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
-                        {e.tipo === 'RETIRO'
-                          ? (Number(e.costo) === 0 ? 'Gratis' : formatPrecio(e.costo))
-                          : esRosario(form.ciudad)
-                            ? 'Gratis'
-                            : e.cotizado
-                              ? (entregaId === e.id && cotizacion
-                                  ? formatPrecio(cotizacion.precio)
-                                  : <span className="font-normal text-zinc-500">Según tu CP</span>)
-                              : <span className="font-normal text-amber-400">A cotizar</span>}
+                        {e.tipo === 'RETIRO' || e.soloRosario
+                          ? (Number(e.costo) === 0
+                              ? <span className="bg-green-500/25 border border-green-400/50 text-green-300 text-xs font-bold px-2 py-0.5 rounded-md">Gratis</span>
+                              : formatPrecio(e.costo))
+                          : e.cotizado
+                            ? (entregaId === e.id && cotizacion
+                                ? formatPrecio(cotizacion.precio)
+                                : <span className="font-normal text-zinc-500">Según tu CP</span>)
+                            : <span className="font-normal text-amber-400">A cotizar</span>}
                       </span>
                     </label>
                   ))}
@@ -364,16 +376,26 @@ export default function CheckoutPage() {
                     <label className="block text-xs text-zinc-400 mb-1">Ciudad *</label>
                     <input type="text" value={form.ciudad} onChange={e => setField('ciudad', e.target.value)}
                       className="input w-full" placeholder="Rosario" required={esEnvio} />
-                    {envioGratisRosario && (
-                      <p className="mt-1 text-xs font-medium text-emerald-400">
-                        🎉 Envío gratis en Rosario
+                    {zonaNoCoincide ? (
+                      <p className="mt-1 text-xs font-medium text-red-400">
+                        {entregaSeleccionada?.soloRosario
+                          ? 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".'
+                          : 'Para Rosario tenés envío gratis: elegí "Envío a domicilio en Rosario".'}
                       </p>
-                    )}
-                    {envioACotizar && form.ciudad.trim() && (
-                      <p className="mt-1 text-xs text-amber-400">
-                        Fuera de Rosario el envío se cotiza aparte: te pasamos el costo
-                        por WhatsApp antes de despacharlo.
-                      </p>
+                    ) : (
+                      <>
+                        {entregaSeleccionada?.soloRosario && ciudadCargada && (
+                          <p className="mt-1 text-xs font-medium text-emerald-400">
+                            🎉 Envío gratis en Rosario
+                          </p>
+                        )}
+                        {envioACotizar && ciudadCargada && (
+                          <p className="mt-1 text-xs text-amber-400">
+                            El envío al interior se cotiza aparte: te pasamos el costo
+                            por WhatsApp antes de despacharlo.
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div>
@@ -593,7 +615,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={enviando || !entregaId || faltaCotizacion || faltaCoordinar}
+                disabled={enviando || !entregaId || faltaCotizacion || faltaCoordinar || zonaNoCoincide}
                 className="mt-4 w-full btn-primario flex items-center justify-center gap-2 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviando ? <><Spinner className="w-4 h-4" /> Procesando...</> : 'Confirmar pedido'}

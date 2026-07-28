@@ -119,9 +119,16 @@ export default function AdminEntregasPage() {
                   <td className="px-4 py-3 text-sm font-medium text-zinc-200">
                     {e.tipo === 'ENVIO' ? '🚚 Envío' : '📍 Retiro'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-300">{e.nombre}</td>
                   <td className="px-4 py-3 text-sm text-zinc-300">
-                    {e.cotizado
+                    {e.nombre}
+                    {e.tipo === 'ENVIO' && (
+                      <span className="ml-2 text-[11px] text-zinc-500">
+                        {e.soloRosario ? '· solo Rosario' : '· resto del país'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-zinc-300">
+                    {e.cotizado || (e.tipo === 'ENVIO' && !e.soloRosario && Number(e.costo) === 0)
                       ? <span className="text-zinc-600">—</span>
                       : Number(e.costo) === 0
                         ? <span className="text-green-400">Gratis</span>

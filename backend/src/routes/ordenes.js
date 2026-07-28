@@ -53,6 +53,23 @@ router.post('/', authOpcional, async (req, res, next) => {
       return res.status(400).json({ mensaje: 'Completá la dirección de envío' })
     }
 
+    // Cada opción de envío cubre una zona distinta, con precio y logística
+    // propios. Se valida que la dirección corresponda a la opción elegida: si
+    // no, el cliente pagaría la tarifa equivocada.
+    if (entrega.tipo === 'ENVIO') {
+      const vaARosario = esRosario(domicilio?.ciudad)
+      if (entrega.soloRosario && !vaARosario) {
+        return res.status(400).json({
+          mensaje: 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".',
+        })
+      }
+      if (!entrega.soloRosario && vaARosario) {
+        return res.status(400).json({
+          mensaje: 'Para direcciones de Rosario elegí "Envío a domicilio en Rosario", que es gratis.',
+        })
+      }
+    }
+
     if (!METODOS_PAGO.includes(metodoPago)) {
       return res.status(400).json({ mensaje: 'Método de pago no válido' })
     }

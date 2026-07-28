@@ -24,9 +24,11 @@ router.get('/agenda', (_req, res) => {
 // GET /api/entregas — público, lista opciones activas
 router.get('/', async (_req, res, next) => {
   try {
+    // Orden pensado para el cliente típico, que es de Rosario: primero el envío
+    // local (gratis), después los retiros, y último el interior.
     const entregas = await prisma.entrega.findMany({
       where: { activo: true },
-      orderBy: { costo: 'asc' },
+      orderBy: [{ soloRosario: 'desc' }, { tipo: 'desc' }, { costo: 'asc' }],
     })
     res.json(entregas)
   } catch (err) { next(err) }

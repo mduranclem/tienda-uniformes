@@ -240,6 +240,10 @@ model Entrega {
   activo   Boolean     @default(true)
   // true: el precio sale del cotizador según CP y peso, ignorando `costo`.
   cotizado Boolean     @default(false)
+  // true: esta opción es solo para direcciones de Rosario (reparto propio).
+  // Separa "envío en Rosario" de "envío al interior", que tienen precio y
+  // logística distintos, y permite validar que la dirección corresponda.
+  soloRosario Boolean  @default(false)
 
   ordenes Orden[]
 }
