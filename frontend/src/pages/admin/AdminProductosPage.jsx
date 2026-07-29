@@ -462,11 +462,12 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
                 <div className="rounded-lg border border-zinc-700 overflow-hidden">
                   {/* Cabecera */}
-                  <div className="grid grid-cols-[3rem_1fr_3.5rem_5rem_2.5rem] gap-1 px-3 py-1.5 bg-zinc-800/60 text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">
+                  <div className="grid grid-cols-[3rem_1fr_3.5rem_5rem_6rem_2.5rem] gap-1 px-3 py-1.5 bg-zinc-800/60 text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">
                     <span>Talle</span>
                     <span>Color</span>
                     <span className="text-center">Stock</span>
                     <span className="text-center">Precio $</span>
+                    <span>Últ. movimiento</span>
                     <span />
                   </div>
 
@@ -479,7 +480,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                         <Fragment key={talle}>
                           {/* Variantes guardadas */}
                           {variantesDelTalle.map(v => (
-                            <div key={v.id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_2.5rem] gap-1 items-center px-3 py-1.5">
+                            <div key={v.id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_6rem_2.5rem] gap-1 items-center px-3 py-1.5">
                               <span className="text-xs font-bold text-zinc-200">{talle}</span>
                               <span className="text-xs text-zinc-300 truncate">{v.color ?? <span className="text-zinc-600 italic">—</span>}</span>
                               <input
@@ -497,6 +498,9 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                                 placeholder={String(Number(producto.precio))}
                                 className="w-full text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
                               />
+                              <span className="text-[10px] text-zinc-500 truncate" title={v.movimientos?.[0]?.createdAt ? new Date(v.movimientos[0].createdAt).toLocaleString('es-AR') : undefined}>
+                                {v.movimientos?.[0]?.puntoDeVenta?.nombre ?? '—'}
+                              </span>
                               <button onClick={() => eliminarVariante(v.id)} className="text-zinc-700 hover:text-red-400 transition-colors flex justify-center">
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -505,7 +509,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
                           {/* Filas nuevas pendientes */}
                           {filasNuevas.map(fila => (
-                            <div key={fila._id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_2.5rem] gap-1 items-center px-3 py-1.5 bg-blue-950/20 border-l-2 border-blue-600/40">
+                            <div key={fila._id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_6rem_2.5rem] gap-1 items-center px-3 py-1.5 bg-blue-950/20 border-l-2 border-blue-600/40">
                               <span className="text-xs text-blue-400 font-bold">{talle}</span>
                               {/* Select de color en vez de input libre */}
                               <select
@@ -535,6 +539,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                                 onKeyDown={e => e.key === 'Enter' && guardarFilaNueva(talle, fila._id)}
                                 className="w-full text-xs bg-zinc-800 border border-blue-600/40 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
                               />
+                              <span />
                               <div className="flex items-center gap-0.5 justify-center">
                                 <button onClick={() => guardarFilaNueva(talle, fila._id)} disabled={!fila.color} className="text-green-400 hover:text-green-300 disabled:opacity-30 transition-colors">
                                   <Check className="w-3.5 h-3.5" />

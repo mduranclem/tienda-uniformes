@@ -112,8 +112,44 @@ model Variante {
 
   itemsOrden   ItemOrden[]
   itemsCarrito ItemCarrito[]
+  movimientos  MovimientoStock[]
 
   @@unique([productoId, talle, color])
+}
+
+// ── Stock centralizado (locales + tienda online) ─────────────────────────────
+model PuntoDeVenta {
+  id             String   @id @default(cuid())
+  nombre         String   @unique
+  apiKeyHash     String   @unique
+  apiKeyUltimos4 String
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  movimientos MovimientoStock[]
+}
+
+model MovimientoStock {
+  id             String              @id @default(cuid())
+  varianteId     String
+  variante       Variante            @relation(fields: [varianteId], references: [id], onDelete: Cascade)
+  puntoDeVentaId String
+  puntoDeVenta   PuntoDeVenta        @relation(fields: [puntoDeVentaId], references: [id])
+  tipo           TipoMovimientoStock
+  cantidad       Int
+  nota           String?
+  createdAt      DateTime            @default(now())
+
+  @@index([varianteId])
+  @@index([puntoDeVentaId])
+  @@index([createdAt])
+}
+
+enum TipoMovimientoStock {
+  VENTA
+  INGRESO
+  AJUSTE
+  DEVOLUCION
 }
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────

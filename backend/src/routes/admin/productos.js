@@ -18,7 +18,16 @@ router.get('/', async (_req, res, next) => {
         colegio: { select: { id: true, nombre: true } },
         imagenes: { orderBy: { orden: 'asc' } },
         colores: { orderBy: { nombre: 'asc' } },
-        variantes: { orderBy: [{ talle: 'asc' }] },
+        variantes: {
+          orderBy: [{ talle: 'asc' }],
+          include: {
+            movimientos: {
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+              select: { createdAt: true, puntoDeVenta: { select: { nombre: true } } },
+            },
+          },
+        },
       },
     })
     res.json(productos)

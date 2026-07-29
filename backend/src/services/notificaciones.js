@@ -59,4 +59,38 @@ async function notificarNuevoPedido(orden) {
   }
 }
 
-module.exports = { notificarNuevoPedido }
+// Notifica al admin vía webhook n8n cuando una variante se queda sin stock
+// o vuelve a tener stock. Si N8N_WEBHOOK_STOCK no está configurado, no hace nada.
+async function notificarStockBajo({ variante, producto, puntoDeVenta, motivo }) {
+  const url = process.env.N8N_WEBHOOK_STOCK
+  if (!url) return
+
+  const talle = variante.talle
+  const color = variante.color ? ` / ${variante.color}` : ''
+
+  const payload = {
+    productoId: producto.id,
+    productoNombre: producto.nombre,
+    talle,
+    color: variante.color ?? null,
+    stockActual: variante.stock,
+    puntoDeVenta: puntoDeVenta?.nombre ?? null,
+    motivo, // 'sin_stock' | 'reingreso'
+    mensaje: motivo === 'sin_stock'
+      ? `⚠️ *Sin stock*: ${producto.nombre} — talle ${talle}${color}`
+      : `✅ *Volvió a haber stock*: ${producto.nombre} — talle ${talle}${color} (${variante.stock} uds)`,
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) console.error(`[n8n] Webhook stock respondió ${res.status}`)
+  } catch (err) {
+    console.error('[n8n] Error al notificar stock:', err.message)
+  }
+}
+
+module.exports = { notificarNuevoPedido, notificarStockBajo }
