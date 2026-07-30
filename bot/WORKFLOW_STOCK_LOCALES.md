@@ -17,13 +17,21 @@ menos para completar es una columna menos para equivocarse.
     → [Preparar estado] → [Leer planilla] → [Ubicar fila] → [Actualizar Estado]
 ```
 
-La columna **Producto** es un desplegable con el catálogo real, así nadie tiene
-que escribir a mano "Chomba – Escuela Claret Rosario". Lo mantiene al día el
-flujo `bot/workflow-sync-catalogo.json`, que corre todos los días a las 6 y
-puede dispararse a mano con `POST /webhook/sync-catalogo-locales`. Escribe los
+Las columnas que se prestan a error no se escriben a mano:
+
+- **Producto** es un desplegable con el catálogo real (hay nombres como
+  `Chomba  – Escuela Claret Rosario`, con guión largo y doble espacio, que nadie
+  tipea igual dos veces).
+- **Tipo** solo deja elegir `VENTA`, `INGRESO` o `AJUSTE`.
+- **Fecha** tiene calendario y formato fijo `dd/MM/yyyy HH:mm`, así los tres
+  locales la cargan igual.
+
+Todo eso lo aplica y lo mantiene al día el flujo
+`bot/workflow-sync-catalogo.json`, que corre a las 6 de la mañana y también se
+puede disparar a mano con `POST /webhook/sync-catalogo-locales`. Escribe los
 nombres en una pestaña oculta `Catálogo` de cada planilla y apunta ahí la
-validación de datos. Si agregás un producto en la tienda, al otro día ya está
-en las tres planillas.
+validación. Si agregás un producto en la tienda, al otro día ya está en las tres
+planillas.
 
 Los tres primeros nodos son lo único que cambia por local: fijan el nombre del
 punto de venta, su API key y a qué planilla escribirle la respuesta. De
@@ -35,9 +43,9 @@ Una por local, todas con las mismas columnas. Una fila por movimiento:
 
 | Columna | Qué va |
 |---|---|
-| Fecha | Referencia para el empleado. La API guarda su propia fecha. |
-| Tipo | `VENTA`, `INGRESO` o `AJUSTE` (no distingue mayúsculas). |
-| Producto | El nombre del producto tal como está en el catálogo. |
+| Fecha | Doble click abre el calendario. Es solo referencia para el local: el movimiento se guarda con la fecha real en que entró. |
+| Tipo | Desplegable: `VENTA`, `INGRESO` o `AJUSTE`. |
+| Producto | Desplegable con el catálogo de la tienda. |
 | Talle | El talle. |
 | Color | Solo si ese talle tiene más de un color; si no, se puede dejar vacío. |
 | Cantidad | Para `VENTA` e `INGRESO`. |
