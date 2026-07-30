@@ -223,41 +223,62 @@
         0
       ],
       "parameters": {
-        "jsCode": "const previo = $('Elegir producto y armar body').item.json._error\nconst ctx = $('Validar fila').item.json\nconst resp = $input.item.json\n\n// El detalle del error puede venir de varias formas según cómo falle el HTTP.\nfunction detalleError(r) {\n  if (!r) return 'sin respuesta del servidor'\n  return r.mensaje\n    || r.message\n    || r.error?.mensaje\n    || r.error?.message\n    || (typeof r.error === 'string' ? r.error : null)\n    || JSON.stringify(r).slice(0, 200)\n}\n\nlet estado\nif (previo) {\n  estado = `ERROR: ${previo}`\n} else if (resp && resp.ok) {\n  estado = `OK — stock actual: ${resp.stockRestante ?? resp.stockActual ?? ''}`\n} else {\n  estado = `ERROR: ${detalleError(resp)}`\n}\n\nreturn {\n  json: {\n    row_number: ctx._rowNumber,\n    documentId: ctx._documentId,\n    estado,\n  },\n}"
+        "jsCode": "const previo = $('Elegir producto y armar body').item.json._error\nconst ctx = $('Validar fila').item.json\nconst resp = $input.item.json\n\nfunction detalleError(r) {\n  if (!r) return 'sin respuesta del servidor'\n  return r.mensaje || r.message || r.error?.mensaje || r.error?.message\n    || (typeof r.error === 'string' ? r.error : null)\n    || JSON.stringify(r).slice(0, 200)\n}\n\nlet estado\nif (previo) estado = `ERROR: ${previo}`\nelse if (resp && resp.ok) estado = `OK — stock actual: ${resp.stockRestante ?? resp.stockActual ?? ''}`\nelse estado = `ERROR: ${detalleError(resp)}`\n\nreturn { json: { documentId: ctx._documentId, estado, fila: ctx } }"
+      }
+    },
+    {
+      "id": "leer-planilla",
+      "name": "Leer planilla",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        0
+      ],
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.documentId }}/values/{{ encodeURIComponent('Untitled!A:I') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsTriggerOAuth2Api",
+        "options": {}
+      }
+    },
+    {
+      "id": "ubicar-fila",
+      "name": "Ubicar fila",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Preparar estado').item.json\nconst f = ctx.fila\nconst filas = $input.item.json.values || []\n\nconst igual = (a, b) => String(a ?? '').trim() === String(b ?? '').trim()\n\n// Buscamos de abajo hacia arriba: lo recién agregado está al final.\n// Solo miramos filas con Estado vacío, así nunca pisamos una ya resuelta.\nlet encontrada = null\nfor (let i = filas.length - 1; i >= 1; i--) {\n  const r = filas[i]\n  const estadoVacio = !String(r[8] ?? '').trim()\n  if (!estadoVacio) continue\n  if (igual(r[1], f['Tipo']) && igual(r[2], f['Producto']) && igual(r[3], f['Talle'])\n      && igual(r[4], f['Color']) && igual(r[5], f['Cantidad']) && igual(r[7], f['Nota'])) {\n    encontrada = i + 1 // la API es 1-based\n    break\n  }\n}\n\nif (!encontrada) throw new Error('No pude ubicar la fila para escribirle el estado')\nreturn { json: { documentId: ctx.documentId, estado: ctx.estado, row_number: encontrada } }"
       }
     },
     {
       "id": "escribir-estado",
       "name": "Actualizar Estado",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.6,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        1820,
+        2220,
         0
       ],
       "parameters": {
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "value": "={{ $json.documentId }}",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "Untitled",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "matchingColumns": [
-            "row_number"
-          ],
-          "value": {
-            "row_number": "={{ $json.row_number }}",
-            "Estado": "={{ $json.estado }}"
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.documentId }}/values/{{ encodeURIComponent('Untitled!I' + $json.row_number) }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsTriggerOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { values: [[$json.estado]] } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
           }
-        },
-        "options": {}
+        }
       }
     }
   ],
@@ -373,6 +394,28 @@
       ]
     },
     "Preparar estado": {
+      "main": [
+        [
+          {
+            "node": "Leer planilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer planilla": {
+      "main": [
+        [
+          {
+            "node": "Ubicar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ubicar fila": {
       "main": [
         [
           {

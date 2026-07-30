@@ -14,8 +14,16 @@ menos para completar es una columna menos para equivocarse.
 [Fisherton: fila nueva] → [Es Fisherton] ├→ [Validar fila] → [Buscar producto]
 [Norte: fila nueva]     → [Es Norte]     ┘
     → [Elegir producto y armar body] → [Llamar API stock]
-    → [Preparar estado] → [Actualizar Estado]
+    → [Preparar estado] → [Leer planilla] → [Ubicar fila] → [Actualizar Estado]
 ```
+
+La columna **Producto** es un desplegable con el catálogo real, así nadie tiene
+que escribir a mano "Chomba – Escuela Claret Rosario". Lo mantiene al día el
+flujo `bot/workflow-sync-catalogo.json`, que corre todos los días a las 6 y
+puede dispararse a mano con `POST /webhook/sync-catalogo-locales`. Escribe los
+nombres en una pestaña oculta `Catálogo` de cada planilla y apunta ahí la
+validación de datos. Si agregás un producto en la tienda, al otro día ya está
+en las tres planillas.
 
 Los tres primeros nodos son lo único que cambia por local: fijan el nombre del
 punto de venta, su API key y a qué planilla escribirle la respuesta. De
@@ -73,6 +81,15 @@ actualizarla en el nodo del local.
 > "Campera Polar / S / AJUSTE / 3" coincide con un producto real y le **pisa el
 > stock**. Las planillas arrancan solo con la fila de encabezados.
 
+> **Ojo con rotar el client secret en Google Cloud.** Borrar un secreto
+> invalida los refresh tokens emitidos con él, y las credenciales de n8n que lo
+> usaban dejan de andar con
+> `The provided authorization grant ... is invalid, expired, revoked`. Si pasa,
+> hay que reconectar cada credencial afectada desde n8n. Por eso todos los nodos
+> de este flujo usan **una sola** credencial: los que hablan con la API de
+> Sheets lo hacen por HTTP con `googleSheetsTriggerOAuth2Api`, en vez de sumar
+> una credencial más de tipo `googleSheetsOAuth2Api`.
+
 ## Qué hace cada nodo
 
 **1-3. `<Local>`: fila nueva** — un trigger por planilla. Dispara cuando aparece
@@ -96,8 +113,19 @@ cuerpo que espera cada endpoint: `cantidad` para venta/ingreso,
 `x-pdv-key`. Está en `neverError`, así que un 409 por falta de stock no corta el
 flujo: sigue para poder escribirle el motivo al empleado.
 
-**11. Preparar estado / Actualizar Estado** — arma el texto y lo escribe en la
-misma fila de la planilla de ese local, buscándola por `row_number`.
+**11-14. Preparar estado / Leer planilla / Ubicar fila / Actualizar Estado** —
+arma el texto y lo escribe en la fila que lo originó.
+
+El trigger de Google Sheets **no dice en qué fila cayó** (solo entrega los
+valores de las columnas), así que hay que ubicarla releyendo la planilla y
+buscando de abajo hacia arriba la primera fila con Estado vacío que coincida en
+tipo, producto, talle, color, cantidad y nota. Se busca desde el final porque lo
+recién agregado está ahí, y se saltean las filas ya resueltas para no pisar el
+resultado de otra.
+
+La escritura va por HTTP contra la API de Sheets en vez del nodo de Google
+Sheets, para poder usar la misma credencial OAuth2 que los triggers (ver la nota
+sobre credenciales más abajo).
 
 ## Errores que va a ver el empleado
 
