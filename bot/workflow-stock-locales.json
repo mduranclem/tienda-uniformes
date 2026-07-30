@@ -2,8 +2,39 @@
   "name": "Stock locales — Tienda de Uniformes",
   "nodes": [
     {
-      "id": "trigger-sheets",
-      "name": "Nueva fila en Sheets",
+      "id": "trigger-fabrica",
+      "name": "Fábrica: fila nueva",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -220
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "PEGAR_ID_PLANILLA_FABRICA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Untitled",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger-fisherton",
+      "name": "Fisherton: fila nueva",
       "type": "n8n-nodes-base.googleSheetsTrigger",
       "typeVersion": 1,
       "position": [
@@ -20,7 +51,7 @@
         },
         "documentId": {
           "__rl": true,
-          "value": "PEGAR_ID_DE_TU_PLANILLA",
+          "value": "PEGAR_ID_PLANILLA_FISHERTON",
           "mode": "id"
         },
         "sheetName": {
@@ -33,8 +64,52 @@
       }
     },
     {
-      "id": "code-armar-pedido",
-      "name": "Armar pedido",
+      "id": "trigger-norte",
+      "name": "Norte: fila nueva",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        220
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "PEGAR_ID_PLANILLA_NORTE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Untitled",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      }
+    },
+    {
+      "id": "id-fabrica",
+      "name": "Es Fábrica",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -220
+      ],
+      "parameters": {
+        "jsCode": "// El local sale de la planilla que disparó: nadie lo escribe a mano.\nreturn {\n  json: {\n    ...$input.item.json,\n    _pdv: 'Fábrica - Dean Funes 1258',\n    _apiKey: 'PEGAR_API_KEY_FABRICA',\n    _documentId: 'PEGAR_ID_PLANILLA_FABRICA',\n    _rowNumber: $input.item.json.row_number,\n  },\n}"
+      }
+    },
+    {
+      "id": "id-fisherton",
+      "name": "Es Fisherton",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -42,43 +117,75 @@
         0
       ],
       "parameters": {
-        "jsCode": "// Mapea 'Punto de venta' -> API key del local (Módulo de stock centralizado)\nconst KEYS = {\n  'Fábrica - Dean Funes 1258': 'PEGAR_API_KEY_FABRICA',\n  'Fisherton - Eva Perón 7790': 'PEGAR_API_KEY_FISHERTON',\n  'Norte - Alberdi 608 bis': 'PEGAR_API_KEY_NORTE',\n}\n\nconst row = $input.item.json\nconst puntoDeVenta = String(row['Punto de venta'] || '').trim()\nconst tipo = String(row['Tipo'] || '').trim().toUpperCase()\nconst apiKey = KEYS[puntoDeVenta]\n\nlet _error = null\nif (!apiKey) _error = `Punto de venta desconocido: \"${puntoDeVenta}\"`\nelse if (!['VENTA', 'INGRESO', 'AJUSTE'].includes(tipo)) _error = `Tipo inválido: \"${tipo}\"`\n\nreturn {\n  json: {\n    ...row,\n    apiKey: apiKey || '',\n    tipoPath: tipo ? tipo.toLowerCase() : '',\n    _error,\n  },\n}"
+        "jsCode": "// El local sale de la planilla que disparó: nadie lo escribe a mano.\nreturn {\n  json: {\n    ...$input.item.json,\n    _pdv: 'Fisherton - Eva Perón 7790',\n    _apiKey: 'PEGAR_API_KEY_FISHERTON',\n    _documentId: 'PEGAR_ID_PLANILLA_FISHERTON',\n    _rowNumber: $input.item.json.row_number,\n  },\n}"
       }
     },
     {
-      "id": "http-buscar-producto",
-      "name": "Buscar producto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "id-norte",
+      "name": "Es Norte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        220
+      ],
+      "parameters": {
+        "jsCode": "// El local sale de la planilla que disparó: nadie lo escribe a mano.\nreturn {\n  json: {\n    ...$input.item.json,\n    _pdv: 'Norte - Alberdi 608 bis',\n    _apiKey: 'PEGAR_API_KEY_NORTE',\n    _documentId: 'PEGAR_ID_PLANILLA_NORTE',\n    _rowNumber: $input.item.json.row_number,\n  },\n}"
+      }
+    },
+    {
+      "id": "validar",
+      "name": "Validar fila",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         520,
         0
       ],
       "parameters": {
-        "url": "=https://api.tiendadeuniformes.store/api/productos?q={{ encodeURIComponent($json['Producto'] || '') }}&limit=10",
-        "options": {}
+        "jsCode": "// Punto único por donde pasan las tres planillas: de acá para abajo\n// la lógica es la misma para los tres locales.\nconst row = $input.item.json\nconst tipo = String(row['Tipo'] || '').trim().toUpperCase()\n\nlet _error = null\nif (!['VENTA', 'INGRESO', 'AJUSTE'].includes(tipo)) {\n  _error = `Tipo inválido: \"${row['Tipo'] ?? ''}\" (poné VENTA, INGRESO o AJUSTE)`\n} else if (!String(row['Producto'] || '').trim()) {\n  _error = 'Falta el nombre del producto'\n} else if (!String(row['Talle'] || '').trim()) {\n  _error = 'Falta el talle'\n}\n\nreturn { json: { ...row, tipoPath: tipo ? tipo.toLowerCase() : '', _error } }"
       }
     },
     {
-      "id": "code-elegir-producto",
-      "name": "Elegir producto y armar body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "buscar-producto",
+      "name": "Buscar producto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         780,
         0
       ],
       "parameters": {
-        "jsCode": "const item = $('Armar pedido').item.json\n\nif (item._error) {\n  return { json: { ...item } }\n}\n\nconst productos = ($input.item.json && $input.item.json.data) || []\nconst nombreBuscado = String(item['Producto'] || '').trim().toLowerCase()\nconst producto = productos.find(p => p.nombre.trim().toLowerCase() === nombreBuscado) || productos[0]\n\nif (!producto) {\n  return { json: { ...item, _error: `Producto no encontrado: \"${item['Producto']}\"` } }\n}\n\nconst body = {\n  productoId: producto.id,\n  talle: String(item['Talle'] || '').trim(),\n}\nif (item['Color']) body.color = String(item['Color']).trim()\n\nif (item.tipoPath === 'ajuste') {\n  body.cantidadFinal = Number(item['Cantidad final (solo AJUSTE)'])\n  body.nota = item['Nota'] || ''\n} else {\n  body.cantidad = Number(item['Cantidad'])\n  if (item['Nota']) body.nota = item['Nota']\n}\n\nreturn { json: { ...item, body } }"
+        "url": "=https://api.tiendadeuniformes.store/api/productos?q={{ encodeURIComponent($json['Producto'] || '') }}&limit=10",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       }
     },
     {
-      "id": "http-llamar-stock",
+      "id": "armar-body",
+      "name": "Elegir producto y armar body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const item = $('Validar fila').item.json\nif (item._error) return { json: { ...item } }\n\nconst productos = ($input.item.json && $input.item.json.data) || []\nconst nombreBuscado = String(item['Producto'] || '').trim().toLowerCase()\n// Preferimos la coincidencia exacta; si no hay, el primer resultado de la búsqueda.\nconst producto = productos.find(p => p.nombre.trim().toLowerCase() === nombreBuscado) || productos[0]\nif (!producto) return { json: { ...item, _error: `Producto no encontrado: \"${item['Producto']}\"` } }\n\nconst body = { productoId: producto.id, talle: String(item['Talle'] || '').trim() }\nif (item['Color']) body.color = String(item['Color']).trim()\n\nif (item.tipoPath === 'ajuste') {\n  body.cantidadFinal = Number(item['Cantidad final (solo AJUSTE)'])\n  body.nota = item['Nota'] || ''\n} else {\n  body.cantidad = Number(item['Cantidad'])\n  if (item['Nota']) body.nota = item['Nota']\n}\n\nreturn { json: { ...item, body } }"
+      }
+    },
+    {
+      "id": "llamar-api",
       "name": "Llamar API stock",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1040,
+        1300,
         0
       ],
       "onError": "continueRegularOutput",
@@ -90,7 +197,7 @@
           "parameters": [
             {
               "name": "x-pdv-key",
-              "value": "={{ $json.apiKey }}"
+              "value": "={{ $json._apiKey }}"
             }
           ]
         },
@@ -107,32 +214,32 @@
       }
     },
     {
-      "id": "code-preparar-estado",
+      "id": "preparar-estado",
       "name": "Preparar estado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1300,
+        1560,
         0
       ],
       "parameters": {
-        "jsCode": "const previo = $('Elegir producto y armar body').item.json._error || $('Armar pedido').item.json._error\nconst resp = $input.item.json\n\n// El detalle del error puede venir de varias formas según cómo falle el HTTP.\nfunction detalleError(r) {\n  if (!r) return 'sin respuesta del servidor'\n  return r.mensaje\n    || r.message\n    || r.error?.mensaje\n    || r.error?.message\n    || (typeof r.error === 'string' ? r.error : null)\n    || JSON.stringify(r).slice(0, 200)\n}\n\nlet estado\nif (previo) {\n  estado = `ERROR: ${previo}`\n} else if (resp && resp.ok) {\n  const stock = resp.stockRestante ?? resp.stockActual ?? ''\n  estado = `OK — stock actual: ${stock}`\n} else {\n  estado = `ERROR: ${detalleError(resp)}`\n}\n\nreturn {\n  json: {\n    row_number: $('Nueva fila en Sheets').item.json.row_number,\n    estado,\n  },\n}"
+        "jsCode": "const previo = $('Elegir producto y armar body').item.json._error\nconst ctx = $('Validar fila').item.json\nconst resp = $input.item.json\n\n// El detalle del error puede venir de varias formas según cómo falle el HTTP.\nfunction detalleError(r) {\n  if (!r) return 'sin respuesta del servidor'\n  return r.mensaje\n    || r.message\n    || r.error?.mensaje\n    || r.error?.message\n    || (typeof r.error === 'string' ? r.error : null)\n    || JSON.stringify(r).slice(0, 200)\n}\n\nlet estado\nif (previo) {\n  estado = `ERROR: ${previo}`\n} else if (resp && resp.ok) {\n  estado = `OK — stock actual: ${resp.stockRestante ?? resp.stockActual ?? ''}`\n} else {\n  estado = `ERROR: ${detalleError(resp)}`\n}\n\nreturn {\n  json: {\n    row_number: ctx._rowNumber,\n    documentId: ctx._documentId,\n    estado,\n  },\n}"
       }
     },
     {
-      "id": "sheets-actualizar-estado",
-      "name": "Actualizar Estado en Sheets",
+      "id": "escribir-estado",
+      "name": "Actualizar Estado",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
       "position": [
-        1560,
+        1820,
         0
       ],
       "parameters": {
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "PEGAR_ID_DE_TU_PLANILLA",
+          "value": "={{ $json.documentId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -147,7 +254,7 @@
           ],
           "value": {
             "row_number": "={{ $json.row_number }}",
-            "Estado (lo completa n8n)": "={{ $json.estado }}"
+            "Estado": "={{ $json.estado }}"
           }
         },
         "options": {}
@@ -155,18 +262,73 @@
     }
   ],
   "connections": {
-    "Nueva fila en Sheets": {
+    "Fábrica: fila nueva": {
       "main": [
         [
           {
-            "node": "Armar pedido",
+            "node": "Es Fábrica",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Armar pedido": {
+    "Fisherton: fila nueva": {
+      "main": [
+        [
+          {
+            "node": "Es Fisherton",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Norte: fila nueva": {
+      "main": [
+        [
+          {
+            "node": "Es Norte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Fábrica": {
+      "main": [
+        [
+          {
+            "node": "Validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Fisherton": {
+      "main": [
+        [
+          {
+            "node": "Validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Norte": {
+      "main": [
+        [
+          {
+            "node": "Validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar fila": {
       "main": [
         [
           {
@@ -214,7 +376,7 @@
       "main": [
         [
           {
-            "node": "Actualizar Estado en Sheets",
+            "node": "Actualizar Estado",
             "type": "main",
             "index": 0
           }
