@@ -1,0 +1,228 @@
+{
+  "name": "Stock locales — Tienda de Uniformes",
+  "nodes": [
+    {
+      "id": "trigger-sheets",
+      "name": "Nueva fila en Sheets",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1dMLZXp02B3zGwxTtVffdhJonNgJz_dNX2aMSqe8QTDs",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list"
+        },
+        "event": "rowAdded",
+        "options": {}
+      }
+    },
+    {
+      "id": "code-armar-pedido",
+      "name": "Armar pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Mapea 'Punto de venta' -> API key del local (Módulo de stock centralizado)\nconst KEYS = {\n  'Fábrica - Dean Funes 1258': 'PEGAR_API_KEY_FABRICA',\n  'Fisherton - Eva Perón 7790': 'PEGAR_API_KEY_FISHERTON',\n  'Norte - Alberdi 608 bis': 'PEGAR_API_KEY_NORTE',\n}\n\nconst row = $input.item.json\nconst puntoDeVenta = String(row['Punto de venta'] || '').trim()\nconst tipo = String(row['Tipo'] || '').trim().toUpperCase()\nconst apiKey = KEYS[puntoDeVenta]\n\nlet _error = null\nif (!apiKey) _error = `Punto de venta desconocido: \"${puntoDeVenta}\"`\nelse if (!['VENTA', 'INGRESO', 'AJUSTE'].includes(tipo)) _error = `Tipo inválido: \"${tipo}\"`\n\nreturn {\n  json: {\n    ...row,\n    apiKey: apiKey || '',\n    tipoPath: tipo ? tipo.toLowerCase() : '',\n    _error,\n  },\n}"
+      }
+    },
+    {
+      "id": "http-buscar-producto",
+      "name": "Buscar producto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "url": "=https://api.tiendadeuniformes.store/api/productos?q={{ encodeURIComponent($json['Producto'] || '') }}&limit=10",
+        "options": {}
+      }
+    },
+    {
+      "id": "code-elegir-producto",
+      "name": "Elegir producto y armar body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const item = $('Armar pedido').item.json\n\nif (item._error) {\n  return { json: { ...item } }\n}\n\nconst productos = ($input.item.json && $input.item.json.data) || []\nconst nombreBuscado = String(item['Producto'] || '').trim().toLowerCase()\nconst producto = productos.find(p => p.nombre.trim().toLowerCase() === nombreBuscado) || productos[0]\n\nif (!producto) {\n  return { json: { ...item, _error: `Producto no encontrado: \"${item['Producto']}\"` } }\n}\n\nconst body = {\n  productoId: producto.id,\n  talle: String(item['Talle'] || '').trim(),\n}\nif (item['Color']) body.color = String(item['Color']).trim()\n\nif (item.tipoPath === 'ajuste') {\n  body.cantidadFinal = Number(item['Cantidad final (solo AJUSTE)'])\n  body.nota = item['Nota'] || ''\n} else {\n  body.cantidad = Number(item['Cantidad'])\n  if (item['Nota']) body.nota = item['Nota']\n}\n\nreturn { json: { ...item, body } }"
+      }
+    },
+    {
+      "id": "http-llamar-stock",
+      "name": "Llamar API stock",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.tiendadeuniformes.store/api/stock/{{ $json.tipoPath }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-pdv-key",
+              "value": "={{ $json.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "code-preparar-estado",
+      "name": "Preparar estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const previo = $('Elegir producto y armar body').item.json._error || $('Armar pedido').item.json._error\nconst resp = $input.item.json\n\n// El detalle del error puede venir de varias formas según cómo falle el HTTP.\nfunction detalleError(r) {\n  if (!r) return 'sin respuesta del servidor'\n  return r.mensaje\n    || r.message\n    || r.error?.mensaje\n    || r.error?.message\n    || (typeof r.error === 'string' ? r.error : null)\n    || JSON.stringify(r).slice(0, 200)\n}\n\nlet estado\nif (previo) {\n  estado = `ERROR: ${previo}`\n} else if (resp && resp.ok) {\n  const stock = resp.stockRestante ?? resp.stockActual ?? ''\n  estado = `OK — stock actual: ${stock}`\n} else {\n  estado = `ERROR: ${detalleError(resp)}`\n}\n\nreturn {\n  json: {\n    row_number: $('Nueva fila en Sheets').item.json.row_number,\n    estado,\n  },\n}"
+      }
+    },
+    {
+      "id": "sheets-actualizar-estado",
+      "name": "Actualizar Estado en Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1dMLZXp02B3zGwxTtVffdhJonNgJz_dNX2aMSqe8QTDs",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Estado (lo completa n8n)": "={{ $json.estado }}"
+          }
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Nueva fila en Sheets": {
+      "main": [
+        [
+          {
+            "node": "Armar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar pedido": {
+      "main": [
+        [
+          {
+            "node": "Buscar producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar producto": {
+      "main": [
+        [
+          {
+            "node": "Elegir producto y armar body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir producto y armar body": {
+      "main": [
+        [
+          {
+            "node": "Llamar API stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar API stock": {
+      "main": [
+        [
+          {
+            "node": "Preparar estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar estado": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Estado en Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
