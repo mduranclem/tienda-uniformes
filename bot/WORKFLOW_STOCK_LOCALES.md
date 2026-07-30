@@ -47,6 +47,17 @@ El flujo está en `bot/workflow-stock-locales.json`:
      de cada punto de venta.
 5. Activá el workflow.
 
+> **El nombre de la pestaña importa.** Los dos nodos de Sheets apuntan a la
+> pestaña por nombre, no por `gid`. Si la planilla se creó subiendo un CSV a
+> Drive, la pestaña suele quedar como `Untitled`. Si la renombrás, hay que
+> actualizar el campo *Sheet* de ambos nodos o el workflow deja de activarse
+> con el error `Sheet with ID ... not found`.
+
+> **Nunca dejes filas de ejemplo en la planilla.** El flujo resuelve el
+> producto por nombre y no distingue mayúsculas: un ejemplo tipo
+> "Campera Polar / S / AJUSTE / 3" coincide con un producto real y le
+> **pisa el stock**. La planilla arranca solo con la fila de encabezados.
+
 Las API keys se generan en `/admin/puntos-venta` y **se muestran una sola vez**
 (se guardan hasheadas). Si perdiste una, no se recupera: se regenera, y hay que
 actualizarla acá.

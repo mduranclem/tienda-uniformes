@@ -20,13 +20,13 @@
         },
         "documentId": {
           "__rl": true,
-          "value": "1dMLZXp02B3zGwxTtVffdhJonNgJz_dNX2aMSqe8QTDs",
+          "value": "PEGAR_ID_DE_TU_PLANILLA",
           "mode": "id"
         },
         "sheetName": {
           "__rl": true,
-          "value": "gid=0",
-          "mode": "list"
+          "value": "Untitled",
+          "mode": "name"
         },
         "event": "rowAdded",
         "options": {}
@@ -132,13 +132,13 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1dMLZXp02B3zGwxTtVffdhJonNgJz_dNX2aMSqe8QTDs",
+          "value": "PEGAR_ID_DE_TU_PLANILLA",
           "mode": "id"
         },
         "sheetName": {
           "__rl": true,
-          "value": "gid=0",
-          "mode": "list"
+          "value": "Untitled",
+          "mode": "name"
         },
         "columns": {
           "mappingMode": "defineBelow",
