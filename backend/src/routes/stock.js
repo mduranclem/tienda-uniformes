@@ -2,7 +2,7 @@ const { Router } = require('express')
 const prisma = require('../lib/prisma')
 const pdvAuth = require('../middleware/pdvAuth')
 const { registrarMovimiento, resolverVariante } = require('../lib/movimientosStock')
-const { notificarStockBajo } = require('../services/notificaciones')
+const { verificarAlertasStock } = require('../services/alertasStock')
 
 const router = Router()
 
@@ -17,7 +17,7 @@ router.post('/venta', async (req, res, next) => {
 
     const variante = await resolverVariante(prisma, { productoId, talle, color })
 
-    const { stockNuevo, movimiento } = await prisma.$transaction(tx =>
+    const { stockAnterior, stockNuevo, movimiento } = await prisma.$transaction(tx =>
       registrarMovimiento(tx, {
         varianteId: variante.id,
         puntoDeVentaId: req.puntoDeVenta.id,
@@ -27,14 +27,7 @@ router.post('/venta', async (req, res, next) => {
       })
     )
 
-    if (stockNuevo === 0) {
-      notificarStockBajo({
-        variante: { ...variante, stock: stockNuevo },
-        producto: variante.producto,
-        puntoDeVenta: req.puntoDeVenta,
-        motivo: 'sin_stock',
-      })
-    }
+    verificarAlertasStock(variante.id, stockAnterior, stockNuevo)
 
     res.json({ ok: true, stockRestante: stockNuevo, movimientoId: movimiento.id })
   } catch (err) { next(err) }
@@ -59,14 +52,7 @@ router.post('/ingreso', async (req, res, next) => {
       })
     )
 
-    if (stockAnterior === 0 && stockNuevo > 0) {
-      notificarStockBajo({
-        variante: { ...variante, stock: stockNuevo },
-        producto: variante.producto,
-        puntoDeVenta: req.puntoDeVenta,
-        motivo: 'reingreso',
-      })
-    }
+    verificarAlertasStock(variante.id, stockAnterior, stockNuevo)
 
     res.json({ ok: true, stockActual: stockNuevo, movimientoId: movimiento.id })
   } catch (err) { next(err) }
@@ -93,6 +79,8 @@ router.post('/ajuste', async (req, res, next) => {
         nota,
       })
     )
+
+    verificarAlertasStock(variante.id, stockAnterior, stockNuevo)
 
     res.json({ ok: true, stockAnterior, stockActual: stockNuevo, movimientoId: movimiento.id })
   } catch (err) { next(err) }

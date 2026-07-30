@@ -80,7 +80,9 @@ export default function ProductCard({ producto }) {
             <p className="text-base font-bold text-zinc-100">Desde {formatPrecio(precioFinal)}</p>
           )}
           {cuotas && (
-            <p className="text-xs text-green-400">Desde {cuotas.texto}</p>
+            <p className="mt-1 inline-block bg-green-500/25 border border-green-400/50 text-green-300 text-[11px] font-bold px-2 py-0.5 rounded-md">
+              {cuotas.textoCorto}
+            </p>
           )}
           {stockTotal > 0 && stockTotal < 5 ? (
             <p className="text-xs font-semibold text-amber-400 mt-0.5">¡Últimas unidades!</p>

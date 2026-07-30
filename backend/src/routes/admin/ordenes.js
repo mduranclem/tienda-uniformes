@@ -2,6 +2,7 @@ const { Router } = require('express')
 const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
+const { notificarOrdenPagada, notificarCambioEstado } = require('../../services/notificaciones')
 
 const router = Router()
 
@@ -99,6 +100,27 @@ router.put('/:id/estado', async (req, res, next) => {
       return actualizada
     })
 
+    // Notificar vía n8n (no bloqueante)
+    prisma.orden.findUnique({
+      where: { id: req.params.id },
+      include: {
+        usuario: { select: { email: true, nombre: true, telefono: true } },
+        // entrega es imprescindible: sin ella el aviso no distingue retiro de
+        // envío y le prometería un retiro a quien pidió entrega a domicilio.
+        entrega: true,
+        items: {
+          include: {
+            producto: { select: { nombre: true } },
+            variante: { select: { talle: true, color: true } },
+          },
+        },
+      },
+    }).then(ordenCompleta => {
+      if (!ordenCompleta) return
+      notificarCambioEstado(ordenCompleta, estado).catch(() => {})
+      if (estado === 'PAGADA') notificarOrdenPagada(ordenCompleta).catch(() => {})
+    })
+
     res.json(orden)
   } catch (err) { next(err) }
 })
@@ -110,9 +132,26 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
     const horas = Number(req.query.horas ?? 48)
     const corte = new Date(Date.now() - horas * 60 * 60 * 1000)
 
+    // Las órdenes en efectivo viven pendientes hasta que la persona pasa por el
+    // local, así que con 48 h se cancelarían solas: quien compra un viernes y
+    // va el lunes se encontraría el pedido cancelado. Se les da 7 días.
+    const HORAS_EFECTIVO = Number(req.query.horasEfectivo ?? 24 * 7)
+    const corteEfectivo = new Date(Date.now() - HORAS_EFECTIVO * 60 * 60 * 1000)
+
     const pendientes = await prisma.orden.findMany({
-      where: { estado: 'PENDIENTE', createdAt: { lt: corte } },
-      include: { items: true },
+      where: {
+        estado: 'PENDIENTE',
+        OR: [
+          { metodoPago: 'efectivo', createdAt: { lt: corteEfectivo } },
+          { metodoPago: { not: 'efectivo' }, createdAt: { lt: corte } },
+          { metodoPago: null, createdAt: { lt: corte } },
+        ],
+      },
+      include: {
+        items: true,
+        entrega: true,
+        usuario: { select: { email: true, nombre: true, telefono: true } },
+      },
     })
 
     let canceladas = 0
@@ -129,10 +168,13 @@ router.post('/limpiar-pendientes', async (req, res, next) => {
           data: {
             ordenId: orden.id,
             estado: 'CANCELADA',
-            nota: `Cancelada automáticamente (>${horas}h sin pago)`,
+            nota: orden.metodoPago === 'efectivo'
+              ? `Cancelada automáticamente (>${HORAS_EFECTIVO}h sin retirar ni pagar)`
+              : `Cancelada automáticamente (>${horas}h sin pago)`,
           },
         })
       })
+      notificarCambioEstado(orden, 'CANCELADA').catch(() => {})
       canceladas++
     }
 

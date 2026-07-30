@@ -19,9 +19,22 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/entregas
 router.post('/', async (req, res, next) => {
   try {
-    const { tipo, nombre, costo } = req.body
+    const { tipo, nombre, costo, cotizado, soloRosario } = req.body
     if (!tipo || !nombre) return res.status(400).json({ mensaje: 'tipo y nombre son requeridos' })
-    const entrega = await prisma.entrega.create({ data: { tipo, nombre, costo: costo ?? 0 } })
+    if ((cotizado || soloRosario) && tipo !== 'ENVIO') {
+      return res.status(400).json({ mensaje: 'Solo una entrega de tipo ENVIO puede cotizarse o limitarse a Rosario' })
+    }
+    // Una opción de Rosario es gratis por definición: no tiene sentido cotizarla.
+    if (soloRosario && cotizado) {
+      return res.status(400).json({ mensaje: 'El envío en Rosario es gratis: no se cotiza' })
+    }
+    const entrega = await prisma.entrega.create({
+      data: {
+        tipo, nombre, costo: costo ?? 0,
+        cotizado: Boolean(cotizado),
+        soloRosario: Boolean(soloRosario),
+      },
+    })
     res.status(201).json(entrega)
   } catch (err) { next(err) }
 })
@@ -29,13 +42,23 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/entregas/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, costo, activo } = req.body
+    const { nombre, costo, activo, cotizado } = req.body
+
+    if (cotizado === true) {
+      const actual = await prisma.entrega.findUnique({ where: { id: req.params.id } })
+      if (actual?.tipo !== 'ENVIO') {
+        return res.status(400).json({ mensaje: 'Solo una entrega de tipo ENVIO puede cotizarse' })
+      }
+    }
+
     const entrega = await prisma.entrega.update({
       where: { id: req.params.id },
       data: {
         nombre: nombre ?? undefined,
         costo: costo !== undefined ? costo : undefined,
         activo: activo !== undefined ? activo : undefined,
+        cotizado: cotizado !== undefined ? Boolean(cotizado) : undefined,
+        soloRosario: req.body.soloRosario !== undefined ? Boolean(req.body.soloRosario) : undefined,
       },
     })
     res.json(entrega)

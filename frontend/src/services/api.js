@@ -7,9 +7,11 @@ const BASE = getBase()
 
 async function request(path, options = {}) {
   const { headers: extraHeaders, ...restOptions } = options
+  // FormData: el browser arma su propio Content-Type (con boundary) — no forzar json.
+  const esFormData = restOptions.body instanceof FormData
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { ...(esFormData ? {} : { 'Content-Type': 'application/json' }), ...extraHeaders },
     ...restOptions,
   })
   if (!res.ok) {
@@ -94,6 +96,16 @@ export const adminApi = {
   listarEntregas: (token) => adminRequest('/admin/entregas', {}, token),
   crearEntrega: (token, data) => adminRequest('/admin/entregas', { method: 'POST', body: JSON.stringify(data) }, token),
   actualizarEntrega: (token, id, data) => adminRequest(`/admin/entregas/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  // Zonas de envío
+  listarZonasEnvio: (token) => adminRequest('/admin/envios/zonas', {}, token),
+  crearZonaEnvio: (token, data) => adminRequest('/admin/envios/zonas', { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarZonaEnvio: (token, id, data) => adminRequest(`/admin/envios/zonas/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  eliminarZonaEnvio: (token, id) => adminRequest(`/admin/envios/zonas/${id}`, { method: 'DELETE' }, token),
+  crearRangoCP: (token, zonaId, data) => adminRequest(`/admin/envios/zonas/${zonaId}/rangos`, { method: 'POST', body: JSON.stringify(data) }, token),
+  eliminarRangoCP: (token, id) => adminRequest(`/admin/envios/rangos/${id}`, { method: 'DELETE' }, token),
+  crearTarifaEnvio: (token, zonaId, data) => adminRequest(`/admin/envios/zonas/${zonaId}/tarifas`, { method: 'POST', body: JSON.stringify(data) }, token),
+  eliminarTarifaEnvio: (token, id) => adminRequest(`/admin/envios/tarifas/${id}`, { method: 'DELETE' }, token),
+  probarEnvio: (token, data) => adminRequest('/admin/envios/probar', { method: 'POST', body: JSON.stringify(data) }, token),
   // Banners
   listarBanners: (token) => adminRequest('/admin/banners', {}, token),
   crearBanner: (token, data) => adminRequest('/admin/banners', { method: 'POST', body: JSON.stringify(data) }, token),
@@ -121,6 +133,9 @@ export const adminApi = {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
     return adminRequest(`/admin/movimientos-stock${qs ? `?${qs}` : ''}`, {}, token)
   },
+  // Bot / config tienda
+  obtenerConfigBot: (token) => adminRequest('/admin/bot', {}, token),
+  actualizarConfigBot: (token, data) => adminRequest('/admin/bot', { method: 'PUT', body: JSON.stringify(data) }, token),
 }
 
 // ── Entregas ──────────────────────────────────────────────────────────────────
@@ -133,6 +148,17 @@ export const cuponesApi = {
 
 export const entregasApi = {
   listar: () => request('/entregas'),
+  // Días y franjas disponibles para coordinar la entrega en Rosario.
+  agenda: () => request('/entregas/agenda'),
+}
+
+// ── Envíos ────────────────────────────────────────────────────────────────────
+// El peso lo calcula el backend a partir de los varianteId: no se manda desde acá.
+export const enviosApi = {
+  cotizar: ({ cp, ciudad, items }) => request('/envios/cotizar', {
+    method: 'POST',
+    body: JSON.stringify({ cp, ciudad, items }),
+  }),
 }
 
 // ── Órdenes ───────────────────────────────────────────────────────────────────

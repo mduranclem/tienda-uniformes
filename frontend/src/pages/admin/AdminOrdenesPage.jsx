@@ -221,6 +221,14 @@ export default function AdminOrdenesPage() {
                               {o.domicilio.calle} {o.domicilio.numero}{o.domicilio.piso ? `, ${o.domicilio.piso}` : ''} — {o.domicilio.ciudad}
                             </p>
                           )}
+                          {/* Día y franja acordados, para armar el recorrido */}
+                          {o.entregaFecha && (
+                            <p className="text-xs font-medium text-blue-400">
+                              📅 {new Date(o.entregaFecha).toLocaleDateString('es-AR', {
+                                timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short',
+                              })} · {o.entregaFranja} hs
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <div>
@@ -231,7 +239,14 @@ export default function AdminOrdenesPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3"><Badge variante={BADGE_ESTADO[o.estado]}>{o.estado}</Badge></td>
+                    <td className="px-4 py-3">
+                      <Badge variante={BADGE_ESTADO[o.estado]}>{o.estado}</Badge>
+                      {/* Un pendiente en efectivo espera al cliente en el local,
+                          no es un pago que falló */}
+                      {o.metodoPago === 'efectivo' && o.estado === 'PENDIENTE' && (
+                        <p className="mt-1 text-[11px] font-medium text-amber-400">💵 paga al retirar</p>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm font-medium text-zinc-100">{formatPrecio(o.total)}</td>
                     <td className="px-4 py-3 text-xs text-zinc-500">{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
                     <td className="px-4 py-3">

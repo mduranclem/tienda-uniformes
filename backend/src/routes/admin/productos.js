@@ -2,10 +2,10 @@ const { Router } = require('express')
 const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
+const { verificarAlertasStock } = require('../../services/alertasStock')
 const { resolverPrecioBanda, precioBaseCategoria } = require('../../lib/preciosBanda')
 
 const router = Router()
-
 
 router.use(authMiddleware, adminOnly)
 
@@ -37,7 +37,7 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, colegioId, imagenes, variantes } = req.body
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, imagenes, variantes } = req.body
     if (!nombre) {
       return res.status(400).json({ mensaje: 'nombre es requerido' })
     }
@@ -55,6 +55,7 @@ router.post('/', async (req, res, next) => {
         precioOferta: precioOferta || null,
         cuotas: cuotas || null,
         cuotasRecargo: cuotasRecargo || null,
+        pesoGramos: pesoGramos ? Number(pesoGramos) : null,
         colegioId: colegioId || null,
         imagenes: imagenes?.length ? { create: imagenes } : undefined,
         variantes: variantes?.length ? { create: variantes } : undefined,
@@ -72,7 +73,7 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, colegioId, activo } = req.body
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, activo } = req.body
 
     let precio
     if (tipo !== undefined) {
@@ -92,6 +93,7 @@ router.put('/:id', async (req, res, next) => {
         precioOferta: precioOferta !== undefined ? (precioOferta || null) : undefined,
         cuotas: cuotas !== undefined ? (cuotas || null) : undefined,
         cuotasRecargo: cuotasRecargo !== undefined ? (cuotasRecargo || null) : undefined,
+        pesoGramos: pesoGramos !== undefined ? (pesoGramos ? Number(pesoGramos) : null) : undefined,
         colegioId: colegioId !== undefined ? (colegioId || null) : undefined,
         activo: activo !== undefined ? activo : undefined,
       },
@@ -121,12 +123,21 @@ router.delete('/:id', async (req, res, next) => {
 // ── Imágenes ──────────────────────────────────────────────────────────────────
 
 // POST /api/admin/productos/:id/imagenes
+// El archivo se comprime en el navegador (frontend/src/lib/imageCompress.js) y
+// se sube directo a Supabase Storage con cache de 1 año; acá solo se registra
+// la URL resultante.
 router.post('/:id/imagenes', async (req, res, next) => {
   try {
     const { url, alt, orden } = req.body
     if (!url) return res.status(400).json({ mensaje: 'url es requerida' })
+
     const imagen = await prisma.productImage.create({
-      data: { productoId: req.params.id, url, alt: alt ?? null, orden: orden ?? 0 },
+      data: {
+        productoId: req.params.id,
+        url,
+        alt: alt ?? null,
+        orden: orden ? Number(orden) : 0,
+      },
     })
     res.status(201).json(imagen)
   } catch (err) { next(err) }
@@ -190,6 +201,10 @@ router.post('/:id/variantes', async (req, res, next) => {
 router.put('/variantes/:varianteId', async (req, res, next) => {
   try {
     const { talle, color, stock, sku, precio } = req.body
+
+    const anterior = await prisma.variante.findUnique({ where: { id: req.params.varianteId } })
+    if (!anterior) return res.status(404).json({ mensaje: 'Variante no encontrada' })
+
     const variante = await prisma.variante.update({
       where: { id: req.params.varianteId },
       data: {
@@ -200,6 +215,11 @@ router.put('/variantes/:varianteId', async (req, res, next) => {
         precio: precio !== undefined ? (precio ? parseFloat(precio) : null) : undefined,
       },
     })
+
+    if (stock !== undefined) {
+      verificarAlertasStock(variante.id, anterior.stock, variante.stock).catch(() => {})
+    }
+
     res.json(variante)
   } catch (err) { next(err) }
 })

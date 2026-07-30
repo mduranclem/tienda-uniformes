@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { entregasApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
+import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
 import { formatPrecio, esRosario } from '../lib/utils'
 import Spinner from '../components/ui/Spinner'
-import { ChevronLeft, Truck, MapPin, Tag, X } from 'lucide-react'
+import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { items, totalPrecio, dispatch } = useCart()
@@ -22,6 +22,11 @@ export default function CheckoutPage() {
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
+  const [metodoPago, setMetodoPago] = useState('mercadopago')
+  const [agenda, setAgenda] = useState(null)
+  const [cotizacion, setCotizacion] = useState(null)
+  const [cotizando, setCotizando] = useState(false)
+  const [errorCotizacion, setErrorCotizacion] = useState('')
 
   const [form, setForm] = useState({
     nombre: usuario?.nombre ?? '',
@@ -32,6 +37,8 @@ export default function CheckoutPage() {
     piso: '',
     ciudad: '',
     cp: '',
+    entregaFecha: '',
+    entregaFranja: '',
   })
 
   useEffect(() => {
@@ -42,6 +49,9 @@ export default function CheckoutPage() {
         if (data.length > 0) setEntregaId(data[0].id)
       })
       .finally(() => setCargando(false))
+    // Los días hábiles los calcula el backend, para que el checkout ofrezca
+    // exactamente los mismos que después valida al crear la orden.
+    entregasApi.agenda().then(setAgenda).catch(() => {})
   }, [])
 
   // Actualiza nombre/email si el usuario carga después
@@ -59,7 +69,32 @@ export default function CheckoutPage() {
   const esEnvio = entregaSeleccionada?.tipo === 'ENVIO'
   // Envío gratis dentro de Rosario (el backend aplica la misma regla)
   const envioGratisRosario = esEnvio && esRosario(form.ciudad)
-  const costoEnvio = envioGratisRosario ? 0 : Number(entregaSeleccionada?.costo ?? 0)
+  // Entregas marcadas como "cotizado": el precio sale del CP y el peso, no de un
+  // costo fijo. Rosario se resuelve antes y nunca llega a cotizarse.
+  const envioCotizado = esEnvio && Boolean(entregaSeleccionada?.cotizado) && !envioGratisRosario
+  const costoEnvio = envioGratisRosario
+    ? 0
+    : envioCotizado
+      ? Number(cotizacion?.precio ?? 0)
+      : Number(entregaSeleccionada?.costo ?? 0)
+  // Sin cotización no se puede comprar: es preferible perder la venta a
+  // despachar al interior cobrando $0.
+  const faltaCotizacion = envioCotizado && (cotizando || !cotizacion)
+  // Solo se coordina día y horario en las entregas que hace la tienda. Los
+  // envíos al interior los reparte Andreani en su propia ventana.
+  const coordinaEntrega = esEnvio && Boolean(entregaSeleccionada?.soloRosario)
+  const faltaCoordinar = coordinaEntrega && (!form.entregaFecha || !form.entregaFranja)
+  // Envío fuera de Rosario sin tarifas cargadas: se acuerda el costo después,
+  // por WhatsApp. Dentro de Rosario siempre es gratis y no entra acá.
+  const envioACotizar = esEnvio && !entregaSeleccionada?.soloRosario && !entregaSeleccionada?.cotizado
+  // La dirección tiene que corresponder a la opción elegida: cada una cubre una
+  // zona con precio distinto.
+  const ciudadCargada = form.ciudad.trim().length > 0
+  const zonaNoCoincide = esEnvio && ciudadCargada && (
+    entregaSeleccionada?.soloRosario !== esRosario(form.ciudad)
+  )
+  // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
+  const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
   const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
   const descuentoCupon = cupon?.descuento ?? 0
   const descuento = descuentoBienvenida + descuentoCupon
@@ -73,6 +108,46 @@ export default function CheckoutPage() {
     }, 600)
     return () => clearTimeout(t)
   }, [form.email])
+
+  // Cotiza el envío cuando cambia el CP. Mismo patrón de guarda `cancelado` que
+  // CatalogoPage: sin él, una respuesta lenta de un CP viejo puede pisar a la
+  // del CP que el cliente terminó de escribir, y mostrar un precio equivocado.
+  useEffect(() => {
+    if (!envioCotizado) {
+      setCotizacion(null); setErrorCotizacion(''); setCotizando(false)
+      return
+    }
+    if (!/\d{4}/.test(form.cp.trim())) {
+      setCotizacion(null); setErrorCotizacion(''); setCotizando(false)
+      return
+    }
+
+    let cancelado = false
+    setCotizando(true)
+    setErrorCotizacion('')
+
+    const t = setTimeout(() => {
+      enviosApi.cotizar({
+        cp: form.cp.trim(),
+        ciudad: form.ciudad,
+        items: items.map(i => ({ varianteId: i.varianteId, cantidad: i.cantidad })),
+      })
+        .then(r => { if (!cancelado) setCotizacion(r.opciones?.[0] ?? null) })
+        .catch(err => {
+          if (cancelado) return
+          setCotizacion(null)
+          setErrorCotizacion(err.message)
+        })
+        .finally(() => { if (!cancelado) setCotizando(false) })
+    }, 500)
+
+    return () => { cancelado = true; clearTimeout(t) }
+  }, [envioCotizado, form.cp, form.ciudad, items])
+
+  // Si cambia a envío a domicilio, el efectivo deja de ser una opción válida.
+  useEffect(() => {
+    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('mercadopago')
+  }, [puedePagarEfectivo, metodoPago])
 
   async function aplicarCupon() {
     if (!codigoInput.trim()) return
@@ -106,6 +181,21 @@ export default function CheckoutPage() {
     if (esEnvio && (!form.calle.trim() || !form.ciudad.trim())) {
       setError('Completá la dirección de envío.'); return
     }
+    if (envioCotizado && !/\d{4}/.test(form.cp.trim())) {
+      setError('Ingresá tu código postal para calcular el envío.'); return
+    }
+    if (faltaCotizacion) {
+      setError(errorCotizacion || 'Esperá a que terminemos de calcular el envío.'); return
+    }
+    if (zonaNoCoincide) {
+      setError(entregaSeleccionada?.soloRosario
+        ? 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".'
+        : 'Para direcciones de Rosario elegí "Envío a domicilio en Rosario", que es gratis.')
+      return
+    }
+    if (faltaCoordinar) {
+      setError('Elegí el día y el horario en que querés recibir el pedido.'); return
+    }
 
     setEnviando(true)
     try {
@@ -120,6 +210,9 @@ export default function CheckoutPage() {
         email: form.email,
         telefono: form.telefono || null,
         entregaId,
+        metodoPago,
+        entregaFecha: coordinaEntrega ? form.entregaFecha : null,
+        entregaFranja: coordinaEntrega ? form.entregaFranja : null,
         cuponId: cupon?.cuponId ?? null,
         domicilio: esEnvio ? {
           calle: form.calle,
@@ -246,9 +339,15 @@ export default function CheckoutPage() {
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
-                        {(e.tipo === 'ENVIO' && esRosario(form.ciudad)) || Number(e.costo) === 0
-                          ? 'Gratis'
-                          : formatPrecio(e.costo)}
+                        {e.tipo === 'RETIRO' || e.soloRosario
+                          ? (Number(e.costo) === 0
+                              ? <span className="bg-green-500/25 border border-green-400/50 text-green-300 text-xs font-bold px-2 py-0.5 rounded-md">Gratis</span>
+                              : formatPrecio(e.costo))
+                          : e.cotizado
+                            ? (entregaId === e.id && cotizacion
+                                ? formatPrecio(cotizacion.precio)
+                                : <span className="font-normal text-zinc-500">Según tu CP</span>)
+                            : <span className="font-normal text-amber-400">A cotizar</span>}
                       </span>
                     </label>
                   ))}
@@ -277,18 +376,132 @@ export default function CheckoutPage() {
                     <label className="block text-xs text-zinc-400 mb-1">Ciudad *</label>
                     <input type="text" value={form.ciudad} onChange={e => setField('ciudad', e.target.value)}
                       className="input w-full" placeholder="Rosario" required={esEnvio} />
-                    {envioGratisRosario && (
-                      <p className="mt-1 text-xs font-medium text-emerald-400">
-                        🎉 Envío gratis en Rosario
+                    {zonaNoCoincide ? (
+                      <p className="mt-1 text-xs font-medium text-red-400">
+                        {entregaSeleccionada?.soloRosario
+                          ? 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".'
+                          : 'Para Rosario tenés envío gratis: elegí "Envío a domicilio en Rosario".'}
                       </p>
+                    ) : (
+                      <>
+                        {entregaSeleccionada?.soloRosario && ciudadCargada && (
+                          <p className="mt-1 text-xs font-medium text-emerald-400">
+                            🎉 Envío gratis en Rosario
+                          </p>
+                        )}
+                        {envioACotizar && ciudadCargada && (
+                          <p className="mt-1 text-xs text-amber-400">
+                            El envío al interior se cotiza aparte: te pasamos el costo
+                            por WhatsApp antes de despacharlo.
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1">Código postal</label>
+                    <label className="block text-xs text-zinc-400 mb-1">
+                      Código postal {envioCotizado && '*'}
+                    </label>
                     <input type="text" value={form.cp} onChange={e => setField('cp', e.target.value)}
-                      className="input w-full" placeholder="1043" />
+                      className="input w-full" placeholder="1043" required={envioCotizado} />
+                    {envioCotizado && cotizando && (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+                        <Spinner className="w-3 h-3" /> Calculando envío...
+                      </p>
+                    )}
+                    {envioCotizado && !cotizando && cotizacion && (
+                      <p className="mt-1 text-xs text-zinc-400">
+                        {cotizacion.nombre}: <span className="font-medium text-zinc-200">{formatPrecio(cotizacion.precio)}</span>
+                      </p>
+                    )}
+                    {envioCotizado && !cotizando && errorCotizacion && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        {errorCotizacion} Escribinos por WhatsApp y lo resolvemos.
+                      </p>
+                    )}
                   </div>
+
+                  {/* Coordinación de la entrega: solo en Rosario, que es donde
+                      reparte la tienda. Al interior lo lleva Andreani. */}
+                  {coordinaEntrega && (
+                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 mt-1 border-t border-zinc-800">
+                      <p className="sm:col-span-2 text-xs text-zinc-400">
+                        ¿Cuándo querés recibirlo? Entregamos de lunes a viernes, de 10 a 16 hs.
+                      </p>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Día *</label>
+                        <select
+                          value={form.entregaFecha}
+                          onChange={e => setField('entregaFecha', e.target.value)}
+                          className="input w-full"
+                          required={coordinaEntrega}
+                        >
+                          <option value="">Elegí un día</option>
+                          {(agenda?.fechas ?? []).map(f => (
+                            <option key={f.valor} value={f.valor}>{f.etiqueta}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Horario *</label>
+                        <select
+                          value={form.entregaFranja}
+                          onChange={e => setField('entregaFranja', e.target.value)}
+                          className="input w-full"
+                          required={coordinaEntrega}
+                        >
+                          <option value="">Elegí un horario</option>
+                          {(agenda?.franjas ?? []).map(f => (
+                            <option key={f.valor} value={f.valor}>{f.etiqueta}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
+
+            {/* Forma de pago */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+              <h2 className="text-base font-semibold text-zinc-100 mb-4">Forma de pago</h2>
+              <div className="flex flex-col gap-2">
+                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  metodoPago === 'mercadopago' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                }`}>
+                  <input type="radio" name="metodoPago" value="mercadopago"
+                    checked={metodoPago === 'mercadopago'}
+                    onChange={() => setMetodoPago('mercadopago')}
+                    className="accent-blue-500" />
+                  <CreditCard className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-100">Mercado Pago</p>
+                    <p className="text-xs text-zinc-500">Tarjeta, débito o dinero en cuenta. Hasta 3 cuotas sin interés.</p>
+                  </div>
+                </label>
+
+                {/* Solo con retiro: con envío a domicilio no hay dónde cobrar. */}
+                {puedePagarEfectivo && (
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    metodoPago === 'efectivo' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                  }`}>
+                    <input type="radio" name="metodoPago" value="efectivo"
+                      checked={metodoPago === 'efectivo'}
+                      onChange={() => setMetodoPago('efectivo')}
+                      className="accent-blue-500" />
+                    <Banknote className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-zinc-100">Efectivo al retirar</p>
+                      <p className="text-xs text-zinc-500">Pagás cuando pasás a buscar el pedido por el local.</p>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              {!puedePagarEfectivo && esEnvio && (
+                <p className="mt-3 text-xs text-zinc-500">
+                  El pago en efectivo está disponible solo si retirás por uno de nuestros locales.
+                </p>
               )}
             </div>
           </div>
@@ -380,7 +593,13 @@ export default function CheckoutPage() {
                 )}
                 <div className="flex justify-between text-zinc-400">
                   <span>Envío</span>
-                  <span>{costoEnvio === 0 ? 'Gratis' : formatPrecio(costoEnvio)}</span>
+                  <span>
+                    {cotizando ? 'Calculando...'
+                      : faltaCotizacion ? '—'
+                      : envioACotizar ? <span className="text-amber-400">A cotizar</span>
+                      : costoEnvio === 0 ? 'Gratis'
+                      : formatPrecio(costoEnvio)}
+                  </span>
                 </div>
                 <div className="flex justify-between font-bold text-zinc-100 text-base mt-1">
                   <span>Total</span>
@@ -396,14 +615,16 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={enviando || !entregaId}
+                disabled={enviando || !entregaId || faltaCotizacion || faltaCoordinar || zonaNoCoincide}
                 className="mt-4 w-full btn-primario flex items-center justify-center gap-2 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {enviando ? <><Spinner className="w-4 h-4" /> Procesando...</> : 'Confirmar pedido'}
               </button>
 
               <p className="mt-2 text-xs text-center text-zinc-600">
-                Vas a poder pagar en el siguiente paso
+                {metodoPago === 'efectivo'
+                  ? 'Reservamos tu pedido y pagás al retirarlo'
+                  : 'Vas a poder pagar en el siguiente paso'}
               </p>
             </div>
           </div>

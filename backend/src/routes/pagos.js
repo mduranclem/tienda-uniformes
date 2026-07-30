@@ -34,6 +34,11 @@ router.post('/preferencia', authOpcional, async (req, res, next) => {
       if (orden.usuarioId !== req.user.id) return res.status(403).json({ mensaje: 'No tenés acceso a esta orden' })
     }
     if (orden.estado !== 'PENDIENTE') return res.status(400).json({ mensaje: 'Esta orden ya no está pendiente de pago' })
+    // Una orden en efectivo se cobra en el local: generar una preferencia de
+    // Mercado Pago para ella permitiría cobrarla dos veces.
+    if (orden.metodoPago === 'efectivo') {
+      return res.status(400).json({ mensaje: 'Esta orden se abona en efectivo al retirarla' })
+    }
 
     const preference = await crearPreferencia(orden)
 

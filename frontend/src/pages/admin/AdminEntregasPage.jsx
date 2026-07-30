@@ -79,6 +79,13 @@ export default function AdminEntregasPage() {
     cargar()
   }
 
+  // "Cotizado": el precio sale de las zonas de envío según CP y peso, en lugar
+  // del costo fijo de esta fila.
+  async function toggleCotizado(entrega) {
+    await adminApi.actualizarEntrega(token, entrega.id, { cotizado: !entrega.cotizado })
+    cargar()
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -101,6 +108,7 @@ export default function AdminEntregasPage() {
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Tipo</th>
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Nombre / Dirección</th>
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Costo</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Precio</th>
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -111,9 +119,33 @@ export default function AdminEntregasPage() {
                   <td className="px-4 py-3 text-sm font-medium text-zinc-200">
                     {e.tipo === 'ENVIO' ? '🚚 Envío' : '📍 Retiro'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-zinc-300">{e.nombre}</td>
                   <td className="px-4 py-3 text-sm text-zinc-300">
-                    {Number(e.costo) === 0 ? <span className="text-green-400">Gratis</span> : `$ ${Number(e.costo).toLocaleString('es-AR')}`}
+                    {e.nombre}
+                    {e.tipo === 'ENVIO' && (
+                      <span className="ml-2 text-[11px] text-zinc-500">
+                        {e.soloRosario ? '· solo Rosario' : '· resto del país'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-zinc-300">
+                    {e.cotizado || (e.tipo === 'ENVIO' && !e.soloRosario && Number(e.costo) === 0)
+                      ? <span className="text-zinc-600">—</span>
+                      : Number(e.costo) === 0
+                        ? <span className="text-green-400">Gratis</span>
+                        : `$ ${Number(e.costo).toLocaleString('es-AR')}`}
+                  </td>
+                  <td className="px-4 py-3">
+                    {e.tipo === 'ENVIO' ? (
+                      <button
+                        onClick={() => toggleCotizado(e)}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          e.cotizado ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-700 text-zinc-400'
+                        }`}
+                        title="Cotizado: el precio se calcula según el CP y el peso del pedido"
+                      >
+                        {e.cotizado ? 'Según CP y peso' : 'Costo fijo'}
+                      </button>
+                    ) : <span className="text-zinc-600 text-sm">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${e.activo ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-500'}`}>

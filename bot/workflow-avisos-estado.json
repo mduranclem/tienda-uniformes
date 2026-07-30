@@ -1,0 +1,105 @@
+{
+  "name": "Avisos de estado de pedido — WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "31b7c59f-f024-41b6-a407-caf7f4401265",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Cambio de estado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "31b7c59f-f024-41b6-a407-caf7f4401265",
+      "notes": "Lo llama la tienda en cada cambio de estado que corresponde avisar. El backend ya filtra qué estados notifican (se configura en /admin/bot)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "tiene-telefono",
+              "leftValue": "={{ $json.body.telefonoWhatsapp }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "telefono-real",
+              "leftValue": "={{ $json.body.telefonoWhatsapp }}",
+              "rightValue": "—",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "¿Tiene teléfono?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [240, 0],
+      "notes": "telefonoWhatsapp viene null si el número que cargó el cliente no se pudo interpretar. Sin este filtro se intentaría enviar a un destinatario vacío."
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "",
+        "recipientPhoneNumber": "={{ $json.body.telefonoWhatsapp }}",
+        "textBody": "={{ $json.body.mensaje }}",
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [480, -80],
+      "notes": "El texto viene ya redactado desde la tienda según sea retiro, envío en Rosario o Andreani. Falta elegir la credencial y el phoneNumberId."
+    }
+  ],
+  "connections": {
+    "Cambio de estado": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene teléfono?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene teléfono?": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

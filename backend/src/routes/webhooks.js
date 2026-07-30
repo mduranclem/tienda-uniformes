@@ -2,7 +2,7 @@ const { Router } = require('express')
 const crypto = require('crypto')
 const prisma = require('../lib/prisma')
 const { obtenerPago } = require('../services/mercadopago')
-const { notificarNuevoPedido } = require('../services/notificaciones')
+const { notificarNuevoPedido, notificarOrdenPagada, notificarCambioEstado } = require('../services/notificaciones')
 
 const router = Router()
 
@@ -113,8 +113,10 @@ router.post('/', async (req, res) => {
 
     console.log(`[webhook MP] Orden ${ordenId} marcada como PAGADA`)
 
-    // Notificar al admin vía n8n (no bloqueante)
+    // Notificar al admin y al cliente vía n8n (no bloqueante)
     notificarNuevoPedido(ordenActualizada).catch(() => {})
+    notificarOrdenPagada(ordenActualizada).catch(() => {})
+    notificarCambioEstado(ordenActualizada, 'PAGADA').catch(() => {})
 
     res.status(200).end()
   } catch (err) {

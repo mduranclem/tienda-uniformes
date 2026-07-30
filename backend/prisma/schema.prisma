@@ -66,6 +66,7 @@ model Producto {
   precioOferta Decimal?       @db.Decimal(10, 2)
   cuotas       Int?
   cuotasRecargo Decimal?      @db.Decimal(5, 2) // % de recargo por financiación; null = sin interés
+  pesoGramos   Int?           // peso unitario sin embalaje; null = se estima por tipo (ver lib/pesos.js)
   activo       Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -113,6 +114,7 @@ model Variante {
   itemsOrden   ItemOrden[]
   itemsCarrito ItemCarrito[]
   movimientos  MovimientoStock[]
+  alertas      AlertaStock[]
 
   @@unique([productoId, talle, color])
 }
@@ -220,6 +222,12 @@ model Orden {
   cupon          Cupon?      @relation(fields: [cuponId], references: [id])
   entregaId      String?
   entrega        Entrega?    @relation(fields: [entregaId], references: [id])
+  servicioEnvio  String?     // código del servicio cotizado, ej. "tabla:santa-fe"
+  // Día y franja acordados para la entrega a domicilio en Rosario.
+  // null en retiro en local y en envíos al interior (los reparte Andreani en
+  // su propia ventana y no se le puede prometer horario al cliente).
+  entregaFecha   DateTime?
+  entregaFranja  String?     // "10-12" | "12-14" | "14-16"
   domicilio      Json?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -261,11 +269,17 @@ model HistorialOrden {
 
 // ── Entrega ───────────────────────────────────────────────────────────────────
 model Entrega {
-  id      String      @id @default(cuid())
-  tipo    TipoEntrega
-  nombre  String
-  costo   Decimal     @default(0) @db.Decimal(10, 2)
-  activo  Boolean     @default(true)
+  id       String      @id @default(cuid())
+  tipo     TipoEntrega
+  nombre   String
+  costo    Decimal     @default(0) @db.Decimal(10, 2)
+  activo   Boolean     @default(true)
+  // true: el precio sale del cotizador según CP y peso, ignorando `costo`.
+  cotizado Boolean     @default(false)
+  // true: esta opción es solo para direcciones de Rosario (reparto propio).
+  // Separa "envío en Rosario" de "envío al interior", que tienen precio y
+  // logística distintos, y permite validar que la dirección corresponda.
+  soloRosario Boolean  @default(false)
 
   ordenes Orden[]
 }
@@ -273,6 +287,44 @@ model Entrega {
 enum TipoEntrega {
   ENVIO
   RETIRO
+}
+
+// ── Tarifas de envío ──────────────────────────────────────────────────────────
+// Se zonifica por rango de código postal numérico y no por nombre de provincia:
+// el CP no admite variantes de escritura, "Buenos Aires" sí.
+
+model ZonaEnvio {
+  id                String        @id @default(cuid())
+  nombre            String        @unique
+  // Ante rangos de CP solapados gana la zona con `orden` menor.
+  orden             Int           @default(0)
+  activo            Boolean       @default(true)
+  // Precio por kilo que excede el escalón de tarifa más alto de la zona.
+  // null = no se cotiza por encima del tope y el checkout bloquea el pago.
+  precioKgAdicional Decimal?      @db.Decimal(10, 2)
+
+  rangos  RangoCP[]
+  tarifas TarifaEnvio[]
+}
+
+model RangoCP {
+  id     String    @id @default(cuid())
+  zonaId String
+  zona   ZonaEnvio @relation(fields: [zonaId], references: [id], onDelete: Cascade)
+  desde  Int
+  hasta  Int
+
+  @@index([desde, hasta])
+}
+
+model TarifaEnvio {
+  id         String    @id @default(cuid())
+  zonaId     String
+  zona       ZonaEnvio @relation(fields: [zonaId], references: [id], onDelete: Cascade)
+  pesoHastaG Int
+  precio     Decimal   @db.Decimal(10, 2)
+
+  @@unique([zonaId, pesoHastaG])
 }
 
 // ── Promociones ───────────────────────────────────────────────────────────────
@@ -346,4 +398,24 @@ model AlumnoTalle {
   talle      String
 
   @@unique([alumnoId, tipoPrenda])
+}
+
+// ── Bot WhatsApp (n8n) ────────────────────────────────────────────────────────
+
+// Config editable desde el admin: horarios, dirección, política de cambios, etc.
+model ConfigTienda {
+  clave String @id
+  valor String
+}
+
+// Suscripciones a "avisame cuando haya stock" para el bot de WhatsApp
+model AlertaStock {
+  id         String   @id @default(cuid())
+  telefono   String
+  varianteId String
+  variante   Variante @relation(fields: [varianteId], references: [id], onDelete: Cascade)
+  notificada Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([varianteId, notificada])
 }

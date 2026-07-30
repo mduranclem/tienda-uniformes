@@ -27,6 +27,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     cuotas: producto?.cuotas ?? '',
     financiacion: producto?.cuotasRecargo ? 'recargo' : 'sin_interes',
     cuotasRecargo: producto?.cuotasRecargo ?? '',
+    pesoGramos: producto?.pesoGramos ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
   })
@@ -61,6 +62,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
         cuotasRecargo: form.cuotas && financiacion === 'recargo' && form.cuotasRecargo
           ? parseFloat(form.cuotasRecargo)
           : null,
+        pesoGramos: form.pesoGramos ? parseInt(form.pesoGramos) : null,
       }
       if (editando) await adminApi.actualizarProducto(token, producto.id, data)
       else await adminApi.crearProducto(token, data)
@@ -163,6 +165,14 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
               })()}
             </div>
           )}
+          <Campo label="Peso (gramos)">
+            <input type="number" min="1" step="1" value={form.pesoGramos}
+              onChange={e => set('pesoGramos', e.target.value)} className="input" placeholder="Ej: 200" />
+            <p className="mt-1 text-xs text-zinc-500">
+              Peso de la prenda sin embalaje. Se usa para calcular el envío fuera de Rosario.
+              Si lo dejás vacío se estima según el tipo de prenda.
+            </p>
+          </Campo>
           {editando && (
             <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
               <input type="checkbox" checked={form.activo} onChange={e => set('activo', e.target.checked)} className="accent-blue-500" />
