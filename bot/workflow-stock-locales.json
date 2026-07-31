@@ -1,0 +1,433 @@
+{
+  "name": "Stock locales — Tienda de Uniformes",
+  "nodes": [
+    {
+      "id": "trigger-fabrica",
+      "name": "Fábrica: fila nueva",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -220
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "PEGAR_ID_PLANILLA_FABRICA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Untitled",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger-fisherton",
+      "name": "Fisherton: fila nueva",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "PEGAR_ID_PLANILLA_FISHERTON",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Untitled",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger-norte",
+      "name": "Norte: fila nueva",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        220
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "PEGAR_ID_PLANILLA_NORTE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Untitled",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      }
+    },
+    {
+      "id": "id-fabrica",
+      "name": "Es Fábrica",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -220
+      ],
+      "parameters": {
+        "jsCode": "// El local sale de la planilla que disparó: nadie lo escribe a mano.\nreturn {\n  json: {\n    ...$input.item.json,\n    _pdv: 'Fábrica - Dean Funes 1258',\n    _apiKey: 'PEGAR_API_KEY_FABRICA',\n    _documentId: 'PEGAR_ID_PLANILLA_FABRICA',\n    _rowNumber: $input.item.json.row_number,\n  },\n}"
+      }
+    },
+    {
+      "id": "id-fisherton",
+      "name": "Es Fisherton",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// El local sale de la planilla que disparó: nadie lo escribe a mano.\nreturn {\n  json: {\n    ...$input.item.json,\n    _pdv: 'Fisherton - Eva Perón 7790',\n    _apiKey: 'PEGAR_API_KEY_FISHERTON',\n    _documentId: 'PEGAR_ID_PLANILLA_FISHERTON',\n    _rowNumber: $input.item.json.row_number,\n  },\n}"
+      }
+    },
+    {
+      "id": "id-norte",
+      "name": "Es Norte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        220
+      ],
+      "parameters": {
+        "jsCode": "// El local sale de la planilla que disparó: nadie lo escribe a mano.\nreturn {\n  json: {\n    ...$input.item.json,\n    _pdv: 'Norte - Alberdi 608 bis',\n    _apiKey: 'PEGAR_API_KEY_NORTE',\n    _documentId: 'PEGAR_ID_PLANILLA_NORTE',\n    _rowNumber: $input.item.json.row_number,\n  },\n}"
+      }
+    },
+    {
+      "id": "validar",
+      "name": "Validar fila",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Punto único por donde pasan las tres planillas: de acá para abajo\n// la lógica es la misma para los tres locales.\nconst row = $input.item.json\nconst tipo = String(row['Tipo'] || '').trim().toUpperCase()\n\nlet _error = null\nif (!['VENTA', 'INGRESO', 'AJUSTE'].includes(tipo)) {\n  _error = `Tipo inválido: \"${row['Tipo'] ?? ''}\" (poné VENTA, INGRESO o AJUSTE)`\n} else if (!String(row['Producto'] || '').trim()) {\n  _error = 'Falta el nombre del producto'\n} else if (!String(row['Talle'] || '').trim()) {\n  _error = 'Falta el talle'\n}\n\nreturn { json: { ...row, tipoPath: tipo ? tipo.toLowerCase() : '', _error } }"
+      }
+    },
+    {
+      "id": "buscar-producto",
+      "name": "Buscar producto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "url": "=https://api.tiendadeuniformes.store/api/productos?q={{ encodeURIComponent($json['Producto'] || '') }}&limit=10",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "armar-body",
+      "name": "Elegir producto y armar body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const item = $('Validar fila').item.json\nif (item._error) return { json: { ...item } }\n\nconst productos = ($input.item.json && $input.item.json.data) || []\nconst nombreBuscado = String(item['Producto'] || '').trim().toLowerCase()\n// Preferimos la coincidencia exacta; si no hay, el primer resultado de la búsqueda.\nconst producto = productos.find(p => p.nombre.trim().toLowerCase() === nombreBuscado) || productos[0]\nif (!producto) return { json: { ...item, _error: `Producto no encontrado: \"${item['Producto']}\"` } }\n\nconst body = { productoId: producto.id, talle: String(item['Talle'] || '').trim() }\nif (item['Color']) body.color = String(item['Color']).trim()\n\nif (item.tipoPath === 'ajuste') {\n  body.cantidadFinal = Number(item['Cantidad final (solo AJUSTE)'])\n  body.nota = item['Nota'] || ''\n} else {\n  body.cantidad = Number(item['Cantidad'])\n  if (item['Nota']) body.nota = item['Nota']\n}\n\nreturn { json: { ...item, body } }"
+      }
+    },
+    {
+      "id": "llamar-api",
+      "name": "Llamar API stock",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.tiendadeuniformes.store/api/stock/{{ $json.tipoPath }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-pdv-key",
+              "value": "={{ $json._apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "preparar-estado",
+      "name": "Preparar estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const previo = $('Elegir producto y armar body').item.json._error\nconst ctx = $('Validar fila').item.json\nconst resp = $input.item.json\n\nfunction detalleError(r) {\n  if (!r) return 'sin respuesta del servidor'\n  return r.mensaje || r.message || r.error?.mensaje || r.error?.message\n    || (typeof r.error === 'string' ? r.error : null)\n    || JSON.stringify(r).slice(0, 200)\n}\n\nlet estado\nif (previo) estado = `ERROR: ${previo}`\nelse if (resp && resp.ok) estado = `OK — stock actual: ${resp.stockRestante ?? resp.stockActual ?? ''}`\nelse estado = `ERROR: ${detalleError(resp)}`\n\nreturn { json: { documentId: ctx._documentId, estado, fila: ctx } }"
+      }
+    },
+    {
+      "id": "leer-planilla",
+      "name": "Leer planilla",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        0
+      ],
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.documentId }}/values/{{ encodeURIComponent('Untitled!A:I') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsTriggerOAuth2Api",
+        "options": {}
+      }
+    },
+    {
+      "id": "ubicar-fila",
+      "name": "Ubicar fila",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Preparar estado').item.json\nconst f = ctx.fila\nconst filas = $input.item.json.values || []\n\nconst igual = (a, b) => String(a ?? '').trim() === String(b ?? '').trim()\n\n// Buscamos de abajo hacia arriba: lo recién agregado está al final.\n// Solo miramos filas con Estado vacío, así nunca pisamos una ya resuelta.\nlet encontrada = null\nfor (let i = filas.length - 1; i >= 1; i--) {\n  const r = filas[i]\n  const estadoVacio = !String(r[8] ?? '').trim()\n  if (!estadoVacio) continue\n  if (igual(r[1], f['Tipo']) && igual(r[2], f['Producto']) && igual(r[3], f['Talle'])\n      && igual(r[4], f['Color']) && igual(r[5], f['Cantidad']) && igual(r[7], f['Nota'])) {\n    encontrada = i + 1 // la API es 1-based\n    break\n  }\n}\n\nif (!encontrada) throw new Error('No pude ubicar la fila para escribirle el estado')\nreturn { json: { documentId: ctx.documentId, estado: ctx.estado, row_number: encontrada } }"
+      }
+    },
+    {
+      "id": "escribir-estado",
+      "name": "Actualizar Estado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        0
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.documentId }}/values/{{ encodeURIComponent('Untitled!I' + $json.row_number) }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsTriggerOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { values: [[$json.estado]] } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Fábrica: fila nueva": {
+      "main": [
+        [
+          {
+            "node": "Es Fábrica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fisherton: fila nueva": {
+      "main": [
+        [
+          {
+            "node": "Es Fisherton",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Norte: fila nueva": {
+      "main": [
+        [
+          {
+            "node": "Es Norte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Fábrica": {
+      "main": [
+        [
+          {
+            "node": "Validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Fisherton": {
+      "main": [
+        [
+          {
+            "node": "Validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Norte": {
+      "main": [
+        [
+          {
+            "node": "Validar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar fila": {
+      "main": [
+        [
+          {
+            "node": "Buscar producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar producto": {
+      "main": [
+        [
+          {
+            "node": "Elegir producto y armar body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir producto y armar body": {
+      "main": [
+        [
+          {
+            "node": "Llamar API stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar API stock": {
+      "main": [
+        [
+          {
+            "node": "Preparar estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar estado": {
+      "main": [
+        [
+          {
+            "node": "Leer planilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer planilla": {
+      "main": [
+        [
+          {
+            "node": "Ubicar fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ubicar fila": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

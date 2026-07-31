@@ -122,6 +122,17 @@ export const adminApi = {
   actualizarBanda: (token, bandaId, data) => adminRequest(`/admin/categorias/bandas/${bandaId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarBanda: (token, bandaId) => adminRequest(`/admin/categorias/bandas/${bandaId}`, { method: 'DELETE' }, token),
   recalcularPrecios: (token, productoId) => adminRequest(`/admin/productos/${productoId}/recalcular-precios`, { method: 'POST' }, token),
+  // Puntos de venta
+  listarPuntosVenta: (token) => adminRequest('/admin/puntos-venta', {}, token),
+  crearPuntoVenta: (token, data) => adminRequest('/admin/puntos-venta', { method: 'POST', body: JSON.stringify(data) }, token),
+  actualizarPuntoVenta: (token, id, data) => adminRequest(`/admin/puntos-venta/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  regenerarKeyPuntoVenta: (token, id) => adminRequest(`/admin/puntos-venta/${id}/regenerar-key`, { method: 'POST' }, token),
+  eliminarPuntoVenta: (token, id) => adminRequest(`/admin/puntos-venta/${id}`, { method: 'DELETE' }, token),
+  // Movimientos de stock
+  listarMovimientosStock: (token, params = {}) => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
+    return adminRequest(`/admin/movimientos-stock${qs ? `?${qs}` : ''}`, {}, token)
+  },
   // Bot / config tienda
   obtenerConfigBot: (token) => adminRequest('/admin/bot', {}, token),
   actualizarConfigBot: (token, data) => adminRequest('/admin/bot', { method: 'PUT', body: JSON.stringify(data) }, token),

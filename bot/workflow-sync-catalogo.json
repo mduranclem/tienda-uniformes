@@ -1,0 +1,219 @@
+{
+  "name": "Sincronizar catálogo en planillas de locales",
+  "nodes": [
+    {
+      "id": "cron",
+      "name": "Cada día a las 6",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -140
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "hook",
+      "name": "Correr a mano",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        140
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-catalogo-locales",
+        "options": {}
+      }
+    },
+    {
+      "id": "get-productos",
+      "name": "Traer catálogo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "url": "https://api.tiendadeuniformes.store/api/productos?limit=200",
+        "options": {}
+      }
+    },
+    {
+      "id": "armar-planillas",
+      "name": "Una salida por planilla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const productos = $input.first().json.data || []\nconst nombres = [...new Set(productos.map(p => String(p.nombre).trim()))].sort((a, b) => a.localeCompare(b, 'es'))\n\nconst PLANILLAS = [\n  { local: 'Fábrica',   documentId: 'PEGAR_ID_PLANILLA_FABRICA' },\n  { local: 'Fisherton', documentId: 'PEGAR_ID_PLANILLA_FISHERTON' },\n  { local: 'Norte',     documentId: 'PEGAR_ID_PLANILLA_NORTE' },\n]\n\nreturn PLANILLAS.map(p => ({ json: { ...p, nombres } }))"
+      }
+    },
+    {
+      "id": "get-hojas",
+      "name": "Ver hojas de la planilla",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.documentId }}?fields=sheets.properties",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsTriggerOAuth2Api",
+        "options": {}
+      }
+    },
+    {
+      "id": "armar-batch",
+      "name": "Armar cambios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Una salida por planilla').item.json\nconst hojas = ($input.item.json.sheets || []).map(s => s.properties)\n\nconst principal = hojas.find(h => h.title !== 'Catálogo')\nconst catalogo = hojas.find(h => h.title === 'Catálogo')\nif (!principal) throw new Error(`${ctx.local}: no encontré la hoja principal`)\n\n// Si la hoja Catálogo no existe la creamos con un id elegido por nosotros,\n// así lo podemos usar en el mismo lote sin esperar la respuesta del addSheet.\nconst ID_CATALOGO = 987654\nconst sheetIdCatalogo = catalogo ? catalogo.sheetId : ID_CATALOGO\nconst hoja = principal.sheetId\n\nconst requests = []\nif (!catalogo) {\n  requests.push({ addSheet: { properties: { sheetId: ID_CATALOGO, title: 'Catálogo', hidden: true, gridProperties: { rowCount: 1000, columnCount: 1 } } } })\n}\n\n// Limpiar la columna antes de reescribirla: si un producto se dio de baja,\n// no puede quedar colgado en el desplegable.\nrequests.push({\n  updateCells: {\n    range: { sheetId: sheetIdCatalogo, startRowIndex: 0, startColumnIndex: 0, endColumnIndex: 1 },\n    fields: 'userEnteredValue',\n  },\n})\n\nconst filas = [{ values: [{ userEnteredValue: { stringValue: 'PRODUCTOS (se actualiza solo)' } }] }]\nfor (const n of ctx.nombres) filas.push({ values: [{ userEnteredValue: { stringValue: n } }] })\nrequests.push({\n  updateCells: {\n    start: { sheetId: sheetIdCatalogo, rowIndex: 0, columnIndex: 0 },\n    rows: filas,\n    fields: 'userEnteredValue',\n  },\n})\n\n// Columnas: Fecha=0, Tipo=1, Producto=2, Talle=3, Color=4, Cantidad=5, ...\nconst col = (i, j) => ({ sheetId: hoja, startRowIndex: 1, startColumnIndex: i, endColumnIndex: j ?? i + 1 })\n\n// Fecha: calendario al hacer doble click, y formato fijo para que los tres\n// locales la escriban igual.\nrequests.push({\n  setDataValidation: {\n    range: col(0),\n    rule: {\n      condition: { type: 'DATE_IS_VALID' },\n      showCustomUi: true,\n      strict: false,\n      inputMessage: 'Doble click para elegir la fecha en el calendario',\n    },\n  },\n})\nrequests.push({\n  repeatCell: {\n    range: col(0),\n    cell: { userEnteredFormat: { numberFormat: { type: 'DATE_TIME', pattern: 'dd/MM/yyyy HH:mm' } } },\n    fields: 'userEnteredFormat.numberFormat',\n  },\n})\n\nrequests.push({\n  setDataValidation: {\n    range: col(2),\n    rule: {\n      condition: { type: 'ONE_OF_RANGE', values: [{ userEnteredValue: \"='Catálogo'!$A$2:$A$1000\" }] },\n      showCustomUi: true,\n      strict: true,\n      inputMessage: 'Elegí el producto de la lista',\n    },\n  },\n})\n\nrequests.push({\n  setDataValidation: {\n    range: col(1),\n    rule: {\n      condition: { type: 'ONE_OF_LIST', values: [{ userEnteredValue: 'VENTA' }, { userEnteredValue: 'INGRESO' }, { userEnteredValue: 'AJUSTE' }] },\n      showCustomUi: true,\n      strict: true,\n    },\n  },\n})\n\nreturn { json: { local: ctx.local, documentId: ctx.documentId, cantidad: ctx.nombres.length, body: { requests } } }",
+        "mode": "runOnceForEachItem"
+      }
+    },
+    {
+      "id": "aplicar",
+      "name": "Aplicar en la planilla",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.documentId }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsTriggerOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "resumen",
+      "name": "Resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Armar cambios').item.json\nconst resp = $input.item.json\nconst error = resp?.error?.message ?? null\nreturn { json: { local: ctx.local, productos: ctx.cantidad, ok: !error, error } }",
+        "mode": "runOnceForEachItem"
+      }
+    }
+  ],
+  "connections": {
+    "Cada día a las 6": {
+      "main": [
+        [
+          {
+            "node": "Traer catálogo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Correr a mano": {
+      "main": [
+        [
+          {
+            "node": "Traer catálogo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer catálogo": {
+      "main": [
+        [
+          {
+            "node": "Una salida por planilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Una salida por planilla": {
+      "main": [
+        [
+          {
+            "node": "Ver hojas de la planilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ver hojas de la planilla": {
+      "main": [
+        [
+          {
+            "node": "Armar cambios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar cambios": {
+      "main": [
+        [
+          {
+            "node": "Aplicar en la planilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar en la planilla": {
+      "main": [
+        [
+          {
+            "node": "Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

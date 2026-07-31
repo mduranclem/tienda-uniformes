@@ -1,8 +1,33 @@
 const { PrismaClient } = require('@prisma/client')
+const { randomBytes, createHash } = require('crypto')
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('Sembrando datos de prueba...')
+
+  // ── Puntos de venta ────────────────────────────────────────────────────────
+  const nombresPuntosVenta = ['Local Centro', 'Local Sur', 'Tienda Online']
+  const keysGeneradas = []
+
+  for (const nombre of nombresPuntosVenta) {
+    const existente = await prisma.puntoDeVenta.findUnique({ where: { nombre } })
+    if (existente) continue
+
+    const rawKey = randomBytes(32).toString('hex')
+    const apiKeyHash = createHash('sha256').update(rawKey).digest('hex')
+    const apiKeyUltimos4 = rawKey.slice(-4)
+
+    await prisma.puntoDeVenta.create({ data: { nombre, apiKeyHash, apiKeyUltimos4 } })
+    keysGeneradas.push({ nombre, rawKey })
+  }
+
+  if (keysGeneradas.length > 0) {
+    console.log('\n🔑 API keys generadas (guardalas ahora, no se van a volver a mostrar):')
+    for (const { nombre, rawKey } of keysGeneradas) {
+      console.log(`  ${nombre}: ${rawKey}`)
+    }
+    console.log('')
+  }
 
   // ── Colegios ───────────────────────────────────────────────────────────────
   const colegio1 = await prisma.colegio.upsert({

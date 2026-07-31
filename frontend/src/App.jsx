@@ -22,6 +22,8 @@ import AdminEntregasPage from './pages/admin/AdminEntregasPage'
 import AdminEnviosPage from './pages/admin/AdminEnviosPage'
 import AdminColegiosPage from './pages/admin/AdminColegiosPage'
 import AdminCategoriasPage from './pages/admin/AdminCategoriasPage'
+import AdminPuntosVentaPage from './pages/admin/AdminPuntosVentaPage'
+import AdminMovimientosStockPage from './pages/admin/AdminMovimientosStockPage'
 import AdminBotPage from './pages/admin/AdminBotPage'
 import CheckoutPage from './pages/CheckoutPage'
 import ConfirmacionPage from './pages/ConfirmacionPage'
@@ -46,6 +48,8 @@ export default function App() {
               <Route path="envios" element={<AdminEnviosPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
               <Route path="categorias" element={<AdminCategoriasPage />} />
+              <Route path="puntos-venta" element={<AdminPuntosVentaPage />} />
+              <Route path="movimientos-stock" element={<AdminMovimientosStockPage />} />
               <Route path="bot" element={<AdminBotPage />} />
             </Route>
 
