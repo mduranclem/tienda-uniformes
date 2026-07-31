@@ -2,17 +2,19 @@
 // en un valor fijo.
 //
 // Uso (desde cualquier carpeta):
-//   node backend/scripts/completar-stock.js                    (simulación)
-//   node backend/scripts/completar-stock.js --aplicar          (escribe)
+//   node backend/scripts/completar-stock.js                       (simulación)
+//   node backend/scripts/completar-stock.js --aplicar             (escribe)
 //   node backend/scripts/completar-stock.js --aplicar --stock 8
+//   node backend/scripts/completar-stock.js --aplicar --todos-los-talles
 //
-// Para cada producto activo toma los talles que YA tiene cargados y los cruza
-// con los colores declarados en el producto. No inventa talles nuevos: si un
-// producto solo tiene 4 y 6, sigue teniendo 4 y 6.
+// Por defecto toma los talles que cada producto YA tiene cargados y los cruza
+// con sus colores declarados: no inventa talles.
 //
-// El precio de cada variante nueva se copia de otra del mismo talle en el mismo
-// producto, que es la fuente más confiable: replica exactamente lo que ya está
-// publicado en vez de recalcularlo.
+// Con --todos-los-talles usa la grilla completa (4 a ESP) para todos los
+// productos. Requiere que la categoría tenga precio para cada talle; si falta
+// alguno se avisa y no se crea esa variante, porque una variante sin precio
+// propio hereda el precio base del producto —el del talle más chico— y se
+// vendería más barata de lo que corresponde.
 //
 // Cada cambio de stock queda registrado en MovimientoStock, que es el historial
 // que alimenta /admin/movimientos-stock. Saltearlo dejaría el stock y su
@@ -24,6 +26,8 @@ const prisma = require('../src/lib/prisma')
 
 const STOCK_DEFECTO = 5
 const PUNTO_VENTA = 'Fábrica - Dean Funes 1258'
+// Misma grilla que usa el admin (frontend/src/lib/utils.js).
+const TALLES_STANDARD = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
 
 function leerStockObjetivo() {
   const i = process.argv.indexOf('--stock')
@@ -38,7 +42,16 @@ function leerStockObjetivo() {
 
 async function main() {
   const aplicar = process.argv.includes('--aplicar')
+  const todosLosTalles = process.argv.includes('--todos-los-talles')
   const objetivo = leerStockObjetivo()
+
+  // Los precios por talle viven en las bandas de cada categoría. Se cargan de
+  // una y se resuelven en memoria: consultarlas por variante serían cientos de
+  // viajes contra el pooler.
+  const categorias = await prisma.categoria.findMany({ include: { preciosBanda: true } })
+  const bandasPorTipo = new Map(categorias.map(c => [c.nombre, c.preciosBanda]))
+  const precioDeTalle = (tipo, talle) =>
+    (bandasPorTipo.get(tipo) ?? []).find(b => b.talles.includes(talle))?.precio ?? null
 
   const punto = await prisma.puntoDeVenta.findFirst({ where: { nombre: PUNTO_VENTA } })
   if (!punto) {
@@ -55,9 +68,12 @@ async function main() {
   let creadas = 0
   let ajustadas = 0
   const sinTalles = []
+  const sinPrecio = []
 
   for (const producto of productos) {
-    const talles = [...new Set(producto.variantes.map(v => v.talle))]
+    const talles = todosLosTalles
+      ? TALLES_STANDARD
+      : [...new Set(producto.variantes.map(v => v.talle))]
     const colores = producto.colores.map(c => c.nombre)
 
     if (talles.length === 0) {
@@ -75,12 +91,21 @@ async function main() {
       const existe = producto.variantes.some(v => v.talle === combo.talle && v.color === combo.color)
       if (existe) continue
 
+      // La banda de la categoría manda; la hermana del mismo talle es el
+      // respaldo para productos cuya categoría no tenga bandas cargadas.
       const hermana = producto.variantes.find(v => v.talle === combo.talle)
+      const precio = precioDeTalle(producto.tipo, combo.talle) ?? hermana?.precio ?? null
+
+      if (precio === null) {
+        sinPrecio.push(`${producto.nombre} — talle ${combo.talle}`)
+        continue
+      }
+
       nuevas.push({
         productoId: producto.id,
         talle: combo.talle,
         color: combo.color,
-        precio: hermana?.precio ?? null,
+        precio,
         stock: objetivo,
       })
     }
@@ -108,27 +133,41 @@ async function main() {
   }
 
   // Historial: se registra después de crear las variantes, para tener sus ids.
+  // Va en try aparte porque el stock ya quedó bien: si fallara el historial por
+  // permisos, no tiene sentido dar por perdida toda la carga.
   if (aplicar) {
     const todas = await prisma.variante.findMany({
       where: { producto: { activo: true } },
       select: { id: true },
     })
-    await prisma.movimientoStock.createMany({
-      data: todas.map(v => ({
-        varianteId: v.id,
-        puntoDeVentaId: punto.id,
-        tipo: 'AJUSTE',
-        cantidad: objetivo,
-        nota: `Carga inicial de stock (${objetivo} por variante)`,
-      })),
-    })
-    console.log(`\n${todas.length} movimiento(s) registrados en "${punto.nombre}".`)
+    try {
+      await prisma.movimientoStock.createMany({
+        data: todas.map(v => ({
+          varianteId: v.id,
+          puntoDeVentaId: punto.id,
+          tipo: 'AJUSTE',
+          cantidad: objetivo,
+          nota: `Carga inicial de stock (${objetivo} por variante)`,
+        })),
+      })
+      console.log(`\n${todas.length} movimiento(s) registrados en "${punto.nombre}".`)
+    } catch (err) {
+      console.log(`\n⚠️  El stock quedó bien, pero no se pudo registrar el historial: ${err.message.split('\n').find(l => l.includes('denied')) ?? err.message}`)
+      console.log('   Corré backend/scripts/fix-permisos-tienda-app.js y volvé a ejecutar esto.')
+    }
   }
 
   console.log(
     `\n${creadas} variante(s) ${aplicar ? 'creadas' : 'a crear'} · ` +
     `${ajustadas} ${aplicar ? 'ajustadas' : 'a ajustar'} a stock ${objetivo}.`
   )
+
+  if (sinPrecio.length) {
+    console.log('\n⚠️  Sin precio en la banda de su categoría, no se crearon:')
+    sinPrecio.slice(0, 15).forEach(x => console.log('   ·', x))
+    if (sinPrecio.length > 15) console.log(`   … y ${sinPrecio.length - 15} más`)
+    console.log('   Cargá esos talles en /admin/categorias y volvé a correr esto.')
+  }
 
   if (sinTalles.length) {
     console.log('\n⚠️  Sin ningún talle cargado, no se pudo completar nada:')
