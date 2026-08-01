@@ -1,10 +1,16 @@
+import { createPortal } from 'react-dom'
 import { formatPrecio } from '../../lib/utils'
 
 // Hoja imprimible de una orden. En pantalla está oculta; solo aparece al
 // imprimir (ver la regla @media print en index.css).
 //
-// Va en blanco y negro a propósito: el panel es oscuro y mandarlo así a una
-// impresora gasta un cartucho por pedido.
+// Se monta con un portal directo al body y no dentro del modal a propósito: el
+// modal es `position: fixed` con scroll propio, y los navegadores recortan o
+// directamente omiten ese tipo de contenedores al imprimir. Colgando del body
+// la hoja se pagina sola.
+//
+// Va en blanco y negro: el panel es oscuro y mandarlo así a una impresora
+// gasta un cartucho por pedido.
 
 const ETIQUETA_PAGO = {
   mercadopago: 'Mercado Pago',
@@ -56,7 +62,7 @@ export default function ComprobanteOrden({ orden }) {
       })
     : null
 
-  return (
+  return createPortal(
     <div className="zona-impresion" style={{
       background: '#fff', color: '#000', padding: 28,
       fontFamily: 'system-ui, sans-serif', fontSize: 12, lineHeight: 1.45,
@@ -176,6 +182,7 @@ export default function ComprobanteOrden({ orden }) {
       <p style={{ marginTop: 18, paddingTop: 6, borderTop: '1px solid #ccc', fontSize: 10, color: '#777' }}>
         Dean Funes 1258 · Eva Perón 7790 · Alberdi 608 — Rosario · WhatsApp 341 743 4552
       </p>
-    </div>
+    </div>,
+    document.body
   )
 }
