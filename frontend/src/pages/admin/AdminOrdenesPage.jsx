@@ -5,6 +5,8 @@ import { entregasApi } from '../../services/api'
 import { formatPrecio } from '../../lib/utils'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
+import ComprobanteOrden from '../../components/admin/ComprobanteOrden'
+import { Printer } from 'lucide-react'
 
 const ESTADOS = ['PENDIENTE', 'PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA', 'CANCELADA']
 
@@ -39,16 +41,33 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
   )
 
   const cliente = orden.usuario?.nombre ?? orden.usuario?.email ?? orden.nombreGuest ?? orden.emailGuest ?? 'Invitado'
+  const email = orden.usuario?.email ?? orden.emailGuest
+  const telefono = orden.usuario?.telefono ?? orden.telefonoGuest
+  const esEnvio = orden.entrega?.tipo === 'ENVIO'
+  const d = orden.domicilio
+  const fechaEntrega = orden.entregaFecha
+    ? new Date(orden.entregaFecha).toLocaleDateString('es-AR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' })
+    : null
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+      {/* Oculta en pantalla; es lo único que sale al imprimir */}
+      <ComprobanteOrden orden={orden} />
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <div>
             <h2 className="font-bold text-zinc-100">Orden #{orden.numero}</h2>
-            <p className="text-xs text-zinc-500">{cliente}</p>
+            <p className="text-xs text-zinc-500">
+              {new Date(orden.createdAt).toLocaleString('es-AR')}
+            </p>
           </div>
-          <button onClick={onCerrar} className="text-zinc-500 hover:text-zinc-200 text-2xl leading-none">×</button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => window.print()} className="btn-secundario flex items-center gap-1.5">
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
+            <button onClick={onCerrar} className="text-zinc-500 hover:text-zinc-200 text-2xl leading-none">×</button>
+          </div>
         </div>
 
         <div className="p-5 flex flex-col gap-4">
@@ -58,12 +77,49 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
           </div>
 
           <div>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Cliente</p>
+            <div className="text-sm text-zinc-300 flex flex-col gap-0.5">
+              <span>{cliente}{!orden.usuario && <span className="text-zinc-600 text-xs"> · invitado</span>}</span>
+              {email && <span className="text-zinc-400">{email}</span>}
+              {telefono && <span className="text-zinc-400">WhatsApp {telefono}</span>}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+              {esEnvio ? 'Envío' : 'Retiro'}
+            </p>
+            <div className="text-sm text-zinc-300 flex flex-col gap-0.5">
+              <span>{orden.entrega?.nombre}</span>
+              {d && (
+                <span className="text-zinc-400">
+                  {[d.calle, d.numero, d.piso ? `piso ${d.piso}` : null].filter(Boolean).join(' ')}
+                  {d.ciudad ? ` — ${d.ciudad}` : ''}{d.cp ? ` (CP ${d.cp})` : ''}
+                </span>
+              )}
+              {fechaEntrega && (
+                <span className="text-blue-400 font-medium">
+                  📅 {fechaEntrega}{orden.entregaFranja ? ` · ${orden.entregaFranja} hs` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Productos</p>
             <div className="flex flex-col gap-1.5">
               {orden.items.map(item => (
-                <div key={item.id} className="flex justify-between text-sm text-zinc-300">
-                  <span>{item.producto.nombre} · Talle {item.variante.talle} × {item.cantidad}</span>
-                  <span className="font-medium">{formatPrecio(item.subtotal)}</span>
+                <div key={item.id} className="flex justify-between gap-3 text-sm text-zinc-300">
+                  <span className="min-w-0">
+                    {item.producto.nombre}
+                    <span className="text-zinc-500">
+                      {' · '}Talle {item.variante.talle}
+                      {item.variante.color ? ` · ${item.variante.color}` : ''}
+                      {' × '}{item.cantidad}
+                      {' · '}{formatPrecio(item.precioUnit)} c/u
+                    </span>
+                  </span>
+                  <span className="font-medium shrink-0">{formatPrecio(item.subtotal)}</span>
                 </div>
               ))}
             </div>
@@ -74,10 +130,28 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
             {Number(orden.descuento) > 0 && (
               <div className="flex justify-between text-green-400"><span>Descuento</span><span>−{formatPrecio(orden.descuento)}</span></div>
             )}
-            <div className="flex justify-between"><span>Envío ({orden.entrega?.nombre})</span><span>{formatPrecio(orden.costoEnvio)}</span></div>
+            <div className="flex justify-between">
+              <span>Envío</span>
+              <span>
+                {Number(orden.costoEnvio) === 0
+                  ? (esEnvio ? <span className="text-amber-400">A cotizar</span> : 'Gratis')
+                  : formatPrecio(orden.costoEnvio)}
+              </span>
+            </div>
             <div className="flex justify-between font-bold text-zinc-100 text-base pt-1 border-t border-zinc-800">
               <span>Total</span><span>{formatPrecio(orden.total)}</span>
             </div>
+            <div className="flex justify-between pt-1">
+              <span>Forma de pago</span>
+              <span className={orden.metodoPago === 'efectivo' ? 'text-amber-400 font-medium' : ''}>
+                {orden.metodoPago === 'efectivo' ? '💵 Efectivo al retirar'
+                  : orden.metodoPago === 'mercadopago' ? 'Mercado Pago'
+                  : '—'}
+              </span>
+            </div>
+            {orden.cupon?.codigo && (
+              <div className="flex justify-between"><span>Cupón</span><span>{orden.cupon.codigo}</span></div>
+            )}
           </div>
 
           {orden.historial?.length > 0 && (
