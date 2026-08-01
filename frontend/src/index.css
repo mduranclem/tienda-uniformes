@@ -18,10 +18,11 @@ body {
   color: #f4f4f5;
 }
 
-/* Impresión de comprobantes: en pantalla la hoja está oculta y al imprimir es
-   lo único que se ve. Se usa visibility y no display para no perder el layout
-   que la hoja ya calculó. */
-.zona-impresion {
+/* ── Comprobante de pedido ───────────────────────────────────────────────────
+   La hoja vive oculta en pantalla y al imprimir es lo único que se ve.
+   Los tamaños están en pt: es la unidad del papel y no depende del zoom. */
+
+.comprobante {
   display: none;
 }
 
@@ -30,22 +31,242 @@ body {
     background: #fff;
     color: #000;
   }
+  /* visibility y no display: display:none en el body borraría también la hoja,
+     que cuelga de él. Así se apaga todo y se vuelve a encender solo el
+     comprobante. */
   body * {
     visibility: hidden;
   }
-  .zona-impresion {
-    display: block;
+  .comprobante,
+  .comprobante * {
     visibility: visible;
+  }
+  .comprobante {
+    display: block;
     position: absolute;
     inset: 0 auto auto 0;
     width: 100%;
   }
-  .zona-impresion * {
-    visibility: visible;
-  }
   @page {
-    margin: 12mm;
+    size: A4;
+    margin: 2cm;
   }
+}
+
+.comprobante {
+  max-width: 170mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  /* El sistema puede estar en modo oscuro y Chrome invierte la hoja al
+     previsualizarla. Esto la deja siempre en claro, que es como se imprime. */
+  color-scheme: only light;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 9pt;
+  line-height: 1.4;
+}
+
+/* Chrome no imprime fondos salvo que el usuario tilde "Gráficos de fondo".
+   Sin esto el diseño se ve en pantalla y sale plano en papel. */
+.comprobante [class^='comprobante-'] {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.comprobante-header {
+  position: relative;
+  text-align: center;
+  border-bottom: 1.5pt solid #000;
+  padding-bottom: 8pt;
+  margin-bottom: 12pt;
+}
+.comprobante-logo {
+  /* La base de Tailwind pone las imágenes en display:block, así que
+     text-align del padre no las centra: hay que hacerlo con margin auto. */
+  display: block;
+  margin: 0 auto;
+  height: 30pt;
+  width: auto;
+}
+.comprobante-marca {
+  margin: 2pt 0 0;
+  font-size: 8.5pt;
+  color: #444;
+}
+.comprobante-pedido {
+  position: absolute;
+  right: 0;
+  top: 0;
+  text-align: right;
+}
+.comprobante-pedido-numero {
+  margin: 0;
+  font-size: 17pt;
+  font-weight: 800;
+  letter-spacing: -0.4pt;
+}
+.comprobante-pedido-dato {
+  margin: 0;
+  font-size: 8pt;
+  color: #444;
+}
+.comprobante-pedido-estado {
+  display: inline-block;
+  margin-top: 3pt;
+  border: 0.75pt solid #000;
+  border-radius: 2pt;
+  padding: 1pt 5pt;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.3pt;
+}
+
+.comprobante-columnas {
+  display: flex;
+  gap: 10pt;
+  margin-bottom: 12pt;
+}
+.comprobante-caja {
+  flex: 1;
+  border: 0.75pt solid #bbb;
+  background: #f4f4f4;
+  border-radius: 3pt;
+  padding: 7pt 9pt;
+}
+.comprobante-caja h2 {
+  margin: 0 0 5pt;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6pt;
+  color: #333;
+  border-bottom: 0.5pt solid #ccc;
+  padding-bottom: 3pt;
+}
+.comprobante-dato {
+  display: flex;
+  gap: 6pt;
+  margin-bottom: 1.5pt;
+}
+.comprobante-dato dt {
+  min-width: 46pt;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.comprobante-dato dd {
+  margin: 0;
+}
+.comprobante-aviso {
+  margin: 5pt 0 0;
+  font-size: 8.5pt;
+  font-weight: 700;
+}
+
+.comprobante-titulo {
+  margin: 0 0 5pt;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6pt;
+  color: #333;
+}
+
+.comprobante-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0.75pt solid #999;
+  margin-bottom: 12pt;
+}
+.comprobante-tabla thead th {
+  background: #e6e6e6;
+  border-bottom: 0.75pt solid #999;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3pt;
+  padding: 4pt 6pt;
+  text-align: left;
+}
+.comprobante-tabla tbody td {
+  border-bottom: 0.5pt solid #ddd;
+  padding: 4pt 6pt;
+  vertical-align: top;
+}
+.comprobante-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+/* El nombre del producto se queda con el espacio sobrante; el resto son
+   columnas de ancho fijo. Sin esto los nombres largos se parten en tres
+   líneas mientras a las otras columnas les sobra lugar. */
+.comprobante-tabla th:nth-child(2), .comprobante-tabla td:nth-child(2) { width: 26pt; }
+.comprobante-tabla th:nth-child(3), .comprobante-tabla td:nth-child(3) { width: 52pt; }
+.comprobante-tabla th:nth-child(4), .comprobante-tabla td:nth-child(4) { width: 26pt; }
+.comprobante-tabla th:nth-child(5), .comprobante-tabla td:nth-child(5) { width: 48pt; }
+.comprobante-tabla th:nth-child(6), .comprobante-tabla td:nth-child(6) { width: 52pt; }
+
+.comprobante-producto {
+  font-size: 11pt;
+  font-weight: 600;
+}
+/* Talle y color no se parten en dos líneas: "Gris Melange" partido se lee
+   peor que la fila un poco más ancha. */
+.comprobante-centro {
+  text-align: center;
+  white-space: nowrap;
+}
+/* tabular-nums alinea las cifras en columna aunque cambien de ancho */
+.comprobante-numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.comprobante-totales {
+  width: 210pt;
+  border: 0.75pt solid #999;
+  border-radius: 3pt;
+  padding: 7pt 9pt;
+}
+.comprobante-total-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 12pt;
+  margin-bottom: 2pt;
+}
+.comprobante-total-final {
+  display: flex;
+  justify-content: space-between;
+  gap: 12pt;
+  border-top: 1.5pt solid #000;
+  margin-top: 5pt;
+  padding-top: 5pt;
+  font-size: 14pt;
+  font-weight: 800;
+}
+
+.comprobante-historial {
+  margin-top: 14pt;
+  border-top: 0.5pt solid #ddd;
+  padding-top: 5pt;
+  font-size: 8pt;
+  color: #666;
+}
+.comprobante-footer {
+  margin-top: 14pt;
+  border-top: 0.5pt solid #bbb;
+  padding-top: 6pt;
+  text-align: center;
+  font-size: 8pt;
+  color: #666;
+}
+
+/* Pedidos largos: el encabezado se repite en cada hoja y ninguna fila se parte
+   por la mitad. */
+@media print {
+  .comprobante-tabla thead { display: table-header-group; }
+  .comprobante-tabla tr { break-inside: avoid; }
+  .comprobante-columnas,
+  .comprobante-totales { break-inside: avoid; }
 }
 
 @layer components {

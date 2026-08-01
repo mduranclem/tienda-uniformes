@@ -1,41 +1,25 @@
 import { createPortal } from 'react-dom'
 import { formatPrecio } from '../../lib/utils'
 
-// Hoja imprimible de una orden. En pantalla está oculta; solo aparece al
-// imprimir (ver la regla @media print en index.css).
+// Comprobante imprimible de un pedido. Los estilos viven en index.css bajo el
+// prefijo .comprobante-*, porque @page, @media print y el forzado de fondos no
+// se pueden expresar con estilos en línea.
 //
-// Se monta con un portal directo al body y no dentro del modal a propósito: el
-// modal es `position: fixed` con scroll propio, y los navegadores recortan o
-// directamente omiten ese tipo de contenedores al imprimir. Colgando del body
-// la hoja se pagina sola.
-//
-// Va en blanco y negro: el panel es oscuro y mandarlo así a una impresora
-// gasta un cartucho por pedido.
+// Se monta con un portal al body y no dentro del modal: el modal es
+// position:fixed con scroll propio, y los navegadores recortan u omiten ese
+// tipo de contenedores al imprimir.
 
 const ETIQUETA_PAGO = {
   mercadopago: 'Mercado Pago',
   efectivo: 'Efectivo al retirar',
 }
 
-function Fila({ etiqueta, children }) {
+function Dato({ etiqueta, children }) {
   if (!children) return null
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 2 }}>
-      <span style={{ minWidth: 92, color: '#555' }}>{etiqueta}</span>
-      <span style={{ fontWeight: 500 }}>{children}</span>
-    </div>
-  )
-}
-
-function Seccion({ titulo, children }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <h2 style={{
-        fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
-        color: '#555', borderBottom: '1px solid #ccc',
-        paddingBottom: 3, marginBottom: 6, marginTop: 0,
-      }}>{titulo}</h2>
-      {children}
+    <div className="comprobante-dato">
+      <dt>{etiqueta}</dt>
+      <dd>{children}</dd>
     </div>
   )
 }
@@ -46,9 +30,9 @@ export default function ComprobanteOrden({ orden }) {
   const cliente = orden.usuario?.nombre ?? orden.nombreGuest ?? null
   const email = orden.usuario?.email ?? orden.emailGuest ?? null
   const telefono = orden.usuario?.telefono ?? orden.telefonoGuest ?? null
+
   const esEnvio = orden.entrega?.tipo === 'ENVIO'
   const d = orden.domicilio
-
   const domicilio = d
     ? [d.calle, d.numero, d.piso ? `piso ${d.piso}` : null].filter(Boolean).join(' ')
     : null
@@ -56,132 +40,140 @@ export default function ComprobanteOrden({ orden }) {
     ? [d.ciudad, d.cp ? `(CP ${d.cp})` : null].filter(Boolean).join(' ')
     : null
 
+  // timeZone UTC: la fecha se guarda como día de calendario al mediodía UTC,
+  // convertirla a local la correría un día.
   const fechaEntrega = orden.entregaFecha
     ? new Date(orden.entregaFecha).toLocaleDateString('es-AR', {
         timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long',
       })
     : null
 
+  const descuento = Number(orden.descuento)
+  const costoEnvio = Number(orden.costoEnvio)
+  const cobrarEnEfectivo = orden.metodoPago === 'efectivo' && orden.estado === 'PENDIENTE'
+
   return createPortal(
-    <div className="zona-impresion" style={{
-      background: '#fff', color: '#000', padding: 28,
-      fontFamily: 'system-ui, sans-serif', fontSize: 12, lineHeight: 1.45,
-    }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        borderBottom: '2px solid #000', paddingBottom: 8, marginBottom: 14,
-      }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>InCollege</p>
-          <p style={{ margin: 0, fontSize: 11, color: '#555' }}>Indumentaria escolar · Rosario</p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Pedido #{orden.numero}</p>
-          <p style={{ margin: 0, fontSize: 11, color: '#555' }}>
+    <div className="comprobante">
+
+      <header className="comprobante-header">
+        {/* Versión recortada y en escala de grises: el logo original es
+            cuadrado con mucho margen transparente y ocupaba alto sin mostrar
+            nada, empujando el comprobante a una segunda hoja. */}
+        <img src="/logo-print.png" alt="InCollege" className="comprobante-logo" />
+        <p className="comprobante-marca">Indumentaria escolar · Rosario</p>
+
+        <div className="comprobante-pedido">
+          <p className="comprobante-pedido-numero">Pedido #{orden.numero}</p>
+          <p className="comprobante-pedido-dato">
             {new Date(orden.createdAt).toLocaleString('es-AR')}
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700 }}>{orden.estado}</p>
+          <p className="comprobante-pedido-estado">{orden.estado}</p>
         </div>
+      </header>
+
+      <div className="comprobante-columnas">
+        <section className="comprobante-caja">
+          <h2>Cliente</h2>
+          <dl>
+            <Dato etiqueta="Nombre">{cliente}</Dato>
+            <Dato etiqueta="Email">{email}</Dato>
+            <Dato etiqueta="WhatsApp">{telefono}</Dato>
+            <Dato etiqueta="Cuenta">{orden.usuario ? 'Registrada' : 'Compra como invitado'}</Dato>
+          </dl>
+        </section>
+
+        <section className="comprobante-caja">
+          <h2>{esEnvio ? 'Envío a domicilio' : 'Retiro en local'}</h2>
+          <dl>
+            <Dato etiqueta={esEnvio ? 'Modalidad' : 'Local'}>{orden.entrega?.nombre}</Dato>
+            <Dato etiqueta="Dirección">{domicilio}</Dato>
+            <Dato etiqueta="Localidad">{localidad}</Dato>
+            <Dato etiqueta="Día">{fechaEntrega}</Dato>
+            <Dato etiqueta="Horario">{orden.entregaFranja ? `${orden.entregaFranja} hs` : null}</Dato>
+          </dl>
+        </section>
       </div>
 
-      <div style={{ display: 'flex', gap: 28 }}>
-        <div style={{ flex: 1 }}>
-          <Seccion titulo="Cliente">
-            <Fila etiqueta="Nombre">{cliente}</Fila>
-            <Fila etiqueta="Email">{email}</Fila>
-            <Fila etiqueta="WhatsApp">{telefono}</Fila>
-            {!orden.usuario && <p style={{ margin: '4px 0 0', fontSize: 10, color: '#777' }}>Compra como invitado</p>}
-          </Seccion>
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <Seccion titulo={esEnvio ? 'Envío' : 'Retiro'}>
-            <Fila etiqueta={esEnvio ? 'Modalidad' : 'Local'}>{orden.entrega?.nombre}</Fila>
-            <Fila etiqueta="Dirección">{domicilio}</Fila>
-            <Fila etiqueta="Localidad">{localidad}</Fila>
-            <Fila etiqueta="Día">{fechaEntrega}</Fila>
-            <Fila etiqueta="Horario">{orden.entregaFranja ? `${orden.entregaFranja} hs` : null}</Fila>
-          </Seccion>
-        </div>
-      </div>
-
-      <Seccion titulo="Productos">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #999', textAlign: 'left' }}>
-              <th style={{ padding: '3px 0', fontSize: 11 }}>Producto</th>
-              <th style={{ padding: '3px 6px', fontSize: 11 }}>Talle</th>
-              <th style={{ padding: '3px 6px', fontSize: 11 }}>Color</th>
-              <th style={{ padding: '3px 6px', fontSize: 11, textAlign: 'center' }}>Cant.</th>
-              <th style={{ padding: '3px 6px', fontSize: 11, textAlign: 'right' }}>Unitario</th>
-              <th style={{ padding: '3px 0', fontSize: 11, textAlign: 'right' }}>Subtotal</th>
+      <h2 className="comprobante-titulo">Productos</h2>
+      <table className="comprobante-tabla">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th className="comprobante-centro">Talle</th>
+            <th className="comprobante-centro">Color</th>
+            <th className="comprobante-centro">Cant.</th>
+            <th className="comprobante-numero">Unitario</th>
+            <th className="comprobante-numero">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orden.items.map(item => (
+            <tr key={item.id}>
+              <td className="comprobante-producto">{item.producto?.nombre}</td>
+              <td className="comprobante-centro">{item.variante?.talle}</td>
+              <td className="comprobante-centro">{item.variante?.color ?? '—'}</td>
+              <td className="comprobante-centro">{item.cantidad}</td>
+              <td className="comprobante-numero">{formatPrecio(item.precioUnit)}</td>
+              <td className="comprobante-numero">{formatPrecio(item.subtotal)}</td>
             </tr>
-          </thead>
-          <tbody>
-            {orden.items.map(item => (
-              <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '4px 0' }}>{item.producto?.nombre}</td>
-                <td style={{ padding: '4px 6px' }}>{item.variante?.talle}</td>
-                <td style={{ padding: '4px 6px' }}>{item.variante?.color ?? '—'}</td>
-                <td style={{ padding: '4px 6px', textAlign: 'center' }}>{item.cantidad}</td>
-                <td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatPrecio(item.precioUnit)}</td>
-                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 500 }}>{formatPrecio(item.subtotal)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Seccion>
+          ))}
+        </tbody>
+      </table>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 28 }}>
-        <div style={{ flex: 1 }}>
-          <Seccion titulo="Pago">
-            <Fila etiqueta="Método">{ETIQUETA_PAGO[orden.metodoPago] ?? orden.metodoPago ?? 'A definir'}</Fila>
-            <Fila etiqueta="Cupón">{orden.cupon?.codigo}</Fila>
-            {orden.metodoPago === 'efectivo' && orden.estado === 'PENDIENTE' && (
-              <p style={{ margin: '6px 0 0', fontWeight: 700 }}>PENDIENTE DE COBRO</p>
-            )}
-          </Seccion>
-        </div>
+      <div className="comprobante-columnas">
+        <section className="comprobante-caja">
+          <h2>Pago</h2>
+          <dl>
+            <Dato etiqueta="Método">
+              {ETIQUETA_PAGO[orden.metodoPago] ?? orden.metodoPago ?? 'A definir'}
+            </Dato>
+            <Dato etiqueta="Cupón">{orden.cupon?.codigo}</Dato>
+          </dl>
+          {cobrarEnEfectivo && (
+            <p className="comprobante-aviso">▸ PENDIENTE DE COBRO</p>
+          )}
+        </section>
 
-        <div style={{ width: 230 }}>
-          <Seccion titulo="Totales">
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Subtotal</span><span>{formatPrecio(orden.subtotal)}</span>
+        <div className="comprobante-totales">
+          <div className="comprobante-total-fila">
+            <span>Subtotal</span>
+            <span className="comprobante-numero">{formatPrecio(orden.subtotal)}</span>
+          </div>
+          {descuento > 0 && (
+            <div className="comprobante-total-fila">
+              <span>Descuento a favor</span>
+              <span className="comprobante-numero">− {formatPrecio(descuento)}</span>
             </div>
-            {Number(orden.descuento) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Descuento</span><span>−{formatPrecio(orden.descuento)}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Envío</span>
-              <span>{Number(orden.costoEnvio) === 0 ? (esEnvio ? 'A cotizar' : 'Gratis') : formatPrecio(orden.costoEnvio)}</span>
-            </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              borderTop: '1px solid #000', marginTop: 4, paddingTop: 4,
-              fontSize: 15, fontWeight: 800,
-            }}>
-              <span>Total</span><span>{formatPrecio(orden.total)}</span>
-            </div>
-          </Seccion>
+          )}
+          <div className="comprobante-total-fila">
+            <span>Envío</span>
+            <span className="comprobante-numero">
+              {costoEnvio === 0 ? (esEnvio ? 'A cotizar' : 'Gratis') : formatPrecio(costoEnvio)}
+            </span>
+          </div>
+          <div className="comprobante-total-final">
+            <span>TOTAL</span>
+            <span className="comprobante-numero">{formatPrecio(orden.total)}</span>
+          </div>
         </div>
       </div>
 
       {orden.historial?.length > 0 && (
-        <Seccion titulo="Historial">
+        <div className="comprobante-historial">
           {orden.historial.map(h => (
-            <div key={h.id} style={{ fontSize: 11, color: '#555' }}>
+            <div key={h.id}>
               {new Date(h.createdAt).toLocaleString('es-AR')} · {h.estado}
               {h.nota ? ` · ${h.nota}` : ''}
             </div>
           ))}
-        </Seccion>
+        </div>
       )}
 
-      <p style={{ marginTop: 18, paddingTop: 6, borderTop: '1px solid #ccc', fontSize: 10, color: '#777' }}>
-        Dean Funes 1258 · Eva Perón 7790 · Alberdi 608 — Rosario · WhatsApp 341 743 4552
-      </p>
+      <footer className="comprobante-footer">
+        Dean Funes 1258 · Eva Perón 7790 · Alberdi 608 — Rosario<br />
+        WhatsApp 341 743 4552 · tiendadeuniformes.store
+      </footer>
+
     </div>,
     document.body
   )
