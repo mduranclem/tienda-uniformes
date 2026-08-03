@@ -42,7 +42,7 @@ export default function ProductCard({ producto }) {
   return (
     <Link
       to={`/producto/${producto.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900
+      className="group flex w-full flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900
                  shadow-[0_1px_2px_rgba(0,0,0,0.4)]
                  transition-[transform,box-shadow,border-color] duration-300 ease-out
                  hover:-translate-y-1 hover:border-zinc-700 hover:shadow-[0_12px_28px_-10px_rgba(0,0,0,0.8)]

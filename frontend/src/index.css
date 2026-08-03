@@ -56,14 +56,43 @@
    posición ya visible, con desaceleración fuerte. Repetir esta entrada en cada
    sección la volvería ruido. */
 @keyframes entrada-titular {
-  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  from { opacity: 0; transform: translateY(38px) scale(0.97); filter: blur(14px); }
   to   { opacity: 1; transform: none; filter: blur(0); }
 }
 .animar-entrada {
-  animation: entrada-titular 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: entrada-titular 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Aparición escalonada de las tarjetas al entrar en pantalla. El recorrido es
+   corto y el retardo entre una y otra, mínimo: si cada tarjeta hiciera una
+   entrada larga, scrollear el catálogo se volvería molesto.
+
+   Va con transition y no con animation a propósito: el estado final de una
+   animación con fill depende del relleno y compite con la regla base, y basta
+   que algo lo interrumpa para que la tarjeta quede en opacidad 0 —o sea, un
+   producto invisible. Una transición entre dos clases no tiene esa ambigüedad:
+   si .visible está puesta, la tarjeta se ve. */
+.revelar {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--retardo, 0ms);
+}
+.revelar.visible {
+  opacity: 1;
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animar-entrada { animation: none; }
+  /* Sin movimiento la tarjeta arranca visible, nunca escondida */
+  .revelar {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 * {

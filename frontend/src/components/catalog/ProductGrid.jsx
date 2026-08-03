@@ -1,5 +1,24 @@
 import ProductCard from './ProductCard'
 import Spinner from '../ui/Spinner'
+import { useRevelar } from '../../lib/useRevelar'
+
+// El retardo se reinicia cada 4 tarjetas —el ancho de una fila en escritorio—
+// para que la última de una grilla de 33 no espere un segundo entero.
+const RETARDO_POR_TARJETA = 55
+const TARJETAS_POR_FILA = 4
+
+function TarjetaRevelada({ producto, indice }) {
+  const ref = useRevelar()
+  return (
+    <div
+      ref={ref}
+      className="revelar flex"
+      style={{ '--retardo': `${(indice % TARJETAS_POR_FILA) * RETARDO_POR_TARJETA}ms` }}
+    >
+      <ProductCard producto={producto} />
+    </div>
+  )
+}
 
 export default function ProductGrid({ productos, cargando }) {
   if (cargando) {
@@ -21,8 +40,8 @@ export default function ProductGrid({ productos, cargando }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-      {productos.map(p => (
-        <ProductCard key={p.id} producto={p} />
+      {productos.map((p, i) => (
+        <TarjetaRevelada key={p.id} producto={p} indice={i} />
       ))}
     </div>
   )
