@@ -175,7 +175,7 @@ export default function ProductoPage() {
               </span>
             )}
             {/* El colegio y el nombre son una unidad; el aire va después */}
-            <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-3xl">
+            <h1 className="titular mt-1.5 text-3xl text-zinc-50 sm:text-4xl">
               {titleCase(producto.nombre)}
             </h1>
           </div>

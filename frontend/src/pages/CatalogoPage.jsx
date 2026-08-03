@@ -84,7 +84,7 @@ export default function CatalogoPage() {
         <ChevronLeft className="w-4 h-4" />
         Volver al inicio
       </Link>
-      <h1 className="mb-5 text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">Catálogo</h1>
+      <h1 className="titular mb-5 text-4xl text-zinc-50 sm:text-5xl">Catálogo</h1>
 
       {/* Catálogo colegial: selector de colegio en vez del buscador genérico */}
       {filtros.colegial === '1' ? (

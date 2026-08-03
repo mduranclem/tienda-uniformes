@@ -7,11 +7,13 @@ import { useAuth } from '../context/AuthContext'
 import { Sparkles, Truck, ShieldCheck, Lock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useSwipe } from '../lib/useSwipe'
 
-function CategoriaCard({ to, label, img, fallbackBg }) {
+function CategoriaCard({ to, label, descripcion, img, fallbackBg }) {
   return (
     <Link
       to={to}
-      className={`relative flex-1 h-28 sm:h-36 rounded-xl overflow-hidden flex items-center justify-center ${fallbackBg}`}
+      className={`group relative flex-1 overflow-hidden rounded-2xl ${fallbackBg}
+                  h-40 sm:h-52
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--marca-claro)]`}
     >
       {img && (
         <img
@@ -19,13 +21,16 @@ function CategoriaCard({ to, label, img, fallbackBg }) {
           alt=""
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.06]"
         />
       )}
-      <div className="absolute inset-0 bg-black/45" />
-      <span className="relative text-white font-bold text-lg sm:text-xl drop-shadow-md">
-        {label}
-      </span>
+      {/* Degradado desde abajo: el texto se apoya en la zona oscura en vez de
+          velar la foto entera con una capa plana. */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+      <div className="absolute inset-x-0 bottom-0 p-4">
+        <span className="titular block text-2xl text-white sm:text-3xl">{label}</span>
+        <span className="mt-1 block text-xs font-medium text-white/70">{descripcion}</span>
+      </div>
     </Link>
   )
 }
@@ -98,34 +103,40 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
         )}
       </div>
 
-      {/* Bloque de presentación — compacto */}
-      <div className="px-4 text-center">
-        <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">
-          Uniformes oficiales y básicos lisos
+      {/* Presentación — el titular a tamaño de cartel, que es la voz que ya
+          tiene el logo. Una sola entrada animada en toda la página. */}
+      {/* La foto va de borde a borde, pero el texto se alinea con la misma
+          grilla que el resto de la página. */}
+      <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-1">
+        <h1 className="titular animar-entrada text-[2.75rem] leading-[0.9] text-white sm:text-6xl lg:text-7xl">
+          Uniformes oficiales
+          <span className="block text-[var(--marca-claro)]">y básicos lisos</span>
         </h1>
-        <p className="text-xs sm:text-sm text-zinc-300 line-clamp-2 mt-0.5">
+        <p className="mt-3 max-w-md text-sm text-zinc-400 sm:text-base">
           Remeras, buzos y más. Encontrá los modelos de tu institución o elegí entre nuestros lisos.
         </p>
       </div>
 
       {/* Cards de categoría */}
-      <div className="px-4 flex flex-row gap-3">
+      <div className="mx-auto flex w-full max-w-6xl flex-row gap-3 px-4 pt-3">
         <CategoriaCard
           to="/catalogo?colegioId=lisos"
           label="Lisos"
+          descripcion="Sin escudo, para todos los días"
           img={imgLisos}
           fallbackBg="bg-zinc-800"
         />
         <CategoriaCard
           to="/catalogo?colegial=1"
           label="Colegial"
+          descripcion="El uniforme de tu institución"
           img={imgColegial}
-          fallbackBg="bg-blue-600"
+          fallbackBg="bg-[var(--marca)]"
         />
       </div>
 
       {/* Trust signals — una sola línea compacta */}
-      <div className="px-4 flex items-center justify-center gap-1.5 text-[10px] sm:text-xs text-emerald-400 whitespace-nowrap overflow-x-auto">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-center gap-1.5 overflow-x-auto whitespace-nowrap px-4 pt-1 text-[10px] text-emerald-400 sm:text-xs">
         <span className="flex items-center gap-1">
           <Truck className="w-3 h-3 flex-shrink-0" />
           Envío gratis en Rosario
@@ -148,13 +159,16 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
 function SeccionProductos({ titulo, subtitulo, productos, cargando, verTodosHref, colegios }) {
   return (
     <section className="max-w-6xl mx-auto px-4 py-10 md:py-12">
-      <div className="flex items-end justify-between gap-4 mb-1">
-        <h2 className="text-xl md:text-2xl font-bold text-zinc-100">{titulo}</h2>
-        <Link to={verTodosHref} className="text-sm text-blue-400 font-medium hover:text-blue-300 whitespace-nowrap">
-          Ver todos →
+      <div className="mb-1 flex items-end justify-between gap-4">
+        <h2 className="titular text-3xl text-zinc-50 md:text-4xl">{titulo}</h2>
+        <Link
+          to={verTodosHref}
+          className="whitespace-nowrap border-b border-transparent text-sm font-semibold text-[var(--marca-claro)] transition-colors hover:border-current"
+        >
+          Ver todos
         </Link>
       </div>
-      <p className="text-sm text-zinc-500 mb-5">{subtitulo}</p>
+      <p className="mb-6 text-sm text-zinc-500">{subtitulo}</p>
       {colegios && (
         <div className="mb-5">
           <ColegioSelector colegios={colegios} />
