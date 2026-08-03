@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { WHATSAPP_URL } from '../lib/contacto'
 
 const PREGUNTAS = [
   {
@@ -75,7 +76,7 @@ export default function FaqPage() {
       <p className="text-center text-zinc-500 text-sm mt-8">
         ¿No encontraste tu respuesta?{' '}
         <a
-          href="https://wa.me/5493417434552?text=Hola!%20Tengo%20una%20consulta%20sobre%20los%20uniformes"
+          href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="text-green-400 hover:text-green-300 font-medium"

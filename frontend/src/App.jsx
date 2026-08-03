@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
-const WHATSAPP_NUMERO = '5493417434552'
-const WHATSAPP_MENSAJE = encodeURIComponent('Hola! Tengo una consulta sobre los uniformes')
+import { WHATSAPP_URL } from './lib/contacto'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import Header from './components/layout/Header'
@@ -88,7 +87,7 @@ export default function App() {
 
                 {/* Botón flotante WhatsApp */}
                 <a
-                  href={`https://wa.me/${WHATSAPP_NUMERO}?text=${WHATSAPP_MENSAJE}`}
+                  href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center bg-green-500 hover:bg-green-400 text-white rounded-full shadow-lg shadow-green-900/40 transition-all hover:scale-105"

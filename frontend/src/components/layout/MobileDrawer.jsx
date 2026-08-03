@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { X, Search, ChevronDown, ChevronUp, ClipboardList, LayoutDashboard, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { colegiosApi } from '../../services/api'
-
-const WHATSAPP = 'https://wa.me/5493417434552?text=' + encodeURIComponent('Hola! Tengo una consulta sobre los uniformes')
+import { WHATSAPP_URL as WHATSAPP } from '../../lib/contacto'
 
 export default function MobileDrawer({ abierto, onCerrar }) {
   const { usuario, logout } = useAuth()

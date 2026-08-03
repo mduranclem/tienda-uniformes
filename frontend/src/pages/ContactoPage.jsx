@@ -1,6 +1,5 @@
 import { MessageCircle, Mail, Clock, MapPin } from 'lucide-react'
-
-const WA_URL = 'https://wa.me/5493417434552?text=' + encodeURIComponent('Hola! Tengo una consulta sobre los uniformes')
+import { WHATSAPP_URL as WA_URL, WHATSAPP_LEGIBLE, EMAIL_CONTACTO } from '../lib/contacto'
 
 export default function ContactoPage() {
   return (
@@ -22,13 +21,14 @@ export default function ContactoPage() {
           </div>
           <div>
             <p className="text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors">WhatsApp</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Respondemos en el día en horario comercial</p>
+            <p className="text-xs text-zinc-400 mt-0.5">{WHATSAPP_LEGIBLE}</p>
+            <p className="text-xs text-zinc-500">Respondemos en el día en horario comercial</p>
           </div>
         </a>
 
         {/* Email */}
         <a
-          href="mailto:contacto@tiendadeuniformes.store"
+          href={`mailto:${EMAIL_CONTACTO}`}
           className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 hover:border-blue-700 rounded-xl p-5 transition-colors group"
         >
           <div className="w-11 h-11 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
@@ -36,7 +36,7 @@ export default function ContactoPage() {
           </div>
           <div>
             <p className="text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors">Email</p>
-            <p className="text-xs text-zinc-500 mt-0.5">contacto@tiendadeuniformes.store</p>
+            <p className="text-xs text-zinc-500 mt-0.5">{EMAIL_CONTACTO}</p>
           </div>
         </a>
 
