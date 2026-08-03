@@ -25,7 +25,10 @@ export default function FilterBar({ colegios, categorias, filtros, onChange }) {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    // Las categorías y los selectores compiten por el mismo renglón: con 12
+    // categorías las primeras quedan cortadas al medio y aparece una barra de
+    // scroll sobre el borde del selector. En pantallas medianas van apilados.
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
       {/* Tipo de prenda — scrollable a la izquierda */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-1 min-w-0">
         {tipos.map(t => (

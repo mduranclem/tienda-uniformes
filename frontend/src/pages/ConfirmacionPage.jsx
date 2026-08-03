@@ -1,3 +1,4 @@
+import FotoProducto from '../components/catalog/FotoProducto'
 import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { ordenesApi, pagosApi } from '../services/api'
@@ -127,10 +128,10 @@ export default function ConfirmacionPage() {
         <div className="flex flex-col gap-3">
           {orden.items.map(item => (
             <div key={item.id} className="flex gap-3 items-center">
-              <img
-                src={item.producto.imagenes?.[0]?.url ?? '/placeholder.png'}
+              <FotoProducto
+                url={item.producto.imagenes?.[0]?.url}
                 alt={item.producto.nombre}
-                className="w-12 h-12 rounded-lg object-cover bg-zinc-800 shrink-0"
+                className="w-12 h-12 shrink-0 rounded-lg object-cover bg-zinc-800"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-zinc-200 truncate">{item.producto.nombre}</p>

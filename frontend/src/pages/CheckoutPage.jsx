@@ -1,3 +1,4 @@
+import FotoProducto from '../components/catalog/FotoProducto'
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
@@ -514,8 +515,8 @@ export default function CheckoutPage() {
               <div className="flex flex-col gap-3 mb-4">
                 {items.map(item => (
                   <div key={item.varianteId} className="flex gap-3 items-center">
-                    <img src={item.imagen} alt={item.nombre}
-                      className="w-12 h-12 rounded-lg object-cover bg-zinc-800 shrink-0" />
+                    <FotoProducto url={item.imagen} alt={item.nombre}
+                      className="w-12 h-12 shrink-0 rounded-lg object-cover bg-zinc-800" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-zinc-200 leading-tight truncate">{item.nombre}</p>
                       <p className="text-xs text-zinc-500">

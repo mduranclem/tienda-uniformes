@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { ShoppingCart, Search, Menu, User, LogOut, LayoutDashboard, ClipboardList } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
@@ -10,6 +10,9 @@ export default function Header() {
   const { totalItems } = useCart()
   const { usuario, logout } = useAuth()
   const navigate = useNavigate()
+  // El catálogo tiene su propio buscador, más grande y junto a los filtros.
+  // Mostrar los dos deja dos campos idénticos a un palmo de distancia.
+  const enCatalogo = useLocation().pathname === '/catalogo'
   const [drawerAbierto, setDrawerAbierto] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [busqueda, setBusqueda] = useState('')
@@ -36,11 +39,11 @@ export default function Header() {
 
           {/* Logo */}
           <Link to="/" className="shrink-0">
-            <img src="/logo.png" alt="InCollege" className="h-20 w-auto" />
+            <img src="/logo.webp" alt="InCollege" className="h-10 w-auto" />
           </Link>
 
           {/* Buscador desktop */}
-          <form onSubmit={handleBusqueda} className="hidden sm:flex flex-1 max-w-sm relative">
+          <form onSubmit={handleBusqueda} className={`${enCatalogo ? 'hidden' : 'hidden sm:flex'} flex-1 max-w-sm relative`}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
             <input
               type="search"

@@ -1,3 +1,4 @@
+import FotoProducto from '../components/catalog/FotoProducto'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -28,10 +29,10 @@ export default function CarritoPage() {
       <div className="flex flex-col gap-3 mb-6">
         {items.map(item => (
           <div key={item.varianteId} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex gap-4">
-            <img
-              src={item.imagen}
+            <FotoProducto
+              url={item.imagen}
               alt={item.nombre}
-              className="w-20 h-20 object-cover rounded-lg bg-zinc-800 shrink-0"
+              className="w-20 h-20 shrink-0 rounded-lg object-cover bg-zinc-800"
             />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-zinc-100 text-sm leading-snug">{item.nombre}</p>

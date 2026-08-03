@@ -103,7 +103,9 @@ export default function ProductoPage() {
         talle: varianteSeleccionada.talle,
         color: varianteSeleccionada.color,
         precioUnit: precioFinal,
-        imagen: producto.imagenes?.[0]?.url ?? '/placeholder.png',
+        // null y no una ruta inventada: el carrito muestra su propio estado
+        // vacío en vez de un ícono de imagen rota.
+        imagen: producto.imagenes?.[0]?.url ?? null,
         cantidad,
       },
     })
@@ -165,11 +167,18 @@ export default function ProductoPage() {
         <ImageGallery imagenes={producto.imagenes} colorFiltro={colorActual} />
 
         {/* Info — sticky en desktop mientras se scrollean las fotos */}
-        <div className="flex flex-col gap-4 md:sticky md:top-24 md:self-start">
-          {producto.colegio && (
-            <span className="text-sm text-blue-400 font-medium">{producto.colegio.nombre}</span>
-          )}
-          <h1 className="text-2xl font-bold text-zinc-100">{titleCase(producto.nombre)}</h1>
+        <div className="flex flex-col gap-5 md:sticky md:top-24 md:self-start">
+          <div>
+            {producto.colegio && (
+              <span className="text-xs font-semibold uppercase tracking-wide text-blue-400">
+                {producto.colegio.nombre}
+              </span>
+            )}
+            {/* El colegio y el nombre son una unidad; el aire va después */}
+            <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-zinc-50 sm:text-3xl">
+              {titleCase(producto.nombre)}
+            </h1>
+          </div>
 
           {/* Precio */}
           <div>
@@ -194,8 +203,10 @@ export default function ProductoPage() {
                 {cuotas.texto}
               </p>
             )}
-            <div className="mt-2 inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium px-2.5 py-1 rounded-full">
-              <Truck className="w-3.5 h-3.5 flex-shrink-0" />
+            {/* Contraste subido: emerald-400 sobre emerald/10 quedaba por
+                debajo del mínimo legible sobre el fondo oscuro. */}
+            <div className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+              <Truck className="h-3.5 w-3.5 flex-shrink-0" />
               Envío gratis en Rosario
             </div>
           </div>

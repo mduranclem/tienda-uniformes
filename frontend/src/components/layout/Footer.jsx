@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="bg-zinc-900 border-t border-zinc-800 mt-12">
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex flex-col items-center gap-6">
-          <img src="/logo.png" alt="InCollege" className="h-40 w-auto opacity-90" />
+          <img src="/logo.webp" alt="InCollege" className="h-16 w-auto opacity-90" />
           <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-zinc-500">
             <p className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-zinc-600" />

@@ -57,7 +57,7 @@ export default function MobileDrawer({ abierto, onCerrar }) {
         {/* Header del drawer */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #2a2a2a' }}>
           <Link to="/" onClick={onCerrar}>
-            <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+            <img src="/logo.webp" alt="Logo" className="h-6 w-auto" />
           </Link>
           <button
             onClick={onCerrar}

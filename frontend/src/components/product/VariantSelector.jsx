@@ -18,8 +18,12 @@ export default function VariantSelector({ variantes = [], seleccionada, colorAct
     <div className="flex flex-col gap-4">
       {tieneColores && (
         <div className="flex flex-col gap-2">
+          {/* Sin selección se pide la acción, no se muestra un guion: el "—"
+              se lee como un dato que falta cargar, no como algo por elegir. */}
           <p className="text-sm font-medium text-zinc-400">
-            Color: <span className="text-zinc-100">{colorActual ?? '—'}</span>
+            {colorActual
+              ? <>Color: <span className="font-semibold text-zinc-100">{colorActual}</span></>
+              : 'Elegí un color'}
           </p>
           <div className="flex flex-wrap gap-2">
             {colores.map(color => {
@@ -45,7 +49,9 @@ export default function VariantSelector({ variantes = [], seleccionada, colorAct
 
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-zinc-400">
-          Talle: <span className="text-zinc-100">{seleccionada?.talle ?? '—'}</span>
+          {seleccionada?.talle
+            ? <>Talle: <span className="font-semibold text-zinc-100">{seleccionada.talle}</span></>
+            : 'Elegí un talle'}
         </p>
         <div className="flex flex-wrap gap-2">
           {talles.map(talle => {

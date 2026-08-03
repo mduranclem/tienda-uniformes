@@ -34,7 +34,7 @@ export default function AdminLayout() {
     <div className="flex min-h-screen bg-zinc-950">
       {/* Barra superior — solo mobile */}
       <div className="sm:hidden fixed top-0 inset-x-0 z-30 h-14 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4">
-        <img src="/logo.png" alt="InCollege" className="h-8 w-auto" />
+        <img src="/logo.webp" alt="InCollege" className="h-5 w-auto" />
         <button
           onClick={() => setMenuAbierto(true)}
           className="p-2 -mr-2 text-zinc-400 hover:text-zinc-100"
@@ -59,7 +59,7 @@ export default function AdminLayout() {
       >
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
           <div>
-            <img src="/logo.png" alt="InCollege" className="h-10 w-auto mb-2" />
+            <img src="/logo.webp" alt="InCollege" className="h-6 w-auto mb-2" />
             <p className="text-xs text-zinc-500 truncate">{usuario.email}</p>
           </div>
           <button

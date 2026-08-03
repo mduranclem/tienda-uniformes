@@ -54,7 +54,7 @@ export default function App() {
 
             {/* Tienda pública */}
             <Route path="/*" element={
-              <div className="min-h-screen flex flex-col relative" style={{ background: 'linear-gradient(rgba(9,9,11,0.75), rgba(9,9,11,0.75)), url(/fondo.png)', backgroundSize: '100% auto', backgroundPosition: 'top center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'scroll' }}>
+              <div className="min-h-screen flex flex-col relative" style={{ background: 'linear-gradient(rgba(9,9,11,0.75), rgba(9,9,11,0.75)), url(/fondo.webp)', backgroundSize: '100% auto', backgroundPosition: 'top center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'scroll' }}>
                 {/* Barra de promos, visible en toda la tienda. Se mantiene en
                     UNA sola línea en mobile: el hero está calculado para entrar
                     en la primera pantalla y cada línea de más lo empuja fuera.

@@ -56,10 +56,40 @@ export function posicionTalle(talle) {
   return i === -1 ? ORDEN_TALLES.length : i
 }
 
-// Capitaliza la primera letra de cada palabra
+// Palabras que en español van en minúscula dentro de un título, salvo que
+// abran la frase.
+const MINUSCULAS_EN_TITULO = new Set([
+  'a', 'con', 'de', 'del', 'e', 'el', 'en', 'la', 'las', 'lo', 'los',
+  'para', 'por', 'sin', 'sobre', 'u', 'y',
+])
+
+// Normaliza el nombre de un producto para mostrarlo.
+//
+// La versión anterior capitalizaba la inicial de TODAS las palabras y bajaba el
+// resto, y eso rompía los nombres bien escritos: "Campera con capucha – Escuela
+// Familia de Dios" salía como "Campera Con Capucha – Escuela Familia De Dios",
+// y las siglas quedaban destruidas ("IZO" → "Izo", "N.º" → "N.º", "VI" → "Vi").
+//
+// Casi todos los nombres se cargan bien desde el admin, así que solo se
+// interviene cuando hace falta: se colapsan los espacios de más y se reescribe
+// únicamente si el nombre vino todo en mayúsculas.
 export function titleCase(texto) {
   if (!texto) return ''
-  return texto
+
+  const limpio = texto.replace(/\s+/g, ' ').trim()
+
+  // Tiene minúsculas: está escrito por una persona, se respeta tal cual.
+  if (/[a-záéíóúüñ]/.test(limpio)) return limpio
+
+  // Vino en mayúsculas (ej. "PANTALON JOGGING BORDADO"): se pasa a formato
+  // título, dejando en minúscula las palabras de enlace que no abren la frase.
+  return limpio
     .toLowerCase()
-    .replace(/(?:^|\s|-)\S/g, l => l.toUpperCase())
+    .split(' ')
+    .map((palabra, i) =>
+      i > 0 && MINUSCULAS_EN_TITULO.has(palabra)
+        ? palabra
+        : palabra.charAt(0).toUpperCase() + palabra.slice(1)
+    )
+    .join(' ')
 }
