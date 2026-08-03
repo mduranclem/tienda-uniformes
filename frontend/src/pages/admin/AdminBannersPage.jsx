@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
@@ -13,11 +13,15 @@ export default function AdminBannersPage() {
   const [cargando, setCargando] = useState(true)
   const [subiendo, setSubiendo] = useState(false)
 
+  // El spinner de pantalla completa desmonta la tabla y cada fila pierde su
+  // estado: se cierra lo que estabas editando y el scroll vuelve arriba. Solo
+  // se muestra al entrar; las recargas posteriores a un guardado son silenciosas.
+  const primeraCarga = useRef(true)
   async function cargar() {
-    setCargando(true)
+    if (primeraCarga.current) setCargando(true)
     const data = await adminApi.listarBanners(token)
     setSlides(data)
-    setCargando(false)
+    primeraCarga.current = false; setCargando(false)
   }
 
   useEffect(() => { if (token) cargar() }, [token])

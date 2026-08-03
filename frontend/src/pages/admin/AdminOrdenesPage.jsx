@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { entregasApi } from '../../services/api'
@@ -200,10 +200,14 @@ export default function AdminOrdenesPage() {
   const [entregas, setEntregas] = useState([])
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
 
+  // El spinner de pantalla completa desmonta la tabla y cada fila pierde su
+  // estado: se cierra lo que estabas editando y el scroll vuelve arriba. Solo
+  // se muestra al entrar; las recargas posteriores a un guardado son silenciosas.
+  const primeraCarga = useRef(true)
   async function cargar() {
-    setCargando(true)
+    if (primeraCarga.current) setCargando(true)
     const r = await adminApi.listarOrdenes(token, { estado: filtroEstado })
-    setOrdenes(r.data); setTotal(r.total); setCargando(false)
+    setOrdenes(r.data); setTotal(r.total); primeraCarga.current = false; setCargando(false)
   }
 
   useEffect(() => { entregasApi.listar().then(setEntregas) }, [])

@@ -610,15 +610,26 @@ export default function AdminProductosPage() {
   const [cargando, setCargando] = useState(true)
   const [modalNuevo, setModalNuevo] = useState(false)
 
-  async function cargar() {
-    setCargando(true)
-    const [prods, cols, cats] = await Promise.all([
-      adminApi.listarProductos(token),
-      colegiosApi.listar(),
-      categoriasApi.listar(),
-    ])
-    setProductos(prods); setColegios(cols); setCategorias(cats); setCargando(false)
+  // silencioso: refresca los datos sin pasar por el spinner de página completa.
+  // Con el spinner, React desmonta toda la tabla y cada fila pierde su estado
+  // local: se cierra el producto que tenías abierto, se borra lo que estabas
+  // editando y el scroll vuelve arriba. Al subir varias fotos seguidas eso
+  // obliga a volver a buscar el producto cada vez.
+  async function cargar({ silencioso = false } = {}) {
+    if (!silencioso) setCargando(true)
+    try {
+      const [prods, cols, cats] = await Promise.all([
+        adminApi.listarProductos(token),
+        colegiosApi.listar(),
+        categoriasApi.listar(),
+      ])
+      setProductos(prods); setColegios(cols); setCategorias(cats)
+    } finally {
+      if (!silencioso) setCargando(false)
+    }
   }
+
+  const refrescar = () => cargar({ silencioso: true })
 
   useEffect(() => { if (token) cargar() }, [token])
 
@@ -650,7 +661,7 @@ export default function AdminProductosPage() {
             </thead>
             <tbody>
               {productos.map(p => (
-                <FilaProducto key={p.id} producto={p} colegios={colegios} categorias={categorias} token={token} onActualizado={cargar} />
+                <FilaProducto key={p.id} producto={p} colegios={colegios} categorias={categorias} token={token} onActualizado={refrescar} />
               ))}
             </tbody>
           </table>
@@ -662,7 +673,7 @@ export default function AdminProductosPage() {
 
       {modalNuevo && (
         <ModalProducto colegios={colegios} categorias={categorias} token={token}
-          onGuardado={() => { setModalNuevo(false); cargar() }}
+          onGuardado={() => { setModalNuevo(false); refrescar() }}
           onCerrar={() => setModalNuevo(false)} />
       )}
     </div>
