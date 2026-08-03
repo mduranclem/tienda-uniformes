@@ -21,7 +21,7 @@ const PREGUNTAS = [
   },
   {
     q: '¿Hacen envíos a todo el país?',
-    a: 'Sí, enviamos a todo el país a través de correo privado. El costo de envío se calcula al momento del checkout según tu localidad.',
+    a: 'Sí. Dentro de Rosario el envío es gratis y coordinamos día y horario al finalizar la compra. Al resto del país enviamos por Andreani: el costo depende de tu código postal y del peso del pedido, y te lo pasamos por WhatsApp antes de despacharlo. También podés retirar sin cargo por cualquiera de nuestros tres locales.',
   },
   {
     q: '¿Tienen descuentos?',
