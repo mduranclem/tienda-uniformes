@@ -8,16 +8,12 @@ const PREGUNTAS = [
     a: 'Elegí los productos que querés, seleccioná talle y color, y agregarlos al carrito. Cuando estés listo, hacé click en "Finalizar compra" y completá tus datos. Podés comprar sin registrarte.',
   },
   {
-    q: '¿Cuánto tarda en llegar mi pedido?',
-    a: 'Los pedidos con envío a domicilio se despachan dentro de los 3 a 5 días hábiles desde la confirmación del pago. Para retiro en local, te avisamos por WhatsApp cuando está listo.',
-  },
-  {
     q: '¿Cómo sé qué talle me queda?',
     a: 'En la página de cada producto vas a encontrar una guía de talles. Si tenés dudas, escribinos por WhatsApp y te asesoramos sin compromiso.',
   },
   {
-    q: '¿Puedo cambiar o devolver una prenda?',
-    a: 'Sí. Aceptamos cambios dentro de los 10 días de recibido el pedido, siempre que la prenda esté sin uso, con etiqueta y en su embalaje original. Las prendas personalizadas con el nombre o logo de un colegio no tienen cambio salvo defecto de fabricación.',
+    q: '¿Puedo cambiar una prenda?',
+    a: 'Aceptamos cambios dentro de las 48 horas de recibido el pedido, siempre que se trate de una falla de fábrica o de un error nuestro. En ese caso te cambiamos la prenda sin costo. No se aceptan cambios cuando la prenda presenta signos de uso o mal cuidado: lavado incorrecto, enganches, manchas, roturas o deformaciones. Ante cualquier problema, escribinos por WhatsApp con fotos de la prenda y lo resolvemos.',
   },
   {
     q: '¿Cómo puedo pagar?',
@@ -26,10 +22,6 @@ const PREGUNTAS = [
   {
     q: '¿Hacen envíos a todo el país?',
     a: 'Sí, enviamos a todo el país a través de correo privado. El costo de envío se calcula al momento del checkout según tu localidad.',
-  },
-  {
-    q: '¿Los productos son oficiales del colegio?',
-    a: 'Sí. Trabajamos directamente con cada institución para reproducir fielmente los modelos oficiales. Si no encontrás tu colegio, escribinos y lo evaluamos.',
   },
   {
     q: '¿Tienen descuentos?',
