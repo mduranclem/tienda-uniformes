@@ -33,9 +33,9 @@ const BANDAS = [
 const TALLES = BANDAS.flatMap(b => b.talles)
 
 // `categoria` es el nombre exacto en la tabla Categoria, que es también lo que
-// guarda Producto.tipo. Los nombres que ya existían se respetan tal cual —
-// incluido el error de tipeo de "FIRSA"—: renombrarlos obligaría a actualizar
-// el tipo de cada producto y es un cambio aparte.
+// guarda Producto.tipo. Para renombrar una categoría no alcanza con cambiarla
+// acá: hay que arrastrar el tipo de cada producto, y de eso se ocupa
+// scripts/renombrar-categoria.js.
 const LISTA = [
   // ── Colegiales: llevan escudo, se producen a pedido ──────────────────────
   { nombre: 'Remera Bordada', categoria: 'REMERA BORDADA', colegial: true, precios: [25250, 26680, 27720, 29540] },
@@ -60,7 +60,7 @@ const LISTA = [
   { nombre: 'Chaleco liso polar azul marino', categoria: 'CHALECO LISO POLAR', colegial: false, precios: [25400, 28100, 30800, 33400] },
   { nombre: 'Campera polar lisa azul marino', categoria: 'CAMPERA LISA POLAR', colegial: false, precios: [33400, 35400, 38100, 40800] },
   { nombre: 'Pantalón jogging liso con frisa', categoria: 'PANTALON LARGO CON FRISA LISO', colegial: false, precios: [36000, 38400, 42100, 46100] },
-  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FIRSA LISO', colegial: false, precios: [49190, 52050, 54910, 59200] },
+  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FRISA LISO', colegial: false, precios: [49190, 52050, 54910, 59200] },
   { nombre: 'Buzo canguro liso con frisa', categoria: 'BUZO CANGURO CON FRISA LISO', colegial: false, precios: [36580, 42040, 44900, 49190] },
   { nombre: 'Pantalón cargo azul-gris gabardina', categoria: 'PANTALON CARGO GABARDINA', colegial: false, precios: [56000, 61000, 66000, 71000] },
 ]

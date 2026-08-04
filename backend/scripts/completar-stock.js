@@ -6,6 +6,7 @@
 //   node backend/scripts/completar-stock.js --aplicar             (escribe)
 //   node backend/scripts/completar-stock.js --aplicar --stock 8
 //   node backend/scripts/completar-stock.js --aplicar --todos-los-talles
+//   node backend/scripts/completar-stock.js --aplicar --incluir-inactivos
 //
 // Por defecto toma los talles que cada producto YA tiene cargados y los cruza
 // con sus colores declarados: no inventa talles.
@@ -59,8 +60,13 @@ async function main() {
     process.exit(1)
   }
 
+  // Por defecto solo los publicados: son los que se pueden vender y los únicos
+  // cuyo stock miente si está mal. Con --incluir-inactivos entran también las
+  // plantillas y los borradores, para dejarlos listos antes de publicarlos.
+  const incluirInactivos = process.argv.includes('--incluir-inactivos')
+
   const productos = await prisma.producto.findMany({
-    where: { activo: true },
+    where: incluirInactivos ? {} : { activo: true },
     include: { colores: true, variantes: true },
     orderBy: { nombre: 'asc' },
   })
@@ -137,7 +143,7 @@ async function main() {
   // permisos, no tiene sentido dar por perdida toda la carga.
   if (aplicar) {
     const todas = await prisma.variante.findMany({
-      where: { producto: { activo: true } },
+      where: incluirInactivos ? {} : { producto: { activo: true } },
       select: { id: true },
     })
     try {
