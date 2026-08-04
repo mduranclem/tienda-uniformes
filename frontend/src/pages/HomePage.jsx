@@ -4,7 +4,7 @@ import { colegiosApi, productosApi, primeraCompraApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
 import { useAuth } from '../context/AuthContext'
-import { Sparkles, Truck, ShieldCheck, Lock, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { Sparkles, Truck, Store, Lock, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import { useSwipe } from '../lib/useSwipe'
 
 function CategoriaCard({ to, label, descripcion, img, fallbackBg }) {
@@ -156,9 +156,11 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
           Envío gratis en Rosario
         </span>
         <span className="text-zinc-600">·</span>
-        <span className="flex items-center gap-1">
-          <ShieldCheck className="w-3 h-3 flex-shrink-0" />
-          Calidad garantizada
+        {/* Reemplaza a "Calidad garantizada": era una promesa genérica y este
+            lugar es de los pocos que se ven sin scrollear. */}
+        <span className="flex items-center gap-1 font-semibold text-violet-300">
+          <Store className="w-3 h-3 flex-shrink-0" />
+          20% OFF retirando en el local
         </span>
         <span className="text-zinc-600">·</span>
         <span className="flex items-center gap-1">

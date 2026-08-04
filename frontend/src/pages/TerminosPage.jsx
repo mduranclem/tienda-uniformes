@@ -44,7 +44,13 @@ export default function TerminosPage() {
         <p>
           Dentro de Rosario el envío es sin cargo y se coordina el día y la franja horaria durante
           el checkout. Al resto del país despachamos por Andreani; el costo se informa antes del
-          despacho. También podés retirar sin cargo por cualquiera de nuestros locales.
+          despacho. También podés retirar por cualquiera de nuestros locales, sin cargo y
+          con un 20% de descuento sobre el pedido.
+        </p>
+        <p>
+          Los descuentos de la casa (20% por primera compra y 20% por retirar en el local)
+          no se acumulan entre sí: se aplica uno solo. Los cupones sí se suman al descuento
+          vigente.
         </p>
         <p>
           Los plazos son estimados y pueden verse afectados por demoras del correo o de la

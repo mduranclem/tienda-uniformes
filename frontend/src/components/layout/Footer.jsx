@@ -33,7 +33,9 @@ export default function Footer() {
     <footer className="mt-16 border-t border-zinc-800 bg-zinc-950">
       <div className="mx-auto max-w-6xl px-4 py-10">
 
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        {/* La columna de contacto va más ancha que las demás: el mail entra en
+            una línea en vez de partirse al medio. */}
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-[1fr_1.5fr_1fr_1.1fr]">
 
           {/* Marca y locales — ocupa dos columnas porque las direcciones son largas */}
           <div className="col-span-2 md:col-span-1">

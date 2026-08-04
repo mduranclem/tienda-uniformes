@@ -6,13 +6,17 @@ const { notificarNuevoPedido } = require('../services/notificaciones')
 const { esRosario } = require('../lib/envios')
 const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
 const { esFechaValida, esFranjaValida, FRANJAS } = require('../lib/agendaEntrega')
+const {
+  calcularDescuentos,
+  DESCUENTO_BIENVENIDA_PCT,
+  DESCUENTO_RETIRO_PCT,
+} = require('../lib/descuentos')
 
 const router = Router()
 
 // Estados que cuentan como compra concretada: solo una compra pagada
 // (o posterior) quema el descuento de bienvenida.
 const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
-const DESCUENTO_BIENVENIDA_PCT = 20
 
 // Efectivo solo tiene sentido si el cliente pasa por el local. Con envío a
 // domicilio no hay dónde cobrarle.
@@ -149,24 +153,21 @@ router.post('/', authOpcional, async (req, res, next) => {
       }
     }
 
-    // Descuento de bienvenida (primera compra): lo decide SIEMPRE el servidor
-    // según el historial del email, nunca un flag del cliente.
-    const descuentoBienvenida = (await esPrimeraCompra(email))
-      ? Math.round(subtotal * DESCUENTO_BIENVENIDA_PCT / 100)
-      : 0
-
-    // Validar cupón si se envió
-    let descuento = descuentoBienvenida
+    // Los descuentos los decide SIEMPRE el servidor: la primera compra según el
+    // historial del email y el retiro según la entrega elegida, nunca un flag
+    // que mande el cliente.
     let cuponValido = null
     if (cuponId) {
-      cuponValido = await prisma.cupon.findUnique({ where: { id: cuponId } })
-      if (cuponValido && cuponValido.activo) {
-        const descuentoCupon = cuponValido.tipo === 'PORCENTAJE'
-          ? Math.round(subtotal * Number(cuponValido.valor) / 100)
-          : Math.min(Number(cuponValido.valor), subtotal)
-        descuento = descuentoBienvenida + descuentoCupon
-      }
+      const cupon = await prisma.cupon.findUnique({ where: { id: cuponId } })
+      if (cupon && cupon.activo) cuponValido = cupon
     }
+
+    const { total: descuento } = calcularDescuentos({
+      subtotal,
+      primeraCompra: await esPrimeraCompra(email),
+      retiraEnLocal: entrega.tipo === 'RETIRO',
+      cupon: cuponValido,
+    })
 
     const total = subtotal + costoEnvio - descuento
 
@@ -253,7 +254,7 @@ router.get('/primera-compra', async (req, res, next) => {
     const { email } = req.query
     if (!email) return res.json({ aplica: false })
     const aplica = await esPrimeraCompra(email)
-    res.json({ aplica, descuentoPct: DESCUENTO_BIENVENIDA_PCT })
+    res.json({ aplica, descuentoPct: DESCUENTO_BIENVENIDA_PCT, descuentoRetiroPct: DESCUENTO_RETIRO_PCT })
   } catch (err) { next(err) }
 })
 

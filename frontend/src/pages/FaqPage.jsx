@@ -21,11 +21,11 @@ const PREGUNTAS = [
   },
   {
     q: '¿Hacen envíos a todo el país?',
-    a: 'Sí. Dentro de Rosario el envío es gratis y coordinamos día y horario al finalizar la compra. Al resto del país enviamos por Andreani: el costo depende de tu código postal y del peso del pedido, y te lo pasamos por WhatsApp antes de despacharlo. También podés retirar sin cargo por cualquiera de nuestros tres locales.',
+    a: 'Sí. Dentro de Rosario el envío es gratis y coordinamos día y horario al finalizar la compra. Al resto del país enviamos por Andreani: el costo depende de tu código postal y del peso del pedido, y te lo pasamos por WhatsApp antes de despacharlo. También podés retirar por cualquiera de nuestros tres locales, sin cargo y con un 20% de descuento sobre el pedido.',
   },
   {
     q: '¿Tienen descuentos?',
-    a: 'La primera compra tiene un 20% de descuento que se aplica automáticamente. También publicamos promos por temporada. Seguinos en redes para enterarte primero.',
+    a: 'Sí. La primera compra tiene un 20% de descuento, y retirando por cualquiera de nuestros locales también tenés un 20% de descuento, siempre, aunque ya nos hayas comprado antes. Los dos descuentos no se acumulan: se aplica uno solo del 20%. Además publicamos promos por temporada.',
   },
 ]
 

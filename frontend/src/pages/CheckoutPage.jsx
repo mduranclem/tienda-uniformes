@@ -96,9 +96,16 @@ export default function CheckoutPage() {
   )
   // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
   const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
-  const descuentoBienvenida = esPrimeraCompra ? Math.round(totalPrecio * 20 / 100) : 0
+  // Las dos promos de la casa valen 20% y NO se acumulan: se aplica una sola.
+  // Este cálculo es solo para mostrar; el que vale es el del servidor
+  // (backend/src/lib/descuentos.js), que es el que arma el total de la orden.
+  const retiraEnLocal = entregaSeleccionada?.tipo === 'RETIRO'
+  const descuentoPromo = (esPrimeraCompra || retiraEnLocal) ? Math.round(totalPrecio * 20 / 100) : 0
+  // Con las dos activas se muestra la de bienvenida, que es la que el cliente
+  // ya venía viendo desde el banner de arriba.
+  const motivoPromo = esPrimeraCompra ? 'primera compra' : 'retiro en el local'
   const descuentoCupon = cupon?.descuento ?? 0
-  const descuento = descuentoBienvenida + descuentoCupon
+  const descuento = descuentoPromo + descuentoCupon
   const total = totalPrecio + costoEnvio - descuento
 
   // Verificar primera compra cuando el email cambia (con delay)
@@ -338,6 +345,11 @@ export default function CheckoutPage() {
                       }
                       <div className="flex-1">
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
+                        {e.tipo === 'RETIRO' && (
+                          <p className="mt-0.5 text-xs font-semibold text-violet-300">
+                            20% OFF retirando
+                          </p>
+                        )}
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
                         {e.tipo === 'RETIRO' || e.soloRosario
@@ -530,15 +542,21 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Descuento bienvenida */}
-              {esPrimeraCompra && (
+              {/* Promo de la casa: bienvenida o retiro, nunca las dos */}
+              {descuentoPromo > 0 && (
                 <div className="mb-3 flex items-center gap-2 bg-violet-500/10 border border-violet-500/30 rounded-lg px-3 py-2">
                   <span className="text-lg">🎉</span>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-violet-300">¡20% OFF — Primera compra!</p>
-                    <p className="text-xs text-violet-400">Descuento aplicado automáticamente</p>
+                    <p className="text-sm font-semibold text-violet-300">
+                      ¡20% OFF — {esPrimeraCompra ? 'Primera compra' : 'Retirando en el local'}!
+                    </p>
+                    <p className="text-xs text-violet-400">
+                      {esPrimeraCompra && retiraEnLocal
+                        ? 'Los descuentos no se acumulan: se aplica uno solo'
+                        : 'Descuento aplicado automáticamente'}
+                    </p>
                   </div>
-                  <span className="text-sm font-bold text-violet-300">− {formatPrecio(descuentoBienvenida)}</span>
+                  <span className="text-sm font-bold text-violet-300">− {formatPrecio(descuentoPromo)}</span>
                 </div>
               )}
 
@@ -580,10 +598,10 @@ export default function CheckoutPage() {
                   <span>Subtotal</span>
                   <span>{formatPrecio(totalPrecio)}</span>
                 </div>
-                {descuentoBienvenida > 0 && (
+                {descuentoPromo > 0 && (
                   <div className="flex justify-between text-violet-400">
-                    <span>20% primera compra</span>
-                    <span>− {formatPrecio(descuentoBienvenida)}</span>
+                    <span>20% {motivoPromo}</span>
+                    <span>− {formatPrecio(descuentoPromo)}</span>
                   </div>
                 )}
                 {descuentoCupon > 0 && (
