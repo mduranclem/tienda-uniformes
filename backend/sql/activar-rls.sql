@@ -6,10 +6,14 @@
 -- usuarios, alumnos, precios y cupones incluidos.
 --
 -- Activar RLS sin crear ninguna política deja la tabla cerrada para todos los
--- roles que pasan por la API (anon y authenticated). La aplicación no se ve
--- afectada: se conecta como `postgres`, que tiene rolbypassrls y por lo tanto
--- ignora RLS. El frontend usa Supabase solo para auth y storage, nunca para
--- leer datos, así que no hay ninguna consulta que dependa de esto.
+-- roles que pasan por la API (anon y authenticated).
+--
+-- OJO: también la cierra para la aplicación. Producción se conecta como
+-- `tienda_app`, que no es dueño de estas tablas ni tiene BYPASSRLS, así que sin
+-- una política propia deja de ver todo y la tienda queda sin productos. Correr
+-- SIEMPRE politica-backend.sql junto con este archivo, y verificar con las
+-- credenciales de producción y no con las de `postgres`, que tiene rolbypassrls
+-- y ve todo aunque esté mal.
 --
 -- Cómo correrlo: dashboard de Supabase → SQL Editor → pegar y ejecutar.
 -- Es idempotente: se puede correr las veces que haga falta.

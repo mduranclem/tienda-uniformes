@@ -40,6 +40,30 @@ async function main() {
   const expuestas = filas.filter(f => !f.rls && (f.anon_lee || f.anon_escribe))
   console.log('\nTablas alcanzables por anon sin RLS: ' + expuestas.length + ' de ' + filas.length)
   if (expuestas.length) console.log(expuestas.map(f => f.tabla).join(', '))
+
+  // Con RLS activo y sin una política para él, `tienda_app` —el usuario con el
+  // que se conecta producción— no ve ninguna fila y la tienda queda vacía. Este
+  // script suele correrse como `postgres`, que tiene BYPASSRLS y no lo notaría.
+  const cerradas = await prisma.$queryRawUnsafe(`
+    SELECT c.relname AS tabla
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
+      AND pg_get_userbyid(c.relowner) <> 'tienda_app'
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_policies p
+        WHERE p.schemaname = 'public' AND p.tablename = c.relname
+          AND 'tienda_app' = ANY (p.roles)
+      )`)
+
+  if (cerradas.length) {
+    console.log('\n🚨 SIN ACCESO PARA EL BACKEND (la tienda las va a ver vacías):')
+    console.log('   ' + cerradas.map(f => f.tabla).join(', '))
+    console.log('   Corré: node scripts/aplicar-politica-backend.js')
+    process.exitCode = 1
+  } else {
+    console.log('El backend (tienda_app) tiene acceso a todas las tablas con RLS.')
+  }
 }
 
 main()
