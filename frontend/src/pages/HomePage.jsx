@@ -4,7 +4,7 @@ import { colegiosApi, productosApi, primeraCompraApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
 import { useAuth } from '../context/AuthContext'
-import { Sparkles, Truck, ShieldCheck, Lock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Sparkles, Truck, ShieldCheck, Lock, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import { useSwipe } from '../lib/useSwipe'
 
 function CategoriaCard({ to, label, descripcion, img, fallbackBg }) {
@@ -54,8 +54,12 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
     <section className="bg-zinc-950 flex flex-col gap-2 pt-3 pb-4">
 
       {/* Carrusel de fotos de producto — full-bleed, bajo, fade */}
+      {/* Las fotos son verticales, de chicos de cuerpo entero, y el contenedor
+          es apaisado. En mobile se ancla arriba para que queden cara y torso —
+          lo que muestra la prenda— en vez de recortar por el medio. En desktop
+          hay alto suficiente para centrar. */}
       <div
-        className="relative w-full h-[160px] sm:h-[250px] lg:h-[350px] overflow-hidden bg-zinc-900"
+        className="relative h-[300px] w-full overflow-hidden bg-zinc-900 sm:h-[380px] lg:h-[450px]"
         onTouchStart={swipe.onTouchStart}
         onTouchEnd={swipe.onTouchEnd}
       >
@@ -67,7 +71,7 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
             alt={s.titulo ?? ''}
             loading={i === 0 ? undefined : 'lazy'}
             decoding="async"
-            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out ${
+            className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-700 ease-in-out lg:object-center ${
               i === idx ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -78,18 +82,18 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
             <button
               onClick={anterior}
               aria-label="Foto anterior"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 z-10 transition-colors"
+              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={siguiente}
               aria-label="Foto siguiente"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 z-10 transition-colors"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/55 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2 py-1 z-10">
+            <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/55 px-2.5 py-1.5 backdrop-blur-sm">
               {slides.map((_, i) => (
                 <button
                   key={i}
@@ -107,8 +111,18 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
           tiene el logo. Una sola entrada animada en toda la página. */}
       {/* La foto va de borde a borde, pero el texto se alinea con la misma
           grilla que el resto de la página. */}
-      <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-1">
-        <h1 className="titular animar-entrada text-[2.75rem] leading-[0.9] text-white sm:text-6xl lg:text-7xl">
+      <div className="mx-auto w-full max-w-6xl px-4 pt-7 pb-2">
+        {/* Gris con un punto de marca: informa sin pelearle a la barra violeta
+            del 20%, que es la que tiene que ganar la atención. */}
+        <span className="inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/80 px-3 py-1 text-[11px] font-medium text-zinc-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--marca-claro)]" />
+          Temporada 2026 · Nuevos modelos disponibles
+        </span>
+
+        {/* Inter y no Anton: Anton es una tipografía de cartel dibujada para
+            mayúsculas y en caja mixta pierde bastante. Anton queda para los
+            títulos de sección, que sí van en mayúsculas. */}
+        <h1 className="animar-entrada mt-4 text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
           Uniformes oficiales
           <span className="block text-[var(--marca-claro)]">y básicos lisos</span>
         </h1>
@@ -151,6 +165,14 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
           <Lock className="w-3 h-3 flex-shrink-0" />
           Pagos seguros
         </span>
+      </div>
+
+      {/* Prueba social. El número sale de los colegios realmente cargados
+          (35 hoy): si alguien cuenta los del selector, la cifra tiene que
+          sostenerse. */}
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-center gap-1.5 px-4 pt-2 text-[11px] font-medium text-zinc-400 sm:text-xs">
+        <Star className="h-3.5 w-3.5 flex-shrink-0 fill-amber-400 text-amber-400" />
+        Más de 30 colegios de Rosario confían en nosotros
       </div>
     </section>
   )

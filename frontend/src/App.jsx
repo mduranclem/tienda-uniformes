@@ -29,6 +29,10 @@ import ConfirmacionPage from './pages/ConfirmacionPage'
 import MisOrdenesPage from './pages/MisOrdenesPage'
 import FaqPage from './pages/FaqPage'
 import ContactoPage from './pages/ContactoPage'
+import TallesPage from './pages/TallesPage'
+import TerminosPage from './pages/TerminosPage'
+import CambiosPage from './pages/CambiosPage'
+import PrivacidadPage from './pages/PrivacidadPage'
 
 export default function App() {
   return (
@@ -79,6 +83,10 @@ export default function App() {
                     <Route path="/mi-cuenta/ordenes" element={<MisOrdenesPage />} />
                     <Route path="/faq" element={<FaqPage />} />
                     <Route path="/contacto" element={<ContactoPage />} />
+                    <Route path="/talles" element={<TallesPage />} />
+                    <Route path="/terminos" element={<TerminosPage />} />
+                    <Route path="/cambios" element={<CambiosPage />} />
+                    <Route path="/privacidad" element={<PrivacidadPage />} />
                     <Route path="/auth/callback" element={<AuthCallbackPage />} />
                     <Route path="/auth/nueva-password" element={<NuevaPasswordPage />} />
                   </Routes>

@@ -16,4 +16,7 @@ const SALUDO = 'Hola! Tengo una consulta sobre los uniformes'
 export const WHATSAPP_URL =
   `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(SALUDO)}`
 
-export const EMAIL_CONTACTO = 'contacto@tiendadeuniformes.store'
+export const EMAIL_CONTACTO = 'tiendadeuniformes.incollege@gmail.com'
+
+export const DIRECCIONES = ['Dean Funes 1258', 'Eva Perón 7790', 'Alberdi 608']
+export const CIUDAD = 'Rosario, Santa Fe'

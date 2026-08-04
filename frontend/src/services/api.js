@@ -190,6 +190,11 @@ export const pagosApi = {
     }),
 }
 
+// ── Tienda (datos generales) ─────────────────────────────────────────────────
+export const tiendaApi = {
+  tablaTalles: () => request('/tienda/tabla-talles'),
+}
+
 // ── Banners ───────────────────────────────────────────────────────────────────
 export const bannersApi = {
   listar: () => request('/banners'),
