@@ -25,10 +25,10 @@ function cuando({ entregaFecha, entregaFranja }) {
 /**
  * @param {{ estado: string, modoEnvio: string, numero: number,
  *           puntoRetiro?: string|null, entregaFecha?: Date|string|null,
- *           entregaFranja?: string|null }} datos
+ *           entregaFranja?: string|null, envioACotizar?: boolean }} datos
  * @returns {string|null} null si ese estado no corresponde avisarlo
  */
-function componerMensaje({ estado, modoEnvio, numero, puntoRetiro, entregaFecha, entregaFranja }) {
+function componerMensaje({ estado, modoEnvio, numero, puntoRetiro, entregaFecha, entregaFranja, envioACotizar = false }) {
   const pedido = `*Pedido #${numero}*`
   const momento = cuando({ entregaFecha, entregaFranja })
 
@@ -42,7 +42,12 @@ function componerMensaje({ estado, modoEnvio, numero, puntoRetiro, entregaFecha,
           ? `✅ ${pedido}\n\n¡Recibimos tu pago! Te lo llevamos ${momento}.`
           : `✅ ${pedido}\n\n¡Recibimos tu pago! Te escribimos para coordinar la entrega.`
       }
-      return `✅ ${pedido}\n\n¡Recibimos tu pago! Te avisamos en cuanto lo despachemos por Andreani.`
+      // Al interior el flete no se cobró en la tienda, así que el pago que
+      // acaba de hacer no lo incluye. Decirlo acá y no cuando ya está
+      // despachado: enterarse del costo después de pagar se siente a trampa.
+      return envioACotizar
+        ? `✅ ${pedido}\n\n¡Recibimos tu pago! Falta el envío: te pasamos el costo por acá y, cuando lo abones, lo despachamos por Andreani.`
+        : `✅ ${pedido}\n\n¡Recibimos tu pago! Te avisamos en cuanto lo despachemos por Andreani.`
 
     case 'LISTA':
       if (modoEnvio === 'RETIRO') {

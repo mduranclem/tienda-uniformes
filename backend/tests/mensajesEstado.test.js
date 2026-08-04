@@ -55,6 +55,23 @@ test('el interior habla de Andreani y no promete horario', () => {
   assert.ok(!msg.includes('jueves'), 'promete una fecha que no controla')
 })
 
+test('PAGADA al interior avisa que el envío se cobra aparte', () => {
+  const msg = componerMensaje({
+    ...BASE, estado: 'PAGADA', modoEnvio: 'INTERIOR', envioACotizar: true,
+  })
+  assert.match(msg, /envío/i)
+  assert.match(msg, /costo/i)
+})
+
+// Si el flete ya se cobró en el checkout, volver a pedirlo sería cobrarlo dos
+// veces. El aviso tiene que depender del dato, no del destino.
+test('PAGADA al interior con el envío ya pago no lo vuelve a pedir', () => {
+  const msg = componerMensaje({
+    ...BASE, estado: 'PAGADA', modoEnvio: 'INTERIOR', envioACotizar: false,
+  })
+  assert.ok(!/costo/i.test(msg), 'pide plata por un envío que ya está pago')
+})
+
 // Un envío en Rosario sin fecha no debería existir, pero si pasa el mensaje
 // tiene que degradar a "coordinamos" y no romperse ni mentir.
 test('un envío en Rosario sin fecha cae en coordinar, sin romperse', () => {

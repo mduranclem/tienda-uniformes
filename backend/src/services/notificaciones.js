@@ -140,6 +140,9 @@ async function notificarCambioEstado(orden, estadoNuevo) {
     puntoRetiro,
     entregaFecha: orden.entregaFecha,
     entregaFranja: orden.entregaFranja,
+    // Al interior el flete no se cobró en el checkout: la orden quedó con
+    // costoEnvio en 0 y todavía hay que pasarle el costo al cliente.
+    envioACotizar: modoEnvio === 'INTERIOR' && Number(orden.costoEnvio) === 0,
   })
   if (!mensaje) return
 

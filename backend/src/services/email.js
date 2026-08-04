@@ -1,4 +1,5 @@
 const { Resend } = require('resend')
+const { esRosario } = require('../lib/envios')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -11,6 +12,11 @@ function htmlConfirmacion(orden) {
   const emailDestino = orden.usuario?.email ?? orden.emailGuest
 
   const esEnvio = orden.entrega?.tipo === 'ENVIO'
+  // Envío al interior sin flete cobrado: el total de este mail NO lo incluye y
+  // hay que decirlo, o el cliente da por hecho que el envío ya está pago.
+  const envioACotizar = esEnvio
+    && Number(orden.costoEnvio) === 0
+    && !esRosario(orden.domicilio?.ciudad)
   const domicilio = orden.domicilio
     ? `${orden.domicilio.calle} ${orden.domicilio.numero}${orden.domicilio.piso ? `, Piso ${orden.domicilio.piso}` : ''}, ${orden.domicilio.ciudad}`
     : ''
@@ -71,11 +77,20 @@ function htmlConfirmacion(orden) {
               <td style="padding:4px 0;font-size:13px;color:#71717a;">Envío</td>
               <td style="padding:4px 0;font-size:13px;color:#a1a1aa;text-align:right;">${formatPrecio(orden.costoEnvio)}</td>
             </tr>` : ''}
+            ${envioACotizar ? `
+            <tr>
+              <td style="padding:4px 0;font-size:13px;color:#71717a;">Envío</td>
+              <td style="padding:4px 0;font-size:13px;color:#fbbf24;text-align:right;">A cotizar</td>
+            </tr>` : ''}
             <tr>
               <td style="padding:10px 0 0;font-size:15px;font-weight:700;color:#f4f4f5;border-top:1px solid #27272a;">Total</td>
               <td style="padding:10px 0 0;font-size:15px;font-weight:700;color:#f4f4f5;text-align:right;border-top:1px solid #27272a;">${formatPrecio(orden.total)}</td>
             </tr>
           </table>
+          ${envioACotizar ? `
+          <p style="margin:10px 0 0;font-size:12px;color:#fbbf24;line-height:1.5;">
+            El total no incluye el envío. Te pasamos el costo por WhatsApp antes de despacharlo.
+          </p>` : ''}
 
           <!-- Entrega -->
           <div style="margin-top:24px;padding:16px;background:#09090b;border-radius:10px;border:1px solid #27272a;">

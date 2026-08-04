@@ -402,7 +402,9 @@ export default function CheckoutPage() {
                             🎉 Envío gratis en Rosario
                           </p>
                         )}
-                        {envioACotizar && ciudadCargada && (
+                        {/* Antes esperaba a que cargaran la ciudad, así que la
+                            opción decía "A cotizar" sin explicar nada. */}
+                        {envioACotizar && (
                           <p className="mt-1 text-xs text-amber-400">
                             El envío al interior se cotiza aparte: te pasamos el costo
                             por WhatsApp antes de despacharlo.
@@ -620,6 +622,14 @@ export default function CheckoutPage() {
                       : formatPrecio(costoEnvio)}
                   </span>
                 </div>
+                {/* El total de abajo no incluye el flete. Decirlo al lado del
+                    número, que es donde el cliente mira. */}
+                {envioACotizar && (
+                  <p className="text-xs leading-snug text-amber-400/90">
+                    El total no incluye el envío: te pasamos el costo por WhatsApp
+                    antes de despacharlo.
+                  </p>
+                )}
                 <div className="flex justify-between font-bold text-zinc-100 text-base mt-1">
                   <span>Total</span>
                   <span>{formatPrecio(total)}</span>
