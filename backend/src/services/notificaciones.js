@@ -3,16 +3,16 @@
 
 const { postConReintentos } = require('../lib/httpRetry')
 const prisma = require('../lib/prisma')
-const { esRosario } = require('../lib/envios')
+const { esZonaLocal } = require('../lib/envios')
 const { aWhatsapp } = require('../lib/telefono')
 const { componerMensaje, ESTADOS_QUE_NOTIFICAN_POR_DEFECTO } = require('./mensajesEstado')
 
 // Cómo recibe el cliente el pedido. Se deriva del tipo de entrega y de la
-// ciudad, reusando el mismo esRosario() que ya usan el checkout y la creación
+// ciudad, reusando el mismo esZonaLocal() que ya usan el checkout y la creación
 // de la orden: no se introduce una segunda definición de "es Rosario".
 function modoDeEnvio(orden) {
   if (orden.entrega?.tipo !== 'ENVIO') return 'RETIRO'
-  return esRosario(orden.domicilio?.ciudad) ? 'ROSARIO' : 'INTERIOR'
+  return esZonaLocal(orden.domicilio?.ciudad) ? 'ROSARIO' : 'INTERIOR'
 }
 
 // Estados que avisan, configurables desde /admin/bot.

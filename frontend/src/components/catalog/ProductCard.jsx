@@ -102,7 +102,7 @@ export default function ProductCard({ producto }) {
 
           <p className="mt-auto flex items-center gap-1.5 pt-1 text-[11px] font-medium text-emerald-400">
             <Truck className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>Envío gratis en Rosario</span>
+            <span>Envío gratis desde 2 prendas</span>
           </p>
         </div>
       </div>

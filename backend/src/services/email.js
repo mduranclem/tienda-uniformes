@@ -1,5 +1,5 @@
 const { Resend } = require('resend')
-const { esRosario } = require('../lib/envios')
+const { esZonaLocal } = require('../lib/envios')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -16,7 +16,7 @@ function htmlConfirmacion(orden) {
   // hay que decirlo, o el cliente da por hecho que el envío ya está pago.
   const envioACotizar = esEnvio
     && Number(orden.costoEnvio) === 0
-    && !esRosario(orden.domicilio?.ciudad)
+    && !esZonaLocal(orden.domicilio?.ciudad)
   const domicilio = orden.domicilio
     ? `${orden.domicilio.calle} ${orden.domicilio.numero}${orden.domicilio.piso ? `, Piso ${orden.domicilio.piso}` : ''}, ${orden.domicilio.ciudad}`
     : ''

@@ -21,7 +21,7 @@ const PREGUNTAS = [
   },
   {
     q: '¿Hacen envíos a todo el país?',
-    a: 'Sí. Dentro de Rosario el envío es gratis y coordinamos día y horario al finalizar la compra. Al resto del país enviamos por Andreani: el costo depende de tu código postal y del peso del pedido, y te lo pasamos por WhatsApp antes de despacharlo. También podés retirar por cualquiera de nuestros tres locales, sin cargo y con un 20% de descuento sobre el pedido.',
+    a: 'Sí. En Rosario y alrededores (Funes, Roldán, Pérez, Ibarlucea, Granadero Baigorria y Villa Gobernador Gálvez) el envío sale $5.000, y es gratis si llevás 2 prendas o más; coordinamos día y horario al finalizar la compra. Al resto del país enviamos por Andreani: el costo depende de tu código postal y del peso del pedido, y te lo pasamos por WhatsApp antes de despacharlo. También podés retirar por cualquiera de nuestros tres locales, sin cargo y con un 20% de descuento sobre el pedido.',
   },
   {
     q: '¿Tienen descuentos?',

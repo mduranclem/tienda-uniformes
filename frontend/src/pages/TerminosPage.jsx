@@ -42,10 +42,11 @@ export default function TerminosPage() {
 
       <Seccion titulo="4. Entregas">
         <p>
-          Dentro de Rosario el envío es sin cargo y se coordina el día y la franja horaria durante
-          el checkout. Al resto del país despachamos por Andreani; el costo se informa antes del
-          despacho. También podés retirar por cualquiera de nuestros locales, sin cargo y
-          con un 20% de descuento sobre el pedido.
+          En Rosario y alrededores —Funes, Roldán, Pérez, Ibarlucea, Granadero Baigorria y Villa
+          Gobernador Gálvez— el envío cuesta $5.000 y es sin cargo a partir de 2 prendas. El día y
+          la franja horaria se coordinan durante el checkout. Al resto del país despachamos por
+          Andreani; el costo se informa antes del despacho. También podés retirar por cualquiera de
+          nuestros locales, sin cargo y con un 20% de descuento sobre el pedido.
         </p>
         <p>
           Los descuentos de la casa (20% por primera compra y 20% por retirar en el local)

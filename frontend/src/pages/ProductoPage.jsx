@@ -207,7 +207,7 @@ export default function ProductoPage() {
                 debajo del mínimo legible sobre el fondo oscuro. */}
             <div className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
               <Truck className="h-3.5 w-3.5 flex-shrink-0" />
-              Envío gratis en Rosario
+              Envío gratis desde 2 prendas en Rosario
             </div>
           </div>
 

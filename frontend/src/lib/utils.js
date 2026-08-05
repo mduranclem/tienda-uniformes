@@ -21,9 +21,36 @@ export function normalizarTexto(texto) {
   return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim()
 }
 
-// El envío dentro de Rosario es siempre gratis (espejo de backend/src/lib/envios.js)
-export function esRosario(ciudad) {
-  return /\brosario\b/.test(normalizarTexto(ciudad))
+// Espejo de backend/src/lib/envios.js. Si cambia una lista tiene que cambiar la
+// otra: acá decide qué se le muestra al cliente, allá qué se le cobra.
+const LOCALIDADES_LOCALES = [
+  'rosario',
+  'funes',
+  'roldan',
+  'perez',
+  'ibarlucea',
+  'granadero baigorria',
+  'baigorria',
+  'villa gobernador galvez',
+  'gobernador galvez',
+]
+
+// A partir de cuántas unidades el envío local es gratis.
+export const UNIDADES_ENVIO_LOCAL_GRATIS = 2
+
+// ¿La ciudad entra en el reparto propio (Rosario y alrededores)?
+export function esZonaLocal(ciudad) {
+  const norm = normalizarTexto(ciudad)
+  if (!norm) return false
+  return LOCALIDADES_LOCALES.some(l => new RegExp(`\\b${l}\\b`).test(norm))
+}
+
+// Alias del nombre viejo: la zona ahora es más grande que Rosario.
+export const esRosario = esZonaLocal
+
+// Cuánto sale el envío local para `unidades` prendas.
+export function costoEnvioLocal(unidades, costoBase) {
+  return unidades >= UNIDADES_ENVIO_LOCAL_GRATIS ? 0 : Number(costoBase)
 }
 
 // Financiación de un producto. Devuelve null si no tiene cuotas configuradas.

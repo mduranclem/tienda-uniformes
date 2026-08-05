@@ -3,7 +3,7 @@ const prisma = require('../lib/prisma')
 const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
 const { notificarNuevoPedido } = require('../services/notificaciones')
-const { esRosario } = require('../lib/envios')
+const { esZonaLocal, costoEnvioLocal } = require('../lib/envios')
 const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
 const { esFechaValida, esFranjaValida, FRANJAS } = require('../lib/agendaEntrega')
 const {
@@ -61,15 +61,15 @@ router.post('/', authOpcional, async (req, res, next) => {
     // propios. Se valida que la dirección corresponda a la opción elegida: si
     // no, el cliente pagaría la tarifa equivocada.
     if (entrega.tipo === 'ENVIO') {
-      const vaARosario = esRosario(domicilio?.ciudad)
-      if (entrega.soloRosario && !vaARosario) {
+      const vaAZonaLocal = esZonaLocal(domicilio?.ciudad)
+      if (entrega.soloRosario && !vaAZonaLocal) {
         return res.status(400).json({
-          mensaje: 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".',
+          mensaje: 'Esa dirección está fuera de la zona de reparto. Elegí "Envío al resto del país".',
         })
       }
-      if (!entrega.soloRosario && vaARosario) {
+      if (!entrega.soloRosario && vaAZonaLocal) {
         return res.status(400).json({
-          mensaje: 'Para direcciones de Rosario elegí "Envío a domicilio en Rosario", que es gratis.',
+          mensaje: 'Para Rosario y alrededores elegí "Envío a domicilio en Rosario y alrededores".',
         })
       }
     }
@@ -111,7 +111,7 @@ router.post('/', authOpcional, async (req, res, next) => {
     // Día y franja de entrega: solo para envíos a domicilio en Rosario, que son
     // los que reparte la tienda. Al interior lo lleva Andreani en su propia
     // ventana y prometer un horario sería mentirle al cliente.
-    const coordinaEntrega = entrega.tipo === 'ENVIO' && esRosario(domicilio?.ciudad)
+    const coordinaEntrega = entrega.tipo === 'ENVIO' && esZonaLocal(domicilio?.ciudad)
     let entregaFecha = null
     let entregaFranja = null
     if (coordinaEntrega) {
@@ -127,11 +127,18 @@ router.post('/', authOpcional, async (req, res, next) => {
       }
     }
 
+    // Unidades y no líneas del carrito: dos remeras del mismo talle son dos
+    // unidades y ya alcanzan para el envío gratis.
+    const unidades = items.reduce((acc, i) => acc + i.cantidad, 0)
+
     let costoEnvio = 0
     let servicioEnvio = null
     if (entrega.tipo === 'ENVIO') {
-      if (esRosario(domicilio?.ciudad)) {
-        // Envío gratis dentro de Rosario, siempre
+      if (esZonaLocal(domicilio?.ciudad)) {
+        // Reparto propio en Rosario y alrededores: precio fijo, gratis desde
+        // dos unidades. El precio base sale de la entrega configurada en el
+        // panel, para que se pueda cambiar sin tocar código.
+        costoEnvio = costoEnvioLocal(unidades, entrega.costo)
         servicioEnvio = OPCION_ROSARIO.codigo
       } else if (entrega.cotizado) {
         try {

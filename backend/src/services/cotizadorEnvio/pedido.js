@@ -5,14 +5,18 @@
 // calculen exactamente lo mismo.
 
 const prisma = require('../../lib/prisma')
-const { esRosario } = require('../../lib/envios')
+const { esZonaLocal } = require('../../lib/envios')
 const { pesoDelEnvio } = require('../../lib/pesos')
 const { cotizar } = require('./index')
 const { ErrorCotizacion } = require('./errores')
 
+// El reparto propio no pasa por el cotizador: su precio sale de la entrega
+// configurada en el panel y de la cantidad de unidades (ver lib/envios.js).
+// `precio: 0` acá es solo el valor que devuelve esta cotización informativa; el
+// que se cobra lo calcula la creación de la orden.
 const OPCION_ROSARIO = {
   codigo: 'local:rosario',
-  nombre: 'Envío gratis en Rosario',
+  nombre: 'Envío a domicilio en Rosario y alrededores',
   precio: 0,
   plazoDias: null,
 }
@@ -53,7 +57,7 @@ async function cotizarPedido({ items, cp, ciudad }) {
   // La regla de Rosario se evalúa por ciudad y no por CP, para que sea la misma
   // condición que ya aplica routes/ordenes.js y no existan dos definiciones de
   // "es Rosario" que puedan divergir.
-  if (esRosario(ciudad)) {
+  if (esZonaLocal(ciudad)) {
     return { pesoGramos, opciones: [OPCION_ROSARIO] }
   }
 

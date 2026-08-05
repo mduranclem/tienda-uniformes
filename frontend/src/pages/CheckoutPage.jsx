@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
-import { formatPrecio, esRosario } from '../lib/utils'
+import { formatPrecio, esZonaLocal, costoEnvioLocal, UNIDADES_ENVIO_LOCAL_GRATIS } from '../lib/utils'
 import Spinner from '../components/ui/Spinner'
 import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote } from 'lucide-react'
 
@@ -68,13 +68,21 @@ export default function CheckoutPage() {
 
   const entregaSeleccionada = entregas.find(e => e.id === entregaId)
   const esEnvio = entregaSeleccionada?.tipo === 'ENVIO'
-  // Envío gratis dentro de Rosario (el backend aplica la misma regla)
-  const envioGratisRosario = esEnvio && esRosario(form.ciudad)
+  // Reparto propio en Rosario y alrededores: precio fijo, gratis desde dos
+  // unidades. El backend recalcula lo mismo; esto es solo para mostrar.
+  //
+  // Manda la opción elegida y no la ciudad escrita: el cliente elige el envío
+  // antes de cargar la dirección, y mirar la ciudad hacía que el resumen
+  // cobrara los $5.000 incluso llevando dos prendas. Que la dirección
+  // corresponda a la zona lo controla `zonaNoCoincide`, que bloquea la compra.
+  const envioLocal = esEnvio && Boolean(entregaSeleccionada?.soloRosario)
+  const unidades = items.reduce((acc, i) => acc + i.cantidad, 0)
+  const faltanParaEnvioGratis = Math.max(0, UNIDADES_ENVIO_LOCAL_GRATIS - unidades)
   // Entregas marcadas como "cotizado": el precio sale del CP y el peso, no de un
-  // costo fijo. Rosario se resuelve antes y nunca llega a cotizarse.
-  const envioCotizado = esEnvio && Boolean(entregaSeleccionada?.cotizado) && !envioGratisRosario
-  const costoEnvio = envioGratisRosario
-    ? 0
+  // costo fijo. La zona local se resuelve antes y nunca llega a cotizarse.
+  const envioCotizado = esEnvio && Boolean(entregaSeleccionada?.cotizado) && !envioLocal
+  const costoEnvio = envioLocal
+    ? costoEnvioLocal(unidades, entregaSeleccionada?.costo ?? 0)
     : envioCotizado
       ? Number(cotizacion?.precio ?? 0)
       : Number(entregaSeleccionada?.costo ?? 0)
@@ -92,7 +100,7 @@ export default function CheckoutPage() {
   // zona con precio distinto.
   const ciudadCargada = form.ciudad.trim().length > 0
   const zonaNoCoincide = esEnvio && ciudadCargada && (
-    entregaSeleccionada?.soloRosario !== esRosario(form.ciudad)
+    entregaSeleccionada?.soloRosario !== esZonaLocal(form.ciudad)
   )
   // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
   const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
@@ -350,10 +358,17 @@ export default function CheckoutPage() {
                             20% OFF retirando
                           </p>
                         )}
+                        {e.soloRosario && (
+                          <p className="mt-0.5 text-xs font-semibold text-emerald-400">
+                            {unidades >= UNIDADES_ENVIO_LOCAL_GRATIS
+                              ? `Gratis por llevar ${unidades} prendas`
+                              : `Gratis desde ${UNIDADES_ENVIO_LOCAL_GRATIS} prendas`}
+                          </p>
+                        )}
                       </div>
                       <span className="text-sm font-semibold text-zinc-200">
                         {e.tipo === 'RETIRO' || e.soloRosario
-                          ? (Number(e.costo) === 0
+                          ? ((e.soloRosario ? costoEnvioLocal(unidades, e.costo) : Number(e.costo)) === 0
                               ? <span className="bg-green-500/25 border border-green-400/50 text-green-300 text-xs font-bold px-2 py-0.5 rounded-md">Gratis</span>
                               : formatPrecio(e.costo))
                           : e.cotizado
@@ -392,15 +407,23 @@ export default function CheckoutPage() {
                     {zonaNoCoincide ? (
                       <p className="mt-1 text-xs font-medium text-red-400">
                         {entregaSeleccionada?.soloRosario
-                          ? 'Esa dirección está fuera de Rosario. Elegí "Envío al resto del país".'
-                          : 'Para Rosario tenés envío gratis: elegí "Envío a domicilio en Rosario".'}
+                          ? 'Esa dirección está fuera de la zona de reparto. Elegí "Envío al resto del país".'
+                          : 'Estás en la zona de reparto: elegí "Envío a domicilio en Rosario y alrededores".'}
                       </p>
                     ) : (
                       <>
                         {entregaSeleccionada?.soloRosario && ciudadCargada && (
-                          <p className="mt-1 text-xs font-medium text-emerald-400">
-                            🎉 Envío gratis en Rosario
-                          </p>
+                          faltanParaEnvioGratis > 0 ? (
+                            // Decirlo acá, con la dirección ya cargada, es donde
+                            // todavía puede agregar una prenda sin perder el hilo.
+                            <p className="mt-1 text-xs font-medium text-amber-400">
+                              Agregá {faltanParaEnvioGratis} prenda más y el envío te sale gratis
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs font-medium text-emerald-400">
+                              🎉 Envío gratis por llevar {unidades} prendas
+                            </p>
+                          )
                         )}
                         {/* Antes esperaba a que cargaran la ciudad, así que la
                             opción decía "A cotizar" sin explicar nada. */}
