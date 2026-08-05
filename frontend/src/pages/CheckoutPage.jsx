@@ -361,8 +361,8 @@ export default function CheckoutPage() {
                         {e.soloRosario && (
                           <p className="mt-0.5 text-xs font-semibold text-emerald-400">
                             {unidades >= UNIDADES_ENVIO_LOCAL_GRATIS
-                              ? `Gratis por llevar ${unidades} prendas`
-                              : `Gratis desde ${UNIDADES_ENVIO_LOCAL_GRATIS} prendas`}
+                              ? `Gratis por llevar ${unidades} unidades`
+                              : `Gratis a partir de ${UNIDADES_ENVIO_LOCAL_GRATIS} unidades`}
                           </p>
                         )}
                       </div>
@@ -415,13 +415,13 @@ export default function CheckoutPage() {
                         {entregaSeleccionada?.soloRosario && ciudadCargada && (
                           faltanParaEnvioGratis > 0 ? (
                             // Decirlo acá, con la dirección ya cargada, es donde
-                            // todavía puede agregar una prenda sin perder el hilo.
+                            // todavía puede agregar una unidad sin perder el hilo.
                             <p className="mt-1 text-xs font-medium text-amber-400">
-                              Agregá {faltanParaEnvioGratis} prenda más y el envío te sale gratis
+                              Agregá {faltanParaEnvioGratis} unidad más y el envío te sale gratis
                             </p>
                           ) : (
                             <p className="mt-1 text-xs font-medium text-emerald-400">
-                              🎉 Envío gratis por llevar {unidades} prendas
+                              🎉 Envío gratis por llevar {unidades} unidades
                             </p>
                           )
                         )}

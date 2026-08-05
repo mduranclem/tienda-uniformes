@@ -153,7 +153,7 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-center gap-1.5 overflow-x-auto whitespace-nowrap px-4 pt-1 text-[10px] text-emerald-400 sm:text-xs">
         <span className="flex items-center gap-1">
           <Truck className="w-3 h-3 flex-shrink-0" />
-          Envío gratis desde 2 prendas
+          Envío gratis a partir de 2 unidades
         </span>
         <span className="text-zinc-600">·</span>
         {/* Reemplaza a "Calidad garantizada": era una promesa genérica y este

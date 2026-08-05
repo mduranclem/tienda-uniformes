@@ -100,9 +100,12 @@ export default function ProductCard({ producto }) {
             <p className="text-xs text-zinc-500">{rangoTalles}</p>
           ) : null}
 
-          <p className="mt-auto flex items-center gap-1.5 pt-1 text-[11px] font-medium text-emerald-400">
-            <Truck className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>Envío gratis desde 2 prendas</span>
+          {/* En mobile la tarjeta mide ~163px y el texto no entra en un renglón:
+              se parte en dos. Con items-start el camión queda a la altura de la
+              primera línea en vez de flotando entre las dos. */}
+          <p className="mt-auto flex items-start gap-1.5 pt-1 text-[11px] font-medium leading-snug text-emerald-400">
+            <Truck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span>Envío gratis a partir de 2 unidades</span>
           </p>
         </div>
       </div>
