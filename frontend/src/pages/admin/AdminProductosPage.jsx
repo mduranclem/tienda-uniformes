@@ -2,11 +2,11 @@ import { useEffect, useState, Fragment } from 'react'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatPrecio, infoCuotas, TALLES_STANDARD } from '../../lib/utils'
+import { formatPrecio, infoCuotas, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
 import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
-import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, RefreshCw, Search } from 'lucide-react'
 
 function Campo({ label, children }) {
   return (
@@ -609,6 +609,8 @@ export default function AdminProductosPage() {
   const [categorias, setCategorias] = useState([])
   const [cargando, setCargando] = useState(true)
   const [modalNuevo, setModalNuevo] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
+  const [colegioFiltro, setColegioFiltro] = useState('')
 
   // silencioso: refresca los datos sin pasar por el spinner de página completa.
   // Con el spinner, React desmonta toda la tabla y cada fila pierde su estado
@@ -633,16 +635,63 @@ export default function AdminProductosPage() {
 
   useEffect(() => { if (token) cargar() }, [token])
 
+  // El texto busca en el nombre, en la categoría y en el nombre del colegio, y
+  // se compara sin tildes: con 40 productos de 35 colegios, escribir "peron"
+  // tiene que encontrar "Eva Perón".
+  const termino = normalizarTexto(busqueda)
+  const filtrados = productos.filter(p => {
+    if (colegioFiltro === 'lisos' ? p.colegioId : colegioFiltro && p.colegioId !== colegioFiltro) return false
+    if (!termino) return true
+    return [p.nombre, p.tipo, p.colegio?.nombre]
+      .some(t => t && normalizarTexto(t).includes(termino))
+  })
+
+  const hayFiltro = Boolean(termino || colegioFiltro)
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-zinc-100">Productos</h1>
-          <p className="text-sm text-zinc-500">{productos.length} productos en total</p>
+          <p className="text-sm text-zinc-500">
+            {hayFiltro
+              ? `${filtrados.length} de ${productos.length} productos`
+              : `${productos.length} productos en total`}
+          </p>
         </div>
         <button onClick={() => setModalNuevo(true)} className="btn-primario flex items-center gap-2">
           <Plus className="w-4 h-4" /> Nuevo producto
         </button>
+      </div>
+
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <input
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar por producto, categoría o colegio..."
+            className="input w-full pl-9 pr-9"
+          />
+          {busqueda && (
+            <button
+              onClick={() => setBusqueda('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-500 hover:text-zinc-200"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <select
+          value={colegioFiltro}
+          onChange={e => setColegioFiltro(e.target.value)}
+          className="input sm:w-64"
+        >
+          <option value="">Todos los colegios</option>
+          <option value="lisos">Sin colegio (lisos)</option>
+          {colegios.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select>
       </div>
 
       {cargando ? (
@@ -660,13 +709,15 @@ export default function AdminProductosPage() {
               </tr>
             </thead>
             <tbody>
-              {productos.map(p => (
+              {filtrados.map(p => (
                 <FilaProducto key={p.id} producto={p} colegios={colegios} categorias={categorias} token={token} onActualizado={refrescar} />
               ))}
             </tbody>
           </table>
-          {!productos.length && (
-            <div className="text-center py-16 text-zinc-600 text-sm">No hay productos aún</div>
+          {!filtrados.length && (
+            <div className="py-16 text-center text-sm text-zinc-600">
+              {hayFiltro ? 'Ningún producto coincide con la búsqueda' : 'No hay productos aún'}
+            </div>
           )}
         </div>
       )}

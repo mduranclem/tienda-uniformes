@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { formatPrecio, TALLES_STANDARD } from '../../lib/utils'
+import { formatPrecio, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
 import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
-import { Plus, Pencil, Check, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Check, X, ChevronDown, ChevronUp, Trash2, Search } from 'lucide-react'
 
 function SeccionBandas({ categoriaId, bandas, token, onActualizado }) {
   const [tallesSeleccionados, setTallesSeleccionados] = useState([])
@@ -189,6 +189,7 @@ export default function AdminCategoriasPage() {
   const [editandoId, setEditandoId] = useState(null)
   const [editNombre, setEditNombre] = useState('')
   const [error, setError] = useState('')
+  const [busqueda, setBusqueda] = useState('')
 
   // El spinner de pantalla completa desmonta la tabla y cada fila pierde su
   // estado: se cierra lo que estabas editando y el scroll vuelve arriba. Solo
@@ -234,6 +235,11 @@ export default function AdminCategoriasPage() {
     catch (err) { alert(err.message) }
   }
 
+  const termino = normalizarTexto(busqueda)
+  const filtradas = termino
+    ? categorias.filter(c => normalizarTexto(c.nombre).includes(termino))
+    : categorias
+
   return (
     <div className="p-6 max-w-2xl">
       <div className="mb-6">
@@ -258,6 +264,27 @@ export default function AdminCategoriasPage() {
       </form>
       {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
 
+      {/* Con 26 categorías, y nombres largos que empiezan casi todos igual
+          ("BUZO CUELLO...", "CAMPERA CANGURO..."), encontrar una a ojo cuesta. */}
+      <div className="relative mb-4">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar categoría..."
+          className="input w-full pl-9 pr-9"
+        />
+        {busqueda && (
+          <button
+            onClick={() => setBusqueda('')}
+            aria-label="Limpiar búsqueda"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-500 hover:text-zinc-200"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {cargando ? (
         <div className="flex justify-center py-12"><Spinner className="w-8 h-8" /></div>
       ) : (
@@ -271,7 +298,7 @@ export default function AdminCategoriasPage() {
               </tr>
             </thead>
             <tbody>
-              {categorias.map(cat => (
+              {filtradas.map(cat => (
                 <FilaCategoria
                   key={cat.id}
                   categoria={cat}
@@ -287,8 +314,10 @@ export default function AdminCategoriasPage() {
               ))}
             </tbody>
           </table>
-          {!categorias.length && (
-            <div className="text-center py-12 text-zinc-600 text-sm">No hay categorías aún</div>
+          {!filtradas.length && (
+            <div className="py-12 text-center text-sm text-zinc-600">
+              {busqueda ? 'Ninguna categoría coincide con la búsqueda' : 'No hay categorías aún'}
+            </div>
           )}
         </div>
       )}

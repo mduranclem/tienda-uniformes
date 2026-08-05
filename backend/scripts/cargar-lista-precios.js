@@ -1,5 +1,8 @@
-// Carga la lista de precios de la tienda: bandas por categoría y los productos
-// que falten.
+// Carga la lista de precios de la tienda: las categorías y sus bandas.
+//
+// NO crea productos. Cada entrada de la lista es una categoría —un tipo de
+// prenda con su escala de precios—, no algo que se venda: los productos son
+// las prendas concretas de cada colegio y se cargan desde el panel.
 //
 //   node scripts/cargar-lista-precios.js --dry-run   (simula, no escribe)
 //   node scripts/cargar-lista-precios.js             (aplica)
@@ -30,39 +33,37 @@ const BANDAS = [
   { clave: 'ESP', talles: ['ESP'] },
 ]
 
-const TALLES = BANDAS.flatMap(b => b.talles)
-
 // `categoria` es el nombre exacto en la tabla Categoria, que es también lo que
 // guarda Producto.tipo. Para renombrar una categoría no alcanza con cambiarla
 // acá: hay que arrastrar el tipo de cada producto, y de eso se ocupa
 // scripts/renombrar-categoria.js.
 const LISTA = [
   // ── Colegiales: llevan escudo, se producen a pedido ──────────────────────
-  { nombre: 'Remera Bordada', categoria: 'REMERA BORDADA', colegial: true, precios: [25250, 26680, 27720, 29540] },
-  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', colegial: true, precios: [19400, 20800, 22100, 24800] },
-  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', colegial: true, precios: [30800, 32800, 33400, 35400] },
-  { nombre: 'Short sin frisa estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', colegial: true, precios: [28000, 30000, 31000, 33000] },
-  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', colegial: true, precios: [39500, 40800, 42100, 45500] },
-  { nombre: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', colegial: true, precios: [36500, 37800, 39100, 42500] },
-  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', colegial: true, precios: [42800, 46000, 49200, 54800] },
-  { nombre: 'Buzo cuello redondo con frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', colegial: true, precios: [39800, 43000, 46200, 51800] },
-  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', colegial: true, precios: [45500, 46800, 50800, 56100] },
-  { nombre: 'Pantalón largo con frisa estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', colegial: true, precios: [42500, 43800, 46800, 51100] },
-  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', colegial: true, precios: [52100, 56100, 58800, 64200] },
-  { nombre: 'Campera canguro con frisa estampada', categoria: 'CAMPERA CANGURO CON FRISA ESTAMPADO', colegial: true, precios: [50100, 53100, 55800, 60200] },
-  { nombre: 'Buzo de acetato', categoria: 'BUZO ACETATO', colegial: true, precios: [56100, 58800, 61500, 66800] },
+  { nombre: 'Remera Bordada', categoria: 'REMERA BORDADA', precios: [25250, 26680, 27720, 29540] },
+  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precios: [19400, 20800, 22100, 24800] },
+  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', precios: [30800, 32800, 33400, 35400] },
+  { nombre: 'Short sin frisa estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', precios: [28000, 30000, 31000, 33000] },
+  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precios: [39500, 40800, 42100, 45500] },
+  { nombre: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', precios: [36500, 37800, 39100, 42500] },
+  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precios: [42800, 46000, 49200, 54800] },
+  { nombre: 'Buzo cuello redondo con frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', precios: [39800, 43000, 46200, 51800] },
+  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precios: [45500, 46800, 50800, 56100] },
+  { nombre: 'Pantalón largo con frisa estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', precios: [42500, 43800, 46800, 51100] },
+  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', precios: [52100, 56100, 58800, 64200] },
+  { nombre: 'Campera canguro con frisa estampada', categoria: 'CAMPERA CANGURO CON FRISA ESTAMPADO', precios: [50100, 53100, 55800, 60200] },
+  { nombre: 'Buzo de acetato', categoria: 'BUZO ACETATO', precios: [56100, 58800, 61500, 66800] },
 
   // ── Lisos: sin escudo, stock permanente ──────────────────────────────────
-  { nombre: 'Chomba lisa', categoria: 'CHOMBA LISA', colegial: false, precios: [31685, 33110, 34454, 37405] },
-  { nombre: 'Remera lisa', categoria: 'REMERA LISA', colegial: false, precios: [15400, 16700, 18100, 21400] },
-  { nombre: 'Remera lisa manga larga', categoria: 'REMERA MANGAS LARGAS LISA', colegial: false, precios: [18800, 20100, 21400, 24100] },
-  { nombre: 'Short liso colegial', categoria: 'SHORT SIN FRISA LISO', colegial: false, precios: [22800, 24800, 26100, 29300] },
-  { nombre: 'Chaleco liso polar azul marino', categoria: 'CHALECO LISO POLAR', colegial: false, precios: [25400, 28100, 30800, 33400] },
-  { nombre: 'Campera polar lisa azul marino', categoria: 'CAMPERA LISA POLAR', colegial: false, precios: [33400, 35400, 38100, 40800] },
-  { nombre: 'Pantalón jogging liso con frisa', categoria: 'PANTALON LARGO CON FRISA LISO', colegial: false, precios: [36000, 38400, 42100, 46100] },
-  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FRISA LISO', colegial: false, precios: [49190, 52050, 54910, 59200] },
-  { nombre: 'Buzo canguro liso con frisa', categoria: 'BUZO CANGURO CON FRISA LISO', colegial: false, precios: [36580, 42040, 44900, 49190] },
-  { nombre: 'Pantalón cargo azul-gris gabardina', categoria: 'PANTALON CARGO GABARDINA', colegial: false, precios: [56000, 61000, 66000, 71000] },
+  { nombre: 'Chomba lisa', categoria: 'CHOMBA LISA', precios: [31685, 33110, 34454, 37405] },
+  { nombre: 'Remera lisa', categoria: 'REMERA LISA', precios: [15400, 16700, 18100, 21400] },
+  { nombre: 'Remera lisa manga larga', categoria: 'REMERA MANGAS LARGAS LISA', precios: [18800, 20100, 21400, 24100] },
+  { nombre: 'Short liso colegial', categoria: 'SHORT SIN FRISA LISO', precios: [22800, 24800, 26100, 29300] },
+  { nombre: 'Chaleco liso polar azul marino', categoria: 'CHALECO LISO POLAR', precios: [25400, 28100, 30800, 33400] },
+  { nombre: 'Campera polar lisa azul marino', categoria: 'CAMPERA LISA POLAR', precios: [33400, 35400, 38100, 40800] },
+  { nombre: 'Pantalón jogging liso con frisa', categoria: 'PANTALON LARGO CON FRISA LISO', precios: [36000, 38400, 42100, 46100] },
+  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FRISA LISO', precios: [49190, 52050, 54910, 59200] },
+  { nombre: 'Buzo canguro liso con frisa', categoria: 'BUZO CANGURO CON FRISA LISO', precios: [36580, 42040, 44900, 49190] },
+  { nombre: 'Pantalón cargo azul-gris gabardina', categoria: 'PANTALON CARGO GABARDINA', precios: [56000, 61000, 66000, 71000] },
 ]
 
 const pesos = n => '$' + Number(n).toLocaleString('es-AR')
@@ -78,7 +79,6 @@ async function main() {
 
   let categoriasNuevas = 0
   let bandasEscritas = 0
-  const productosCreados = []
 
   for (const item of LISTA) {
     // ── Categoría ──────────────────────────────────────────────────────────
@@ -126,47 +126,13 @@ async function main() {
       console.log(`${marca} ${item.categoria.padEnd(38)} ${detalle}`)
     }
 
-    // ── Producto ───────────────────────────────────────────────────────────
-    // Se busca por categoría y no por nombre: los nombres cargados difieren en
-    // mayúsculas y redacción ("Remera Lisa" vs "Remera lisa"), y matchear por
-    // texto exacto crearía duplicados casi idénticos.
-    const yaHay = categoria
-      ? await prisma.producto.count({ where: { tipo: item.categoria, colegioId: null } })
-      : 0
-
-    if (yaHay === 0) {
-      productosCreados.push(item)
-      if (!dryRun && categoria) {
-        await prisma.producto.create({
-          data: {
-            nombre: item.nombre,
-            tipo: item.categoria,
-            colegioId: null,
-            precio: item.precios[0],
-            // Nace apagado: sin foto cargada, publicarlo dejaría un hueco en la
-            // grilla de la tienda. Se activa desde el panel con un clic.
-            activo: false,
-            variantes: {
-              create: BANDAS.flatMap((banda, i) =>
-                banda.talles.map(talle => ({ talle, stock: 5, precio: item.precios[i] }))
-              ),
-            },
-          },
-        })
-      }
-    }
   }
 
   // ── Resumen ──────────────────────────────────────────────────────────────
   console.log(
-    `\n${categoriasNuevas} categoría(s) nueva(s), ${bandasEscritas} banda(s) ` +
-    `${dryRun ? 'a escribir' : 'escritas'}, ${productosCreados.length} producto(s) ` +
-    `${dryRun ? 'a crear' : 'creados'}.`
+    `\n${categoriasNuevas} categoría(s) nueva(s) y ${bandasEscritas} banda(s) ` +
+    `${dryRun ? 'a escribir' : 'escritas'}.`
   )
-  if (productosCreados.length) {
-    console.log('\nProductos nuevos (quedan INACTIVOS hasta que les cargues la foto):')
-    productosCreados.forEach(p => console.log(`   · ${p.nombre.padEnd(40)} ${TALLES.length} talles, stock 5`))
-  }
 
   // Categorías que existen en la base pero no están en la lista: quedan con el
   // precio viejo y conviene decirlo, no que se descubra en una venta.
