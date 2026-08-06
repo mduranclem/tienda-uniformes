@@ -1,10 +1,11 @@
 import FotoProducto from '../components/catalog/FotoProducto'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
 import { formatPrecio, esZonaLocal, costoEnvioLocal, UNIDADES_ENVIO_LOCAL_GRATIS } from '../lib/utils'
+import { trackInitiateCheckout } from '../lib/metaPixel'
 import Spinner from '../components/ui/Spinner'
 import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote } from 'lucide-react'
 
@@ -53,6 +54,20 @@ export default function CheckoutPage() {
     // Los días hábiles los calcula el backend, para que el checkout ofrezca
     // exactamente los mismos que después valida al crear la orden.
     entregasApi.agenda().then(setAgenda).catch(() => {})
+  }, [])
+
+  // Aviso al pixel de que arrancó el checkout. Se manda una sola vez por
+  // visita a la pantalla, con el carrito tal como está al entrar: si dependiera
+  // de los items, cada cambio de cantidad contaría un checkout nuevo.
+  const checkoutAvisado = useRef(false)
+  useEffect(() => {
+    if (!items.length || checkoutAvisado.current) return
+    checkoutAvisado.current = true
+    trackInitiateCheckout({
+      total: totalPrecio,
+      unidades: items.reduce((acc, i) => acc + i.cantidad, 0),
+      productoIds: [...new Set(items.map(i => i.productoId).filter(Boolean))],
+    })
   }, [])
 
   // Actualiza nombre/email si el usuario carga después

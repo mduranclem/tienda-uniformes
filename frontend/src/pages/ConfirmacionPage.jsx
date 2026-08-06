@@ -4,6 +4,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { ordenesApi, pagosApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { formatPrecio, esRosario } from '../lib/utils'
+import { trackPurchase } from '../lib/metaPixel'
 import Spinner from '../components/ui/Spinner'
 import { CheckCircle2, Package, CreditCard, Clock, XCircle, AlertCircle, Banknote } from 'lucide-react'
 
@@ -25,6 +26,34 @@ export default function ConfirmacionPage() {
       .then(setOrden)
       .finally(() => setCargando(false))
   }, [id])
+
+  // Purchase al pixel, una sola vez por orden.
+  //
+  // El candado en localStorage es imprescindible: esta pantalla se recarga al
+  // volver de Mercado Pago, se comparte por WhatsApp y queda en el historial.
+  // Sin él, cada visita contaría una venta más y las métricas de la campaña
+  // quedarían infladas.
+  //
+  // Dispara con la orden ya PAGADA en el servidor o con la vuelta aprobada de
+  // Mercado Pago. Esto último es solo para medir: la orden se sigue marcando
+  // como pagada únicamente con el webhook, nunca desde acá.
+  useEffect(() => {
+    if (!orden) return
+    const pagada = orden.estado === 'PAGADA' || estadoPago === 'aprobado'
+    if (!pagada) return
+
+    const clave = `pixel-purchase-${orden.id}`
+    try {
+      if (localStorage.getItem(clave)) return
+      localStorage.setItem(clave, '1')
+    } catch { /* sin localStorage se manda igual: mejor medir de más que nada */ }
+
+    trackPurchase({
+      total: orden.total,
+      unidades: (orden.items ?? []).reduce((acc, i) => acc + i.cantidad, 0),
+      productoIds: [...new Set((orden.items ?? []).map(i => i.productoId).filter(Boolean))],
+    })
+  }, [orden, estadoPago])
 
   async function handlePagar() {
     setPagando(true)

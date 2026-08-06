@@ -33,12 +33,14 @@ import TallesPage from './pages/TallesPage'
 import TerminosPage from './pages/TerminosPage'
 import CambiosPage from './pages/CambiosPage'
 import PrivacidadPage from './pages/PrivacidadPage'
+import MetaPixel from './components/MetaPixel'
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
+          <MetaPixel />
           <Routes>
             {/* Admin — layout propio sin header/footer de la tienda */}
             <Route path="/admin" element={<AdminLayout />}>

@@ -9,6 +9,7 @@ import TablaTalles from '../components/product/TablaTalles'
 import StickyAddToCart from '../components/product/StickyAddToCart'
 import Spinner from '../components/ui/Spinner'
 import { formatPrecio, titleCase, infoCuotas } from '../lib/utils'
+import { trackViewContent, trackAddToCart } from '../lib/metaPixel'
 import { ShoppingCart, ChevronLeft, GraduationCap, Truck, CreditCard } from 'lucide-react'
 
 export default function ProductoPage() {
@@ -27,6 +28,8 @@ export default function ProductoPage() {
   const [alumnos, setAlumnos] = useState([])
   const [alumnoActivoId, setAlumnoActivoId] = useState(null)
   const seleccionManual = useRef(false)
+  // Último producto avisado al pixel, para no contar dos veces la misma vista.
+  const vistoEnPixel = useRef(null)
 
   // Resetear estado al cambiar de producto
   useEffect(() => {
@@ -44,6 +47,18 @@ export default function ProductoPage() {
       .then(r => {
         const prod = r.data ?? r
         setProducto(prod)
+        // Se avisa acá y no en un efecto sobre `producto`: así se manda una vez
+        // por producto abierto, y no de nuevo cada vez que cambia el talle.
+        // El candado evita el segundo disparo del doble montaje de desarrollo
+        // y el de cualquier recarga de los datos del mismo producto.
+        if (vistoEnPixel.current !== prod.id) {
+          vistoEnPixel.current = prod.id
+          trackViewContent({
+            id: prod.id,
+            nombre: prod.nombre,
+            precio: prod.precioOferta ?? prod.precio,
+          })
+        }
         // Sin auto-selección: el cliente elige talle activamente
         // (salvo sugerencia por talle guardado del alumno, más abajo)
         setVarianteSeleccionada(null)
@@ -108,6 +123,12 @@ export default function ProductoPage() {
         imagen: producto.imagenes?.[0]?.url ?? null,
         cantidad,
       },
+    })
+    trackAddToCart({
+      id: producto.id,
+      nombre: producto.nombre,
+      precioUnit: precioFinal,
+      cantidad,
     })
     setAgregado(true)
     setTimeout(() => setAgregado(false), 2000)
