@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronDown, School, Shirt, MessageCircle } from 'lucide-react'
 import { normalizarTexto } from '../../lib/utils'
 import { whatsappUrl } from '../../lib/contacto'
+import { evento } from '../../lib/analitica'
+import { trackContact } from '../../lib/metaPixel'
 
 const OPCION_LISOS = { id: 'lisos', nombre: 'Básicos lisos (sin colegio)' }
 
@@ -38,6 +40,37 @@ export default function ColegioSelector({ colegios, compact = false }) {
   )
 
   useEffect(() => { setActiva(0) }, [query, abierto])
+
+  // Medición de búsquedas.
+  //
+  // El buscador filtra con cada tecla, así que medir "la búsqueda" tal cual
+  // pasa llenaría la herramienta de basura: escribir "San Antonio" generaría
+  // once eventos, diez de ellos con términos incompletos. Se espera a que la
+  // persona deje de tipear y recién ahí se registra lo que quedó escrito.
+  //
+  // El mínimo de tres letras evita medir tanteos de una o dos.
+  const ultimoMedido = useRef(null)
+  const hayResultados = opciones.length > 0
+
+  useEffect(() => {
+    const termino = query.trim()
+    if (termino.length < 3) return
+
+    const t = setTimeout(() => {
+      // La misma búsqueda no se cuenta dos veces: borrar una letra y volver a
+      // escribirla es la misma intención, no dos.
+      const clave = `${normalizarTexto(termino)}|${hayResultados}`
+      if (ultimoMedido.current === clave) return
+      ultimoMedido.current = clave
+
+      evento(
+        hayResultados ? 'busqueda_colegio_exitosa' : 'busqueda_colegio_sin_resultado',
+        { colegio_buscado: termino }
+      )
+    }, 800)
+
+    return () => clearTimeout(t)
+  }, [query, hayResultados])
 
   // Cerrar al tocar/clickear afuera
   useEffect(() => {
@@ -128,7 +161,13 @@ export default function ColegioSelector({ colegios, compact = false }) {
             )}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setAbierto(false)}
+            onClick={() => {
+              // Se mide antes de que el navegador cambie de pestaña, mientras
+              // esta página sigue viva.
+              evento('contact_whatsapp_fallback', { colegio_buscado: query.trim() })
+              trackContact({ content_name: query.trim() })
+              setAbierto(false)
+            }}
             className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-500"
           >
             <MessageCircle className="h-4 w-4 flex-shrink-0" />

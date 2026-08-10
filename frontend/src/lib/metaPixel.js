@@ -97,6 +97,15 @@ export function trackInitiateCheckout({ total, unidades, productoIds = [] }) {
   })
 }
 
+/**
+ * Contacto por WhatsApp. Es un evento estándar de Meta, así que sirve como
+ * conversión de campaña: en esta tienda una consulta por un colegio que no
+ * está en el catálogo es el inicio de una venta a medida.
+ */
+export function trackContact(datos = {}) {
+  trackPixel('Contact', datos)
+}
+
 export function trackPurchase({ total, unidades, productoIds = [] }) {
   trackPixel('Purchase', {
     value: Number(total) || 0,
