@@ -4,14 +4,22 @@ import PaginaTexto, { Seccion } from '../components/layout/PaginaTexto'
 import { tiendaApi } from '../services/api'
 import { WHATSAPP_URL } from '../lib/contacto'
 
+// Cada familia de prendas tiene su propia tabla porque no se miden igual: un
+// short va por tiro y cadera, una remera por ancho y largo.
+const TITULOS = {
+  general: 'Remeras, chombas, buzos y camperas',
+  short: 'Shorts',
+  pantalon: 'Pantalones y joggings',
+}
+
 export default function TallesPage() {
-  const [url, setUrl] = useState(null)
+  const [tablas, setTablas] = useState([])
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
     tiendaApi.tablaTalles()
-      .then(r => setUrl(r?.url || null))
-      .catch(() => setUrl(null))
+      .then(r => setTablas(r?.tablas ?? (r?.url ? [{ familia: 'general', url: r.url }] : [])))
+      .catch(() => setTablas([]))
       .finally(() => setCargando(false))
   }, [])
 
@@ -20,29 +28,35 @@ export default function TallesPage() {
       titulo="Guía de talles"
       bajada="Medí una prenda que ya uses y compará con la tabla. Ante la duda, conviene el talle mayor."
     >
-      <Seccion titulo="Tabla de medidas">
-        {cargando && <div className="h-64 animate-pulse rounded-xl bg-zinc-900" />}
+      {cargando && (
+        <Seccion titulo="Tablas de medidas">
+          <div className="h-64 animate-pulse rounded-xl bg-zinc-900" />
+        </Seccion>
+      )}
 
-        {!cargando && url && (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+      {!cargando && tablas.map(t => (
+        <Seccion key={t.familia} titulo={TITULOS[t.familia] ?? 'Tabla de medidas'}>
+          <a href={t.url} target="_blank" rel="noopener noreferrer" className="block">
             <img
-              src={url}
-              alt="Tabla de talles de InCollege"
+              src={t.url}
+              alt={`Tabla de talles de ${TITULOS[t.familia] ?? 'InCollege'}`}
               className="w-full rounded-xl border border-zinc-800 bg-white"
             />
             <span className="mt-2 block text-xs text-zinc-500">
               Tocá la imagen para verla en grande.
             </span>
           </a>
-        )}
+        </Seccion>
+      ))}
 
-        {!cargando && !url && (
+      {!cargando && !tablas.length && (
+        <Seccion titulo="Tablas de medidas">
           <p>
-            Estamos actualizando la tabla. Escribinos por WhatsApp y te pasamos las medidas
+            Estamos actualizando las tablas. Escribinos por WhatsApp y te pasamos las medidas
             del talle que necesites.
           </p>
-        )}
-      </Seccion>
+        </Seccion>
+      )}
 
       <Seccion titulo="Cómo tomar las medidas">
         <p>

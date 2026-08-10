@@ -1,16 +1,19 @@
 const { Router } = require('express')
-const prisma = require('../lib/prisma')
+const { tablasCargadas } = require('../lib/tablaTalles')
 
 const router = Router()
 
 // GET /api/tienda/tabla-talles — público.
-// La tabla se sube una vez y su URL vive en ConfigTienda; la página /talles la
-// pide acá en vez de tener la dirección escrita a mano, para que al reemplazar
-// la imagen no haya que tocar el frontend.
+// Las tablas se suben una vez y sus URLs viven en ConfigTienda; la página
+// /talles las pide acá en vez de tener las direcciones escritas a mano, para
+// que al reemplazar una imagen no haya que tocar el frontend.
+//
+// `url` se mantiene por compatibilidad: apunta a la primera tabla cargada, que
+// es lo que devolvía antes esta ruta cuando había una sola.
 router.get('/tabla-talles', async (_req, res, next) => {
   try {
-    const fila = await prisma.configTienda.findUnique({ where: { clave: 'tablaTallesUrl' } })
-    res.json({ url: fila?.valor || null })
+    const tablas = await tablasCargadas()
+    res.json({ tablas, url: tablas[0]?.url ?? null })
   } catch (err) { next(err) }
 })
 

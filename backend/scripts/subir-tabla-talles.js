@@ -1,12 +1,15 @@
-// Sube la tabla de talles a Supabase Storage y guarda su URL en ConfigTienda.
+// Sube una tabla de talles a Supabase Storage y guarda su URL en ConfigTienda.
 //
 // Uso:
 //   cd backend
-//   node -r dotenv/config scripts/subir-tabla-talles.js "C:/ruta/a/talles.jpg"
+//   node -r dotenv/config scripts/subir-tabla-talles.js "C:/ruta/talles.jpg" [familia]
 //
-// Es una sola imagen compartida por todos los productos: se sube una vez y la
-// URL queda en ConfigTienda. Para actualizarla, volvé a correr el script con la
-// imagen nueva — pisa la anterior y no hay que tocar producto por producto.
+//   familia: general (por defecto) | short | pantalon
+//
+// Hay una imagen por familia de prendas, compartida por todos los productos de
+// esa familia: se sube una vez y la URL queda en ConfigTienda. Para
+// actualizarla, volvé a correr el script con la imagen nueva — pisa la anterior
+// y no hay que tocar producto por producto.
 //
 // Requiere SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en backend/.env.
 
@@ -14,12 +17,9 @@ const fs = require('fs')
 const sharp = require('sharp')
 const prisma = require('../src/lib/prisma')
 const supabaseAdmin = require('../src/lib/supabaseAdmin')
+const { FAMILIAS } = require('../src/lib/tablaTalles')
 
 const BUCKET = 'productos'
-// Path fijo: al re-subir con upsert, la URL no cambia y los productos siguen
-// apuntando al mismo lugar.
-const PATH = 'config/tabla-talles.webp'
-const CLAVE = 'tablaTallesUrl'
 const CACHE_CONTROL_1_ANIO = '31536000'
 // Más ancho que una foto de producto: es una tabla y tiene que leerse el texto.
 const ANCHO_MAX = 1600
@@ -29,14 +29,26 @@ const CALIDAD_WEBP = 92
 
 async function main() {
   const origen = process.argv[2]
+  const nombreFamilia = process.argv[3] ?? 'general'
   if (!origen) {
-    console.error('Falta la ruta de la imagen.\n  node -r dotenv/config scripts/subir-tabla-talles.js "C:/ruta/talles.jpg"')
+    console.error('Falta la ruta de la imagen.\n  node -r dotenv/config scripts/subir-tabla-talles.js "C:/ruta/talles.jpg" [general|short|pantalon]')
     process.exit(1)
   }
   if (!fs.existsSync(origen)) {
     console.error(`No existe el archivo: ${origen}`)
     process.exit(1)
   }
+
+  const familia = FAMILIAS.find(f => f.nombre === nombreFamilia)
+  if (!familia) {
+    console.error(`Familia desconocida: "${nombreFamilia}". Opciones: ${FAMILIAS.map(f => f.nombre).join(', ')}`)
+    process.exit(1)
+  }
+
+  // Path fijo por familia: al re-subir con upsert la URL no cambia y los
+  // productos siguen apuntando al mismo lugar.
+  const PATH = `config/tabla-talles-${familia.nombre}.webp`
+  const CLAVE = familia.clave
 
   const original = fs.readFileSync(origen)
   const webp = await sharp(original)
