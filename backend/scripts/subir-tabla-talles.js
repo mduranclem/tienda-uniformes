@@ -29,13 +29,23 @@ const CALIDAD_WEBP = 92
 
 async function main() {
   const origen = process.argv[2]
-  const nombreFamilia = process.argv[3] ?? 'general'
+  const nombreFamilia = (process.argv[3] && !process.argv[3].startsWith('--')) ? process.argv[3] : 'general'
   if (!origen) {
     console.error('Falta la ruta de la imagen.\n  node -r dotenv/config scripts/subir-tabla-talles.js "C:/ruta/talles.jpg" [general|short|pantalon]')
     process.exit(1)
   }
   if (!fs.existsSync(origen)) {
     console.error(`No existe el archivo: ${origen}`)
+    process.exit(1)
+  }
+
+  // La calidad por defecto sirve para tablas planas. Una foto con textura
+  // —jersey, frisa— puede pesar más en WebP que el JPEG original; bajarla unos
+  // puntos no toca los números de la tabla, que son texto sobre fondo liso.
+  const iCalidad = process.argv.indexOf('--calidad')
+  const calidad = iCalidad === -1 ? CALIDAD_WEBP : Number(process.argv[iCalidad + 1])
+  if (!Number.isInteger(calidad) || calidad < 1 || calidad > 100) {
+    console.error('--calidad tiene que ser un entero entre 1 y 100')
     process.exit(1)
   }
 
@@ -53,7 +63,7 @@ async function main() {
   const original = fs.readFileSync(origen)
   const webp = await sharp(original)
     .resize({ width: ANCHO_MAX, withoutEnlargement: true })
-    .webp({ quality: CALIDAD_WEBP })
+    .webp({ quality: calidad })
     .toBuffer()
 
   console.log(`Original: ${(original.length / 1024).toFixed(0)} kB → WebP: ${(webp.length / 1024).toFixed(0)} kB`)
