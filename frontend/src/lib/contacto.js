@@ -13,8 +13,17 @@ export const WHATSAPP_LEGIBLE = '341 743 4552'
 
 const SALUDO = 'Hola! Tengo una consulta sobre los uniformes'
 
-export const WHATSAPP_URL =
-  `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(SALUDO)}`
+/**
+ * Enlace a WhatsApp con el mensaje ya escrito.
+ *
+ * Escribir el mensaje por el cliente no es un detalle: el que abre WhatsApp con
+ * el chat en blanco muchas veces no escribe nada y se pierde la consulta.
+ */
+export function whatsappUrl(mensaje = SALUDO) {
+  return `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`
+}
+
+export const WHATSAPP_URL = whatsappUrl()
 
 export const EMAIL_CONTACTO = 'tiendadeuniformes.incollege@gmail.com'
 

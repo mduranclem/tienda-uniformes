@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, School, Shirt } from 'lucide-react'
+import { ChevronDown, School, Shirt, MessageCircle } from 'lucide-react'
 import { normalizarTexto } from '../../lib/utils'
+import { whatsappUrl } from '../../lib/contacto'
 
 const OPCION_LISOS = { id: 'lisos', nombre: 'Básicos lisos (sin colegio)' }
 
@@ -110,18 +111,48 @@ export default function ColegioSelector({ colegios, compact = false }) {
         />
       </div>
 
-      {abierto && (
+      {/* Sin resultados no es un callejón sin salida: los uniformes se fabrican
+          a pedido, así que un colegio que no está en el catálogo es una venta
+          posible y no un "no tenemos". Va fuera del listbox porque son botones,
+          y un listbox solo debería contener opciones. */}
+      {abierto && opciones.length === 0 && (
+        <div className="absolute z-30 mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 p-4 shadow-xl">
+          <p className="text-sm leading-relaxed text-zinc-300">
+            No encontramos ese colegio en el catálogo.{' '}
+            <span className="font-semibold text-white">Lo fabricamos especialmente para vos</span>
+            {' '}— escribinos por WhatsApp con el nombre del colegio y te confirmamos.
+          </p>
+          <a
+            href={whatsappUrl(
+              `Hola! Busqué "${query.trim()}" en la tienda y no aparece. ¿Pueden fabricar el uniforme de ese colegio?`
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setAbierto(false)}
+            className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-500"
+          >
+            <MessageCircle className="h-4 w-4 flex-shrink-0" />
+            Consultar por WhatsApp
+          </a>
+          <p className="mt-3 text-sm text-zinc-400">Mientras tanto, mirá los básicos lisos.</p>
+          <button
+            type="button"
+            onClick={() => elegir(OPCION_LISOS)}
+            className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:text-white"
+          >
+            <Shirt className="h-4 w-4 flex-shrink-0" />
+            Ver básicos lisos
+          </button>
+        </div>
+      )}
+
+      {abierto && opciones.length > 0 && (
         <ul
           id="colegio-listbox"
           ref={listaRef}
           role="listbox"
           className="absolute z-30 mt-2 w-full max-h-64 overflow-y-auto bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl"
         >
-          {opciones.length === 0 && (
-            <li className="px-4 py-3 text-sm text-zinc-500">
-              No encontramos ese colegio. Probá con los básicos lisos.
-            </li>
-          )}
           {opciones.map((c, i) => (
             <li key={c.id} role="option" aria-selected={i === activa}>
               <button
