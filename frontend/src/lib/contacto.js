@@ -6,10 +6,10 @@
 
 // Formato internacional sin símbolos, que es el que espera wa.me:
 // 54 (país) + 9 (móvil) + código de área + abonado.
-export const WHATSAPP_NUMERO = '5493415556865'
+export const WHATSAPP_NUMERO = '5493417434552'
 
 // Cómo se muestra al cliente cuando el número va escrito, no como enlace.
-export const WHATSAPP_LEGIBLE = '341 555 6865'
+export const WHATSAPP_LEGIBLE = '341 743 4552'
 
 const SALUDO = 'Hola! Tengo una consulta sobre los uniformes'
 
