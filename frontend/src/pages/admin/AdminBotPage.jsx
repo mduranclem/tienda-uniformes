@@ -14,6 +14,17 @@ const CAMPOS = [
   { clave: 'webhookStockAlert', label: 'URL del webhook de alertas de stock', placeholder: 'https://...n8n.cloud/webhook/...' },
 ]
 
+// Datos para transferir. A diferencia de los de arriba —que son textos que el
+// bot lee—, estos se le muestran al cliente tal cual en la confirmación del
+// pedido y en el mail, así que un error de tipeo acá es plata que no llega.
+const CAMPOS_BANCO = [
+  { clave: 'bancoNombre', label: 'Banco', placeholder: 'Banco Galicia' },
+  { clave: 'bancoTitular', label: 'Titular de la cuenta', placeholder: 'Nombre y apellido o razón social' },
+  { clave: 'bancoCbu', label: 'CBU', placeholder: '0000000000000000000000' },
+  { clave: 'bancoAlias', label: 'Alias', placeholder: 'mi.alias.mp' },
+  { clave: 'bancoCuit', label: 'CUIT / CUIL', placeholder: '20-12345678-9' },
+]
+
 // Estados de pedido que pueden avisar al cliente por WhatsApp.
 // PREPARANDO viene desactivado: no le pide una acción al cliente ni le da
 // información que no tenga, y cada mensaje de más gasta la paciencia de la que
@@ -99,7 +110,48 @@ export default function AdminBotPage() {
           </div>
         ))}
 
-        <div className="flex flex-col gap-2 pt-3 border-t border-zinc-800">
+        {/* Datos para transferencias */}
+        <div className="flex flex-col gap-4 pt-4 border-t border-zinc-800">
+          <div>
+            <p className="text-sm font-semibold text-zinc-200">Datos para transferencias</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Se los mostramos al cliente al confirmar el pedido y se los mandamos por mail.
+              Sin CBU ni alias no se le puede pedir que transfiera.
+            </p>
+          </div>
+          {CAMPOS_BANCO.map(({ clave, label, placeholder }) => (
+            <div key={clave} className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-400">{label}</label>
+              <input
+                value={form[clave] ?? ''}
+                onChange={e => set(clave, e.target.value)}
+                className="input"
+                placeholder={placeholder}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Mercado Pago */}
+        <div className="flex flex-col gap-2 pt-4 border-t border-zinc-800">
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.mercadoPagoActivo === '1'}
+              onChange={e => set('mercadoPagoActivo', e.target.checked ? '1' : '0')}
+              className="accent-blue-500 mt-0.5"
+            />
+            <span>
+              <span className="text-sm font-medium text-zinc-200">Cobrar también con Mercado Pago</span>
+              <span className="block text-xs text-zinc-500 mt-0.5">
+                Apagado, la tienda cobra solo por transferencia (envíos) y en el local (retiros).
+                Encendido, vuelve a aparecer el botón de pago online en la confirmación del pedido.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-2 pt-4 border-t border-zinc-800">
           <label className="text-xs font-medium text-zinc-400">
             Avisar al cliente por WhatsApp cuando el pedido pase a...
           </label>

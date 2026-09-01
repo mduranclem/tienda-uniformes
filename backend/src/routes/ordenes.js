@@ -11,6 +11,7 @@ const {
   DESCUENTO_BIENVENIDA_PCT,
   DESCUENTO_RETIRO_PCT,
 } = require('../lib/descuentos')
+const { mercadoPagoEstaActivo } = require('../lib/configTienda')
 
 const router = Router()
 
@@ -20,7 +21,12 @@ const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
 
 // Efectivo solo tiene sentido si el cliente pasa por el local. Con envío a
 // domicilio no hay dónde cobrarle.
-const METODOS_PAGO = ['mercadopago', 'efectivo']
+//
+// 'transferencia' es hoy la forma de cobrar los envíos: el cliente transfiere
+// contra los datos que ve en la confirmación y en el mail, y la orden queda
+// PENDIENTE hasta que el admin la pasa a PAGADA con el comprobante a la vista.
+// 'mercadopago' sigue aceptándose pero solo con el flag encendido.
+const METODOS_PAGO = ['transferencia', 'efectivo', 'mercadopago']
 
 async function esPrimeraCompra(email) {
   const emailNorm = email.trim().toLowerCase()
@@ -44,7 +50,7 @@ router.post('/', authOpcional, async (req, res, next) => {
     const { items, nombre, email, telefono, entregaId, domicilio, cuponId } = req.body
     const entregaFechaCruda = req.body.entregaFecha
     const entregaFranjaCruda = req.body.entregaFranja
-    const metodoPago = req.body.metodoPago ?? 'mercadopago'
+    const metodoPagoPedido = req.body.metodoPago
 
     if (!items?.length) return res.status(400).json({ mensaje: 'El carrito está vacío' })
     if (!nombre || !email) return res.status(400).json({ mensaje: 'Nombre y email son requeridos' })
@@ -74,6 +80,10 @@ router.post('/', authOpcional, async (req, res, next) => {
       }
     }
 
+    // Sin método explícito, lo decide la forma de entrega: quien retira abona
+    // en el local y quien lo recibe en su casa transfiere antes del envío.
+    const metodoPago = metodoPagoPedido ?? (entrega.tipo === 'RETIRO' ? 'efectivo' : 'transferencia')
+
     if (!METODOS_PAGO.includes(metodoPago)) {
       return res.status(400).json({ mensaje: 'Método de pago no válido' })
     }
@@ -81,6 +91,11 @@ router.post('/', authOpcional, async (req, res, next) => {
     // pedir efectivo con envío a domicilio dejaría un pedido que nadie cobra.
     if (metodoPago === 'efectivo' && entrega.tipo !== 'RETIRO') {
       return res.status(400).json({ mensaje: 'El pago en efectivo solo está disponible si retirás por el local' })
+    }
+    // Con Mercado Pago apagado, una orden con ese método quedaría sin forma de
+    // cobrarse: nadie le va a generar la preferencia.
+    if (metodoPago === 'mercadopago' && !(await mercadoPagoEstaActivo())) {
+      return res.status(400).json({ mensaje: 'El pago por Mercado Pago no está disponible' })
     }
 
     // Verificar stock y obtener variantes con precio real de la DB

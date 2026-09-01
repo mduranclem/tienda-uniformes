@@ -1,12 +1,43 @@
 import FotoProducto from '../components/catalog/FotoProducto'
 import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { ordenesApi, pagosApi } from '../services/api'
+import { ordenesApi, pagosApi, tiendaApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { formatPrecio, esRosario } from '../lib/utils'
 import { trackPurchase } from '../lib/metaPixel'
+import { WHATSAPP_LEGIBLE, whatsappUrl } from '../lib/contacto'
 import Spinner from '../components/ui/Spinner'
-import { CheckCircle2, Package, CreditCard, Clock, XCircle, AlertCircle, Banknote } from 'lucide-react'
+import { CheckCircle2, Package, CreditCard, Clock, XCircle, AlertCircle, Banknote, Landmark, Copy, Check } from 'lucide-react'
+
+/** Un dato bancario con botón de copiar: el CBU no se copia bien a mano. */
+function DatoBancario({ etiqueta, valor, copiable = false }) {
+  const [copiado, setCopiado] = useState(false)
+  if (!valor) return null
+
+  function copiar() {
+    navigator.clipboard?.writeText(valor)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-xs text-zinc-500 shrink-0">{etiqueta}</span>
+      <span className="flex items-center gap-2 min-w-0">
+        <span className="text-sm font-semibold text-zinc-100 truncate">{valor}</span>
+        {copiable && (
+          <button
+            onClick={copiar}
+            aria-label={`Copiar ${etiqueta}`}
+            className="shrink-0 text-zinc-500 hover:text-blue-400 transition-colors"
+          >
+            {copiado ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </span>
+    </div>
+  )
+}
 
 const SANDBOX = import.meta.env.VITE_MP_SANDBOX === 'true'
 
@@ -20,12 +51,19 @@ export default function ConfirmacionPage() {
   const [cargando, setCargando] = useState(true)
   const [pagando, setPagando] = useState(false)
   const [errorPago, setErrorPago] = useState('')
+  const [configPago, setConfigPago] = useState(null)
 
   useEffect(() => {
     ordenesApi.obtener(id, sesion?.access_token ?? null)
       .then(setOrden)
       .finally(() => setCargando(false))
   }, [id])
+
+  // Los datos para transferir se piden a la tienda y no vienen con la orden:
+  // si cambia el CBU, un pedido viejo sin pagar tiene que mostrar el nuevo.
+  useEffect(() => {
+    tiendaApi.pago().then(setConfigPago).catch(() => setConfigPago(null))
+  }, [])
 
   // Purchase al pixel, una sola vez por orden.
   //
@@ -86,8 +124,16 @@ export default function ConfirmacionPage() {
   const pendiente = estadoPago === 'pendiente'
   // En efectivo no hay nada que cobrar online: se paga en el local.
   const esEfectivo = orden.metodoPago === 'efectivo'
-  const esperandoPago = !yaPagada && !rechazado && !pendiente && !esEfectivo && orden.estado === 'PENDIENTE'
+  const esTransferencia = orden.metodoPago === 'transferencia'
+  const mercadoPagoActivo = Boolean(configPago?.mercadoPagoActivo)
+  // El botón de Mercado Pago solo tiene sentido si la orden se creó para
+  // pagarse por ahí y la pasarela sigue habilitada.
+  const esperandoPago = !yaPagada && !rechazado && !pendiente
+    && !esEfectivo && !esTransferencia && mercadoPagoActivo
+    && orden.estado === 'PENDIENTE'
   const esperandoRetiro = esEfectivo && !yaPagada
+  const esperandoTransferencia = esTransferencia && !yaPagada
+  const banco = configPago?.banco ?? {}
   // Envío fuera de Rosario sin costo cobrado: se acuerda aparte.
   const envioACotizar = orden.entrega?.tipo === 'ENVIO'
     && !esRosario(orden.domicilio?.ciudad)
@@ -136,6 +182,7 @@ export default function ConfirmacionPage() {
         <h1 className="text-2xl font-bold text-zinc-100 mb-1">
           {yaPagada ? '¡Pedido confirmado!'
             : esperandoRetiro ? '¡Pedido reservado!'
+            : esperandoTransferencia ? '¡Pedido registrado!'
             : 'Tu pedido está listo para pagar'}
         </h1>
         <p className="text-zinc-400 text-sm">
@@ -233,6 +280,49 @@ export default function ConfirmacionPage() {
         </div>
       )}
 
+      {/* Transferencia: los datos para pagar y a dónde mandar el comprobante */}
+      {esperandoTransferencia && (
+        <div className="bg-zinc-900 border border-blue-500/30 rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Landmark className="w-5 h-5 text-blue-400" />
+            <h2 className="text-sm font-semibold text-zinc-100">Transferí para confirmar tu pedido</h2>
+          </div>
+          <p className="text-2xl font-bold text-zinc-50 mb-4">{formatPrecio(orden.total)}</p>
+
+          {configPago && !configPago.transferenciaDisponible ? (
+            <p className="text-sm text-zinc-400">
+              Te pasamos los datos para transferir por WhatsApp al {orden.telefonoGuest ?? 'número que dejaste'}.
+            </p>
+          ) : (
+            <div className="divide-y divide-zinc-800 border-y border-zinc-800 mb-4">
+              <DatoBancario etiqueta="Banco" valor={banco.nombre} />
+              <DatoBancario etiqueta="Titular" valor={banco.titular} />
+              <DatoBancario etiqueta="CBU" valor={banco.cbu} copiable />
+              <DatoBancario etiqueta="Alias" valor={banco.alias} copiable />
+              <DatoBancario etiqueta="CUIT" valor={banco.cuit} />
+            </div>
+          )}
+
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2.5">
+            <p className="text-xs text-amber-300 leading-relaxed">
+              Enviá el comprobante al WhatsApp{' '}
+              <a
+                href={whatsappUrl(`Hola! Te paso el comprobante del pedido #${orden.numero}`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold underline hover:text-amber-200"
+              >
+                {WHATSAPP_LEGIBLE}
+              </a>{' '}
+              indicando tu número de pedido <span className="font-bold">#{orden.numero}</span>.
+            </p>
+          </div>
+          <p className="text-xs text-zinc-500 mt-2">
+            Te lo mandamos también por mail. Preparamos el pedido en cuanto confirmemos el pago.
+          </p>
+        </div>
+      )}
+
       {/* Botón de pago o acciones */}
       <div className="flex flex-col items-center gap-3">
 
@@ -255,7 +345,7 @@ export default function ConfirmacionPage() {
           </>
         )}
 
-        {(rechazado || pendiente) && (
+        {(rechazado || pendiente) && mercadoPagoActivo && (
           <button
             onClick={handlePagar}
             disabled={pagando}

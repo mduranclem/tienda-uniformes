@@ -1,5 +1,7 @@
 const { Resend } = require('resend')
 const { esZonaLocal } = require('../lib/envios')
+const { leerConfigPublica } = require('../lib/configTienda')
+const { WHATSAPP_LEGIBLE } = require('../lib/contacto')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -7,7 +9,68 @@ function formatPrecio(n) {
   return `$ ${Number(n).toLocaleString('es-AR')}`
 }
 
-function htmlConfirmacion(orden) {
+/**
+ * Cómo pagar, según el método de la orden.
+ *
+ * Es la parte del mail que el cliente necesita para poder pagar, así que va
+ * completa acá y no como "te contactamos": el que transfiere quiere el CBU a
+ * mano y saber a dónde mandar el comprobante.
+ */
+function htmlComoPagar(orden, config) {
+  const fila = (etiqueta, valor) => valor
+    ? `<tr>
+         <td style="padding:3px 0;font-size:13px;color:#71717a;white-space:nowrap;">${etiqueta}</td>
+         <td style="padding:3px 0 3px 12px;font-size:13px;color:#f4f4f5;font-weight:600;text-align:right;">${valor}</td>
+       </tr>`
+    : ''
+
+  if (orden.metodoPago === 'transferencia') {
+    const datos = [
+      fila('Banco', config.bancoNombre),
+      fila('Titular', config.bancoTitular),
+      fila('CBU', config.bancoCbu),
+      fila('Alias', config.bancoAlias),
+      fila('CUIT', config.bancoCuit),
+    ].join('')
+
+    // Sin CBU ni alias cargados no hay a dónde transferir: mejor decir que los
+    // pasamos por WhatsApp que mostrar un recuadro vacío.
+    const cuerpo = datos
+      ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">${datos}</table>`
+      : `<p style="margin:0 0 12px;font-size:13px;color:#d4d4d8;">Te pasamos los datos para transferir por WhatsApp.</p>`
+
+    return `
+      <div style="margin-top:16px;padding:16px;background:#09090b;border-radius:10px;border:1px solid #3f3f46;">
+        <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:0.08em;">Cómo pagar</p>
+        <p style="margin:0 0 12px;font-size:14px;color:#f4f4f5;font-weight:600;">Transferencia bancaria por ${formatPrecio(orden.total)}</p>
+        ${cuerpo}
+        <p style="margin:0;font-size:13px;color:#fbbf24;line-height:1.5;">
+          Enviá el comprobante de transferencia al WhatsApp
+          <strong style="color:#fcd34d;">${WHATSAPP_LEGIBLE}</strong>
+          indicando tu número de pedido <strong style="color:#fcd34d;">#${orden.numero}</strong>.
+        </p>
+        <p style="margin:8px 0 0;font-size:12px;color:#71717a;line-height:1.5;">
+          Preparamos el pedido en cuanto confirmemos el pago.
+        </p>
+      </div>`
+  }
+
+  // Retiro: se abona en el local, como el cliente prefiera.
+  return `
+    <div style="margin-top:16px;padding:16px;background:#09090b;border-radius:10px;border:1px solid #3f3f46;">
+      <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:0.08em;">Cómo pagar</p>
+      <p style="margin:0 0 6px;font-size:14px;color:#f4f4f5;font-weight:600;">Abonás al retirar: ${formatPrecio(orden.total)}</p>
+      <p style="margin:0;font-size:13px;color:#d4d4d8;line-height:1.5;">
+        Podés pagar en efectivo, por transferencia o como prefieras cuando pases a buscarlo.
+      </p>
+      ${config.direccion ? `<p style="margin:8px 0 0;font-size:13px;color:#a1a1aa;">📍 ${config.direccion}</p>` : ''}
+      <p style="margin:8px 0 0;font-size:12px;color:#71717a;line-height:1.5;">
+        Te avisamos por WhatsApp cuando esté listo.
+      </p>
+    </div>`
+}
+
+function htmlConfirmacion(orden, config) {
   const cliente = orden.usuario?.nombre ?? orden.nombreGuest ?? 'Cliente'
   const emailDestino = orden.usuario?.email ?? orden.emailGuest
 
@@ -98,6 +161,9 @@ function htmlConfirmacion(orden) {
             ${entregaHtml}
           </div>
 
+          <!-- Cómo pagar -->
+          ${htmlComoPagar(orden, config)}
+
         </td></tr>
 
         <!-- Footer -->
@@ -185,12 +251,21 @@ async function enviarConfirmacionCompra(orden) {
   const adminEmail = process.env.ADMIN_EMAIL
   const from = process.env.RESEND_FROM ?? 'onboarding@resend.dev'
 
+  // Los datos bancarios se leen al mandar el mail y no se guardan en la orden:
+  // si cambia el CBU, los pedidos viejos que todavía no pagaron tienen que ver
+  // el nuevo. Si la lectura falla, el mail igual sale (con el bloque vacío):
+  // perder la confirmación entera por eso sería peor.
+  const config = await leerConfigPublica().catch(err => {
+    console.error('[email] No se pudo leer la config de pago:', err.message)
+    return {}
+  })
+
   await Promise.allSettled([
     emailCliente && resend.emails.send({
       from,
       to: emailCliente,
       subject: `Pedido #${orden.numero} recibido — InCollege`,
-      html: htmlConfirmacion(orden),
+      html: htmlConfirmacion(orden, config),
     }),
     adminEmail && resend.emails.send({
       from,
@@ -205,4 +280,6 @@ async function enviarConfirmacionCompra(orden) {
   })
 }
 
-module.exports = { enviarConfirmacionCompra }
+// htmlComoPagar se exporta para poder probarlo sin mandar un mail: es lo que
+// le dice al cliente a dónde girar la plata, así que conviene tenerlo cubierto.
+module.exports = { enviarConfirmacionCompra, htmlComoPagar }

@@ -3,11 +3,11 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from '../services/api'
+import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi, tiendaApi } from '../services/api'
 import { formatPrecio, esZonaLocal, costoEnvioLocal, UNIDADES_ENVIO_LOCAL_GRATIS } from '../lib/utils'
 import { trackInitiateCheckout } from '../lib/metaPixel'
 import Spinner from '../components/ui/Spinner'
-import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote } from 'lucide-react'
+import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote, Landmark } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { items, totalPrecio, dispatch } = useCart()
@@ -24,7 +24,8 @@ export default function CheckoutPage() {
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
-  const [metodoPago, setMetodoPago] = useState('mercadopago')
+  const [metodoPago, setMetodoPago] = useState('transferencia')
+  const [configPago, setConfigPago] = useState(null)
   const [agenda, setAgenda] = useState(null)
   const [cotizacion, setCotizacion] = useState(null)
   const [cotizando, setCotizando] = useState(false)
@@ -175,10 +176,29 @@ export default function CheckoutPage() {
     return () => { cancelado = true; clearTimeout(t) }
   }, [envioCotizado, form.cp, form.ciudad, items])
 
-  // Si cambia a envío a domicilio, el efectivo deja de ser una opción válida.
+  // Mercado Pago está apagado salvo que se encienda desde el panel, así que la
+  // opción no se dibuja a menos que la tienda confirme que se puede usar.
   useEffect(() => {
-    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('mercadopago')
-  }, [puedePagarEfectivo, metodoPago])
+    tiendaApi.pago().then(setConfigPago).catch(() => setConfigPago(null))
+  }, [])
+
+  const mercadoPagoActivo = Boolean(configPago?.mercadoPagoActivo)
+
+  // Al retirar se abona en el local; con envío a domicilio se transfiere antes.
+  // Se corrige acá y no solo al elegir la entrega porque el cliente puede
+  // cambiar de forma de entrega después de haber tocado el método de pago.
+  useEffect(() => {
+    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('transferencia')
+    if (!mercadoPagoActivo && metodoPago === 'mercadopago') {
+      setMetodoPago(puedePagarEfectivo ? 'efectivo' : 'transferencia')
+    }
+  }, [puedePagarEfectivo, metodoPago, mercadoPagoActivo])
+
+  // Con retiro, el default es abonar en el local.
+  useEffect(() => {
+    if (puedePagarEfectivo) setMetodoPago('efectivo')
+    else setMetodoPago('transferencia')
+  }, [puedePagarEfectivo])
 
   async function aplicarCupon() {
     if (!codigoInput.trim()) return
@@ -519,20 +539,6 @@ export default function CheckoutPage() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
               <h2 className="text-base font-semibold text-zinc-100 mb-4">Forma de pago</h2>
               <div className="flex flex-col gap-2">
-                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  metodoPago === 'mercadopago' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
-                }`}>
-                  <input type="radio" name="metodoPago" value="mercadopago"
-                    checked={metodoPago === 'mercadopago'}
-                    onChange={() => setMetodoPago('mercadopago')}
-                    className="accent-blue-500" />
-                  <CreditCard className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-zinc-100">Mercado Pago</p>
-                    <p className="text-xs text-zinc-500">Tarjeta, débito o dinero en cuenta. Hasta 3 cuotas sin interés.</p>
-                  </div>
-                </label>
-
                 {/* Solo con retiro: con envío a domicilio no hay dónde cobrar. */}
                 {puedePagarEfectivo && (
                   <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -544,16 +550,51 @@ export default function CheckoutPage() {
                       className="accent-blue-500" />
                     <Banknote className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-100">Efectivo al retirar</p>
-                      <p className="text-xs text-zinc-500">Pagás cuando pasás a buscar el pedido por el local.</p>
+                      <p className="text-sm font-medium text-zinc-100">Al retirar, en el local</p>
+                      <p className="text-xs text-zinc-500">Efectivo, transferencia o como prefieras cuando pases a buscarlo.</p>
+                    </div>
+                  </label>
+                )}
+
+                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  metodoPago === 'transferencia' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                }`}>
+                  <input type="radio" name="metodoPago" value="transferencia"
+                    checked={metodoPago === 'transferencia'}
+                    onChange={() => setMetodoPago('transferencia')}
+                    className="accent-blue-500" />
+                  <Landmark className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-100">Transferencia bancaria</p>
+                    <p className="text-xs text-zinc-500">
+                      {esEnvio
+                        ? 'Te damos los datos al confirmar. Despachamos cuando se acredita.'
+                        : 'Te damos los datos al confirmar el pedido.'}
+                    </p>
+                  </div>
+                </label>
+
+                {mercadoPagoActivo && (
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    metodoPago === 'mercadopago' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                  }`}>
+                    <input type="radio" name="metodoPago" value="mercadopago"
+                      checked={metodoPago === 'mercadopago'}
+                      onChange={() => setMetodoPago('mercadopago')}
+                      className="accent-blue-500" />
+                    <CreditCard className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-zinc-100">Mercado Pago</p>
+                      <p className="text-xs text-zinc-500">Tarjeta, débito o dinero en cuenta. Hasta 3 cuotas sin interés.</p>
                     </div>
                   </label>
                 )}
               </div>
 
-              {!puedePagarEfectivo && esEnvio && (
+              {metodoPago === 'transferencia' && (
                 <p className="mt-3 text-xs text-zinc-500">
-                  El pago en efectivo está disponible solo si retirás por uno de nuestros locales.
+                  Al confirmar te mostramos el CBU y te lo mandamos por mail. Después nos pasás
+                  el comprobante por WhatsApp.
                 </p>
               )}
             </div>
@@ -691,6 +732,8 @@ export default function CheckoutPage() {
               <p className="mt-2 text-xs text-center text-zinc-600">
                 {metodoPago === 'efectivo'
                   ? 'Reservamos tu pedido y pagás al retirarlo'
+                  : metodoPago === 'transferencia'
+                  ? 'Te mostramos los datos para transferir en el siguiente paso'
                   : 'Vas a poder pagar en el siguiente paso'}
               </p>
             </div>

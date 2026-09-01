@@ -2,12 +2,20 @@ const { Router } = require('express')
 const prisma = require('../lib/prisma')
 const { authOpcional } = require('../middleware/auth')
 const { crearPreferencia } = require('../services/mercadopago')
+const { mercadoPagoEstaActivo } = require('../lib/configTienda')
 
 const router = Router()
 
 // POST /api/pagos/preferencia — guest o usuario logueado
 router.post('/preferencia', authOpcional, async (req, res, next) => {
   try {
+    // La tienda cobra por transferencia; Mercado Pago queda apagado detrás de
+    // un flag en ConfigTienda. El código de acá para abajo sigue entero: para
+    // volver a MP alcanza con poner mercadoPagoActivo en '1' desde el panel.
+    if (!(await mercadoPagoEstaActivo())) {
+      return res.status(400).json({ mensaje: 'El pago por Mercado Pago no está disponible' })
+    }
+
     const { ordenId } = req.body
     if (!ordenId) return res.status(400).json({ mensaje: 'ordenId es requerido' })
 

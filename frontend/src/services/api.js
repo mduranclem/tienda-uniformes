@@ -193,6 +193,7 @@ export const pagosApi = {
 // ── Tienda (datos generales) ─────────────────────────────────────────────────
 export const tiendaApi = {
   tablaTalles: () => request('/tienda/tabla-talles'),
+  pago: () => request('/tienda/pago'),
 }
 
 // ── Banners ───────────────────────────────────────────────────────────────────
