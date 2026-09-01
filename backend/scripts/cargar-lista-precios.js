@@ -26,11 +26,17 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const prisma = require('../src/lib/prisma')
 
 // Los cuatro rangos, en el orden en que se muestran.
+//
+// 'ESP' va primero en su rango a propósito: la comparación de más abajo busca
+// la banda anterior por el primer talle de la lista, así que dejándolo al
+// frente sigue reconociendo las bandas ya cargadas. Los especiales conviven con
+// el talle ESP que ya usan las variantes cargadas, en vez de reemplazarlo: son
+// 54 variantes con stock y cambiarles el talle las dejaría sin precio.
 const BANDAS = [
   { clave: '4-10', talles: ['4', '6', '8', '10'] },
   { clave: '12-16', talles: ['12', '14', '16'] },
   { clave: 'S-XL', talles: ['S', 'M', 'L', 'XL'] },
-  { clave: 'ESP', talles: ['ESP'] },
+  { clave: 'ESP', talles: ['ESP', '2XL', '3XL', '6ESP', '8ESP'] },
 ]
 
 // `categoria` es el nombre exacto en la tabla Categoria, que es también lo que
@@ -39,17 +45,20 @@ const BANDAS = [
 // scripts/renombrar-categoria.js.
 const LISTA = [
   // ── Colegiales: llevan escudo, se producen a pedido ──────────────────────
-  { nombre: 'Remera Bordada', categoria: 'REMERA BORDADA', precios: [25250, 26680, 27720, 29540] },
-  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precios: [19400, 20800, 22100, 24800] },
-  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', precios: [30800, 32800, 33400, 35400] },
+  // Lista de septiembre 2026. Las bordadas y las dos remeras se actualizaron;
+  // las estampadas que no vinieron en la lista mantienen el precio de agosto.
+  { nombre: 'Remera de algodón', categoria: 'REMERA BORDADA', precios: [23170, 24430, 25480, 28000] },
+  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precios: [20230, 21385, 21805, 25480] },
+  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', precios: [28945, 30730, 33355, 36715] },
   { nombre: 'Short sin frisa estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', precios: [28000, 30000, 31000, 33000] },
-  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precios: [39500, 40800, 42100, 45500] },
+  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precios: [34300, 36820, 37555, 40075] },
   { nombre: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', precios: [36500, 37800, 39100, 42500] },
-  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precios: [42800, 46000, 49200, 54800] },
+  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precios: [38185, 40495, 43120, 46270] },
   { nombre: 'Buzo cuello redondo con frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', precios: [39800, 43000, 46200, 51800] },
-  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precios: [45500, 46800, 50800, 56100] },
+  { nombre: 'Buzo canguro con frisa bordado', categoria: 'BUZO CANGURO CON FRISA BORDADO', precios: [42805, 47215, 48475, 50890] },
+  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precios: [38185, 40495, 43120, 46270] },
   { nombre: 'Pantalón largo con frisa estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', precios: [42500, 43800, 46800, 51100] },
-  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', precios: [52100, 56100, 58800, 64200] },
+  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', precios: [50680, 53830, 55615, 58975] },
   { nombre: 'Campera canguro con frisa estampada', categoria: 'CAMPERA CANGURO CON FRISA ESTAMPADO', precios: [50100, 53100, 55800, 60200] },
   { nombre: 'Buzo de acetato', categoria: 'BUZO ACETATO', precios: [56100, 58800, 61500, 66800] },
 
