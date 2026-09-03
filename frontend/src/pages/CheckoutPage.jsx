@@ -184,21 +184,21 @@ export default function CheckoutPage() {
 
   const mercadoPagoActivo = Boolean(configPago?.mercadoPagoActivo)
 
-  // Al retirar se abona en el local; con envío a domicilio se transfiere antes.
-  // Se corrige acá y no solo al elegir la entrega porque el cliente puede
-  // cambiar de forma de entrega después de haber tocado el método de pago.
+  // El método de pago sigue a la forma de entrega: quien retira abona en el
+  // local y quien recibe en su casa transfiere antes del envío. Cambiar de
+  // entrega vuelve a poner el default, porque el método elegido para la
+  // anterior puede no existir en la nueva (efectivo con envío no va).
   useEffect(() => {
-    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('transferencia')
+    setMetodoPago(puedePagarEfectivo ? 'efectivo' : 'transferencia')
+  }, [puedePagarEfectivo])
+
+  // Mercado Pago puede apagarse desde el panel mientras alguien está comprando:
+  // si eso pasa, la opción desaparece y hay que sacarla también de la selección.
+  useEffect(() => {
     if (!mercadoPagoActivo && metodoPago === 'mercadopago') {
       setMetodoPago(puedePagarEfectivo ? 'efectivo' : 'transferencia')
     }
-  }, [puedePagarEfectivo, metodoPago, mercadoPagoActivo])
-
-  // Con retiro, el default es abonar en el local.
-  useEffect(() => {
-    if (puedePagarEfectivo) setMetodoPago('efectivo')
-    else setMetodoPago('transferencia')
-  }, [puedePagarEfectivo])
+  }, [mercadoPagoActivo, metodoPago, puedePagarEfectivo])
 
   async function aplicarCupon() {
     if (!codigoInput.trim()) return

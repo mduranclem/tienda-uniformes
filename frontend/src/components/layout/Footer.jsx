@@ -88,7 +88,7 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} InCollege · Indumentaria escolar</p>
           <p className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-zinc-600" />
-            Pagos seguros con Mercado Pago
+            Transferencia bancaria o pago en el local
           </p>
         </div>
 
