@@ -4,7 +4,7 @@
 Tienda online B2C para consumidor final (alumnos de colegios y familias).
 Venta de remeras y prendas, lisas y personalizadas por colegio. El cliente
 entra, ve qué hay disponible, filtra por colegio o por "lisos", arma el
-carrito y paga online.
+carrito y paga por transferencia o en efectivo en el local.
 
 ## Stack (NO cambiar sin avisar)
 - Frontend: React + Vite + TailwindCSS
@@ -12,7 +12,7 @@ carrito y paga online.
 - DB: PostgreSQL (Supabase)
 - Auth: Supabase Auth (magic link + Google opcional)
 - Deploy: vía GitHub
-- Pagos: Mercado Pago (modo test primero) + NAVE (Banco Galicia) más adelante
+- Pagos: transferencia bancaria y efectivo en el local (sin pasarela de pago)
 
 ## Modelo de datos (entidades core)
 - Colegio: nombre, logo, slug. Agrupa los modelos disponibles para ese colegio.
@@ -26,12 +26,17 @@ carrito y paga online.
 - Entrega: envío a domicilio o retiro en local, con su costo.
 
 ## Pagos (IMPORTANTE — Argentina)
-- NO usar Stripe (no cobra en Argentina).
-- Mercado Pago como principal, SIEMPRE primero en modo sandbox/test.
-- NAVE (Banco Galicia) como opción adicional más adelante.
-- La orden SOLO se marca como pagada al recibir el webhook de confirmación,
-  NUNCA desde el frontend.
-- Usar Context7 para la documentación vigente de cada pasarela.
+- Sin pasarela de pago: se sacó Mercado Pago (2026-10) porque las comisiones
+  encarecían los precios. No volver a agregar una sin avisar.
+- Formas de pago: transferencia (siempre) y efectivo al retirar (solo con
+  retiro en el local).
+- La confirmación del pedido, el mail y el WhatsApp de "pedido recibido" le
+  pasan al cliente alias, CBU y monto; manda el comprobante por WhatsApp.
+- La orden se marca como pagada a mano desde el panel, al ver el comprobante,
+  NUNCA desde el frontend de la tienda.
+- Plazo de pago: 7 días (`venceEl`). El backend cancela los vencidos cada hora
+  y devuelve el stock; desde el panel se puede dar 7 días más.
+- Sin cuotas: no mostrar financiación en ningún lado.
 
 ## Notificaciones
 - Confirmación de compra por email (base).
@@ -41,7 +46,7 @@ carrito y paga online.
 ## Reglas de diseño
 - Mobile-first (la mayoría compra desde el celular), luego desktop.
 - Estilo tipo Tiendanube / Mercado Libre: grilla de productos con foto,
-  precio y cuotas; buscador arriba; filtros por colegio y "Lisos".
+  precio; buscador arriba; filtros por colegio y "Lisos".
 - Página de producto con galería + zoom y selector de talle/color.
 - Limpio y moderno. NADA de aspecto "template de IA".
 

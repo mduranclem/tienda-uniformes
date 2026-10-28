@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MapPin, MessageCircle, Mail, ShieldCheck } from 'lucide-react'
+import { MapPin, MessageCircle, Mail, Landmark } from 'lucide-react'
 import { WHATSAPP_URL, WHATSAPP_LEGIBLE, EMAIL_CONTACTO, DIRECCIONES, CIUDAD } from '../../lib/contacto'
 
 const NAVEGACION = [
@@ -87,8 +87,8 @@ export default function Footer() {
         <div className="mt-9 flex flex-col items-center gap-3 border-t border-zinc-800/80 pt-5 text-xs text-zinc-500 sm:flex-row sm:justify-between">
           <p>© {new Date().getFullYear()} InCollege · Indumentaria escolar</p>
           <p className="flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-zinc-600" />
-            Pagos seguros con Mercado Pago
+            <Landmark className="h-3.5 w-3.5 text-zinc-600" />
+            Pagás por transferencia o en efectivo en el local
           </p>
         </div>
 

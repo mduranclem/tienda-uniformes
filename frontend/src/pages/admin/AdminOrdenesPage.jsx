@@ -10,6 +10,20 @@ import { Printer } from 'lucide-react'
 
 const ESTADOS = ['PENDIENTE', 'PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA', 'CANCELADA']
 
+const ETIQUETA_PAGO = {
+  transferencia: '🏦 Transferencia',
+  efectivo: '💵 Efectivo al retirar',
+  mercadopago: 'Mercado Pago',
+}
+
+// venceEl es un instante: se muestra en hora argentina.
+function formatearVencimiento(venceEl) {
+  return new Date(venceEl).toLocaleDateString('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
 const BADGE_ESTADO = {
   PENDIENTE: 'yellow',
   PAGADA: 'blue',
@@ -24,8 +38,25 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
   const [nuevoEstado, setNuevoEstado] = useState('')
   const [nota, setNota] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [extendiendo, setExtendiendo] = useState(false)
+  const [errorPlazo, setErrorPlazo] = useState('')
 
-  useEffect(() => { adminApi.obtenerOrden(token, ordenId).then(setOrden) }, [ordenId])
+  const cargarOrden = () => adminApi.obtenerOrden(token, ordenId).then(setOrden)
+  useEffect(() => { cargarOrden() }, [ordenId])
+
+  // Para cuando la familia escribe pidiendo más tiempo para pagar.
+  async function extenderPlazo() {
+    setExtendiendo(true); setErrorPlazo('')
+    try {
+      await adminApi.extenderPlazoOrden(token, ordenId)
+      await cargarOrden()
+      onActualizado()
+    } catch (err) {
+      setErrorPlazo(err.message || 'No se pudo extender el plazo')
+    } finally {
+      setExtendiendo(false)
+    }
+  }
 
   async function cambiarEstado() {
     if (!nuevoEstado) return
@@ -75,6 +106,26 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
             <span className="text-sm text-zinc-400">Estado actual:</span>
             <Badge variante={BADGE_ESTADO[orden.estado]}>{orden.estado}</Badge>
           </div>
+
+          {/* Plazo de pago: pasado el vencimiento se cancela solo y el stock vuelve */}
+          {orden.estado === 'PENDIENTE' && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-amber-300">
+                  {orden.metodoPago === 'efectivo' ? 'Paga al retirar.' : 'Esperando la transferencia.'}
+                  {orden.venceEl && <> Vence el <span className="font-semibold">{formatearVencimiento(orden.venceEl)}</span>.</>}
+                </p>
+                <button onClick={extenderPlazo} disabled={extendiendo}
+                  className="btn-secundario shrink-0 text-xs disabled:opacity-50">
+                  {extendiendo ? 'Extendiendo...' : 'Dar 7 días más'}
+                </button>
+              </div>
+              <p className="text-xs text-amber-400/70">
+                Cuando veas el comprobante, pasalo a PAGADA: al cliente le llega la confirmación.
+              </p>
+              {errorPlazo && <p className="text-xs text-red-400">{errorPlazo}</p>}
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Cliente</p>
@@ -144,9 +195,7 @@ function ModalOrden({ ordenId, token, onCerrar, onActualizado }) {
             <div className="flex justify-between pt-1">
               <span>Forma de pago</span>
               <span className={orden.metodoPago === 'efectivo' ? 'text-amber-400 font-medium' : ''}>
-                {orden.metodoPago === 'efectivo' ? '💵 Efectivo al retirar'
-                  : orden.metodoPago === 'mercadopago' ? 'Mercado Pago'
-                  : '—'}
+                {ETIQUETA_PAGO[orden.metodoPago] ?? '—'}
               </span>
             </div>
             {orden.cupon?.codigo && (
@@ -319,10 +368,12 @@ export default function AdminOrdenesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge variante={BADGE_ESTADO[o.estado]}>{o.estado}</Badge>
-                      {/* Un pendiente en efectivo espera al cliente en el local,
-                          no es un pago que falló */}
-                      {o.metodoPago === 'efectivo' && o.estado === 'PENDIENTE' && (
-                        <p className="mt-1 text-[11px] font-medium text-amber-400">💵 paga al retirar</p>
+                      {/* Qué se está esperando de un pendiente y hasta cuándo */}
+                      {o.estado === 'PENDIENTE' && (
+                        <p className="mt-1 text-[11px] font-medium text-amber-400">
+                          {o.metodoPago === 'efectivo' ? '💵 paga al retirar' : '🏦 espera transferencia'}
+                          {o.venceEl && <span className="block text-amber-400/70 font-normal">vence {formatearVencimiento(o.venceEl)}</span>}
+                        </p>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-zinc-100">{formatPrecio(o.total)}</td>

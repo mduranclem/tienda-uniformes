@@ -53,26 +53,6 @@ export function costoEnvioLocal(unidades, costoBase) {
   return unidades >= UNIDADES_ENVIO_LOCAL_GRATIS ? 0 : Number(costoBase)
 }
 
-// Financiación de un producto. Devuelve null si no tiene cuotas configuradas.
-// cuotasRecargo: % de recargo sobre el precio; null/0 = sin interés.
-export function infoCuotas(precioFinal, cuotas, cuotasRecargo) {
-  const n = Number(cuotas)
-  if (!n || n < 2 || !precioFinal) return null
-  const recargo = Number(cuotasRecargo ?? 0)
-  const sinInteres = !recargo
-  const monto = (Number(precioFinal) * (1 + recargo / 100)) / n
-  // "Hasta" y no "desde": el cliente puede pagar en 1, 2 o hasta n cuotas, y n
-  // es el máximo. Decir "desde" invierte el sentido de la promoción.
-  const texto = sinInteres
-    ? `Hasta ${n} cuotas sin interés de ${formatPrecio(monto)}`
-    : `Hasta ${n} cuotas de ${formatPrecio(monto)}`
-  // Versión sin monto, para lugares donde el precio varía según el talle.
-  const textoCorto = sinInteres
-    ? `Hasta ${n} cuotas sin interés`
-    : `Hasta ${n} cuotas`
-  return { n, sinInteres, monto, texto, textoCorto }
-}
-
 export const TALLES_STANDARD = ['4', '6', '8', '10', '12', '14', '16', 'S', 'M', 'L', 'XL', 'ESP']
 const ORDEN_TALLES = TALLES_STANDARD
 

@@ -215,7 +215,11 @@ model Orden {
   descuento      Decimal     @default(0) @db.Decimal(10, 2)
   costoEnvio     Decimal     @default(0) @db.Decimal(10, 2)
   total          Decimal     @db.Decimal(10, 2)
-  metodoPago     String?
+  metodoPago     String?     // "transferencia" | "efectivo" ("mercadopago" en pedidos viejos)
+  // Hasta cuándo se espera el pago de un pedido PENDIENTE. Pasada la fecha se
+  // cancela solo y el stock vuelve. Desde el panel se puede extender.
+  venceEl        DateTime?
+  // Solo pedidos viejos, de cuando se cobraba con Mercado Pago.
   mpPaymentId    String?
   mpPreferenceId String?
   cuponId        String?

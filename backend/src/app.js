@@ -3,8 +3,6 @@ const express = require('express')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 
-const pagosRouter = require('./routes/pagos')
-const webhooksRouter = require('./routes/webhooks')
 const alumnosRouter = require('./routes/alumnos')
 const bannersRouter = require('./routes/banners')
 const categoriasRouter = require('./routes/categorias')
@@ -47,9 +45,6 @@ app.use(cors({
   credentials: true,
 }))
 
-// Webhook de MP necesita raw body para validar firma — va ANTES de express.json()
-app.use('/api/webhooks/mercadopago', express.raw({ type: 'application/json' }), webhooksRouter)
-
 app.use(express.json())
 app.use(cookieParser())
 
@@ -76,7 +71,6 @@ app.use('/api/admin/banners', adminBannersRouter)
 app.use('/api/stock', stockRouter)
 app.use('/api/admin/puntos-venta', adminPuntosVentaRouter)
 app.use('/api/admin/movimientos-stock', adminMovimientosStockRouter)
-app.use('/api/pagos', pagosRouter)
 app.use('/api/bot', botRouter)
 app.use('/api/admin/bot', adminBotRouter)
 
@@ -94,5 +88,20 @@ const prisma = require('./lib/prisma')
 setInterval(async () => {
   try { await prisma.$queryRaw`SELECT 1` } catch (_) {}
 }, 4 * 60 * 1000)
+
+// Cancela los pedidos que pasaron su plazo de pago sin pagarse y devuelve el
+// stock. Corre al arrancar y después cada hora: el plazo es de días, así que
+// una hora de demora no cambia nada.
+const { cancelarVencidas } = require('./lib/vencimientoOrden')
+async function revisarVencidas() {
+  try {
+    const canceladas = await cancelarVencidas()
+    if (canceladas) console.log(`[vencimientos] ${canceladas} pedido(s) cancelado(s) por falta de pago`)
+  } catch (err) {
+    console.error('[vencimientos] Error:', err.message)
+  }
+}
+revisarVencidas()
+setInterval(revisarVencidas, 60 * 60 * 1000)
 
 module.exports = app

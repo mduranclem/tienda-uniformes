@@ -8,7 +8,12 @@ const CAMPOS = [
   { clave: 'direccion', label: 'Dirección del local', placeholder: 'Av. Corrientes 1234, Rosario' },
   { clave: 'telefono', label: 'Teléfono de contacto', placeholder: '+54 9 341 ...' },
   { clave: 'politicaCambios', label: 'Política de cambios y devoluciones', textarea: true, placeholder: 'Cambios dentro de los 30 días con la prenda sin uso...' },
-  { clave: 'mediosPago', label: 'Medios de pago aceptados', textarea: true, placeholder: 'Mercado Pago, transferencia, efectivo en el local...' },
+  { clave: 'mediosPago', label: 'Medios de pago aceptados', textarea: true, placeholder: 'Transferencia bancaria o efectivo al retirar en el local' },
+  // Se muestran al cliente en la confirmación del pedido, el mail y el WhatsApp.
+  { clave: 'transferenciaAlias', label: 'Transferencia — alias', placeholder: 'incollege.uniformes' },
+  { clave: 'transferenciaCbu', label: 'Transferencia — CBU / CVU', placeholder: '22 dígitos' },
+  { clave: 'transferenciaTitular', label: 'Transferencia — titular de la cuenta', placeholder: 'Nombre o razón social' },
+  { clave: 'transferenciaBanco', label: 'Transferencia — banco', placeholder: 'Banco Galicia' },
   { clave: 'tiempoEnvioRosario', label: 'Tiempo de envío — Rosario', placeholder: '2 a 3 días hábiles' },
   { clave: 'tiempoEnvioFueraRosario', label: 'Tiempo de envío — fuera de Rosario', placeholder: '5 a 7 días hábiles' },
   { clave: 'webhookStockAlert', label: 'URL del webhook de alertas de stock', placeholder: 'https://...n8n.cloud/webhook/...' },
@@ -19,13 +24,14 @@ const CAMPOS = [
 // información que no tenga, y cada mensaje de más gasta la paciencia de la que
 // dependen los que sí importan.
 const ESTADOS_NOTIFICABLES = [
+  { valor: 'PENDIENTE', label: 'Pedido recibido (le pasa los datos para pagar)' },
   { valor: 'PAGADA', label: 'Pago confirmado' },
   { valor: 'PREPARANDO', label: 'Preparando el pedido' },
   { valor: 'LISTA', label: 'Listo para retirar / sale a entregarse' },
   { valor: 'ENTREGADA', label: 'Entregado' },
   { valor: 'CANCELADA', label: 'Cancelado' },
 ]
-const ESTADOS_POR_DEFECTO = 'PAGADA,LISTA,ENTREGADA,CANCELADA'
+const ESTADOS_POR_DEFECTO = 'PENDIENTE,PAGADA,LISTA,ENTREGADA,CANCELADA'
 
 export default function AdminBotPage() {
   const { sesion } = useAuth()

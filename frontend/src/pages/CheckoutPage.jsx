@@ -7,7 +7,7 @@ import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi } from
 import { formatPrecio, esZonaLocal, costoEnvioLocal, UNIDADES_ENVIO_LOCAL_GRATIS } from '../lib/utils'
 import { trackInitiateCheckout } from '../lib/metaPixel'
 import Spinner from '../components/ui/Spinner'
-import { ChevronLeft, Truck, MapPin, Tag, X, CreditCard, Banknote } from 'lucide-react'
+import { ChevronLeft, Truck, MapPin, Tag, X, Landmark, Banknote } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { items, totalPrecio, dispatch } = useCart()
@@ -24,7 +24,7 @@ export default function CheckoutPage() {
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
-  const [metodoPago, setMetodoPago] = useState('mercadopago')
+  const [metodoPago, setMetodoPago] = useState('transferencia')
   const [agenda, setAgenda] = useState(null)
   const [cotizacion, setCotizacion] = useState(null)
   const [cotizando, setCotizando] = useState(false)
@@ -177,7 +177,7 @@ export default function CheckoutPage() {
 
   // Si cambia a envío a domicilio, el efectivo deja de ser una opción válida.
   useEffect(() => {
-    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('mercadopago')
+    if (!puedePagarEfectivo && metodoPago === 'efectivo') setMetodoPago('transferencia')
   }, [puedePagarEfectivo, metodoPago])
 
   async function aplicarCupon() {
@@ -520,16 +520,16 @@ export default function CheckoutPage() {
               <h2 className="text-base font-semibold text-zinc-100 mb-4">Forma de pago</h2>
               <div className="flex flex-col gap-2">
                 <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  metodoPago === 'mercadopago' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                  metodoPago === 'transferencia' ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-600'
                 }`}>
-                  <input type="radio" name="metodoPago" value="mercadopago"
-                    checked={metodoPago === 'mercadopago'}
-                    onChange={() => setMetodoPago('mercadopago')}
+                  <input type="radio" name="metodoPago" value="transferencia"
+                    checked={metodoPago === 'transferencia'}
+                    onChange={() => setMetodoPago('transferencia')}
                     className="accent-blue-500" />
-                  <CreditCard className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <Landmark className="w-4 h-4 text-zinc-400 shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-zinc-100">Mercado Pago</p>
-                    <p className="text-xs text-zinc-500">Tarjeta, débito o dinero en cuenta. Hasta 3 cuotas sin interés.</p>
+                    <p className="text-sm font-medium text-zinc-100">Transferencia bancaria</p>
+                    <p className="text-xs text-zinc-500">Al confirmar te pasamos el alias y el CBU. Nos mandás el comprobante por WhatsApp.</p>
                   </div>
                 </label>
 
@@ -691,7 +691,7 @@ export default function CheckoutPage() {
               <p className="mt-2 text-xs text-center text-zinc-600">
                 {metodoPago === 'efectivo'
                   ? 'Reservamos tu pedido y pagás al retirarlo'
-                  : 'Vas a poder pagar en el siguiente paso'}
+                  : 'En el siguiente paso te mostramos los datos para transferir'}
               </p>
             </div>
           </div>

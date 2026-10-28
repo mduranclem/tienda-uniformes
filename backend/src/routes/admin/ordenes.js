@@ -3,6 +3,7 @@ const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
 const { notificarOrdenPagada, notificarCambioEstado } = require('../../services/notificaciones')
+const { DIAS_PLAZO_PAGO, calcularVencimiento, extenderVencimiento, cancelarVencidas } = require('../../lib/vencimientoOrden')
 
 const router = Router()
 
@@ -90,9 +91,15 @@ router.put('/:id/estado', async (req, res, next) => {
         }
       }
 
+      // Volver a PENDIENTE (por ejemplo, si se marcó pagada por error) le da
+      // un plazo nuevo: con el viejo, la cancelación automática podría
+      // llevárselo en la próxima pasada.
+      const plazo = estado === 'PENDIENTE' && actual.estado !== 'PENDIENTE'
+        ? { venceEl: calcularVencimiento() }
+        : {}
       const actualizada = await tx.orden.update({
         where: { id: req.params.id },
-        data: { estado },
+        data: { estado, ...plazo },
       })
       await tx.historialOrden.create({
         data: { ordenId: req.params.id, estado, nota: nota ?? null },
@@ -125,59 +132,41 @@ router.put('/:id/estado', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// POST /api/admin/ordenes/limpiar-pendientes?horas=48
-// Cancela órdenes PENDIENTE viejas y restaura su stock
-router.post('/limpiar-pendientes', async (req, res, next) => {
+// POST /api/admin/ordenes/:id/extender-plazo
+// Le da al cliente 7 días más para pagar, cuando lo pide por WhatsApp.
+router.post('/:id/extender-plazo', async (req, res, next) => {
   try {
-    const horas = Number(req.query.horas ?? 48)
-    const corte = new Date(Date.now() - horas * 60 * 60 * 1000)
-
-    // Las órdenes en efectivo viven pendientes hasta que la persona pasa por el
-    // local, así que con 48 h se cancelarían solas: quien compra un viernes y
-    // va el lunes se encontraría el pedido cancelado. Se les da 7 días.
-    const HORAS_EFECTIVO = Number(req.query.horasEfectivo ?? 24 * 7)
-    const corteEfectivo = new Date(Date.now() - HORAS_EFECTIVO * 60 * 60 * 1000)
-
-    const pendientes = await prisma.orden.findMany({
-      where: {
-        estado: 'PENDIENTE',
-        OR: [
-          { metodoPago: 'efectivo', createdAt: { lt: corteEfectivo } },
-          { metodoPago: { not: 'efectivo' }, createdAt: { lt: corte } },
-          { metodoPago: null, createdAt: { lt: corte } },
-        ],
-      },
-      include: {
-        items: true,
-        entrega: true,
-        usuario: { select: { email: true, nombre: true, telefono: true } },
-      },
+    const actual = await prisma.orden.findUnique({
+      where: { id: req.params.id },
+      select: { estado: true, venceEl: true },
     })
-
-    let canceladas = 0
-    for (const orden of pendientes) {
-      await prisma.$transaction(async (tx) => {
-        for (const item of orden.items) {
-          await tx.variante.update({
-            where: { id: item.varianteId },
-            data: { stock: { increment: item.cantidad } },
-          })
-        }
-        await tx.orden.update({ where: { id: orden.id }, data: { estado: 'CANCELADA' } })
-        await tx.historialOrden.create({
-          data: {
-            ordenId: orden.id,
-            estado: 'CANCELADA',
-            nota: orden.metodoPago === 'efectivo'
-              ? `Cancelada automáticamente (>${HORAS_EFECTIVO}h sin retirar ni pagar)`
-              : `Cancelada automáticamente (>${horas}h sin pago)`,
-          },
-        })
-      })
-      notificarCambioEstado(orden, 'CANCELADA').catch(() => {})
-      canceladas++
+    if (!actual) return res.status(404).json({ mensaje: 'Orden no encontrada' })
+    if (actual.estado !== 'PENDIENTE') {
+      return res.status(400).json({ mensaje: 'Solo se puede extender el plazo de un pedido pendiente de pago' })
     }
 
+    const venceEl = extenderVencimiento(actual.venceEl)
+    const orden = await prisma.$transaction(async (tx) => {
+      const actualizada = await tx.orden.update({ where: { id: req.params.id }, data: { venceEl } })
+      await tx.historialOrden.create({
+        data: {
+          ordenId: req.params.id,
+          estado: 'PENDIENTE',
+          nota: `Plazo de pago extendido ${DIAS_PLAZO_PAGO} días`,
+        },
+      })
+      return actualizada
+    })
+    res.json(orden)
+  } catch (err) { next(err) }
+})
+
+// POST /api/admin/ordenes/limpiar-pendientes
+// Cancela ya los pendientes vencidos y restaura su stock. El backend lo hace
+// solo cada hora; esto queda para forzarlo a mano.
+router.post('/limpiar-pendientes', async (_req, res, next) => {
+  try {
+    const canceladas = await cancelarVencidas()
     res.json({ canceladas, mensaje: `${canceladas} orden(es) cancelada(s) y stock restaurado` })
   } catch (err) { next(err) }
 })

@@ -6,6 +6,7 @@ const prisma = require('../lib/prisma')
 const { esZonaLocal } = require('../lib/envios')
 const { aWhatsapp } = require('../lib/telefono')
 const { componerMensaje, ESTADOS_QUE_NOTIFICAN_POR_DEFECTO } = require('./mensajesEstado')
+const { leerDatosTransferencia } = require('../lib/configTienda')
 
 // Cómo recibe el cliente el pedido. Se deriva del tipo de entrega y de la
 // ciudad, reusando el mismo esZonaLocal() que ya usan el checkout y la creación
@@ -34,6 +35,11 @@ function datosCliente(orden) {
   const telefono = orden.usuario?.telefono ?? orden.telefonoGuest ?? '—'
   const email = orden.usuario?.email ?? orden.emailGuest ?? null
   return { cliente, telefono, email }
+}
+
+const ETIQUETA_PAGO = {
+  transferencia: 'Transferencia (esperando comprobante)',
+  efectivo: 'Efectivo al retirar',
 }
 
 function listaProductos(orden) {
@@ -69,6 +75,7 @@ async function notificarNuevoPedido(orden) {
     entrega,
     domicilio,
     productos,
+    metodoPago: orden.metodoPago ?? null,
     createdAt: orden.createdAt,
     // Mensaje preformateado listo para usar en WhatsApp
     mensaje: [
@@ -80,6 +87,7 @@ async function notificarNuevoPedido(orden) {
       ``,
       `🚚 ${entrega}${domicilio ? `: ${domicilio}` : ''}`,
       `💰 Total: $${Number(orden.total).toLocaleString('es-AR')}`,
+      `💳 ${ETIQUETA_PAGO[orden.metodoPago] ?? orden.metodoPago ?? '—'}`,
     ].join('\n'),
   }
 
@@ -132,6 +140,10 @@ async function notificarCambioEstado(orden, estadoNuevo) {
   const { cliente, telefono, email } = datosCliente(orden)
   const modoEnvio = modoDeEnvio(orden)
   const puntoRetiro = modoEnvio === 'RETIRO' ? (orden.entrega?.nombre ?? null) : null
+  // Los datos bancarios solo hacen falta en el aviso de pedido recibido.
+  const transferencia = estadoNuevo === 'PENDIENTE' && orden.metodoPago === 'transferencia'
+    ? await leerDatosTransferencia().catch(() => null)
+    : null
 
   const mensaje = componerMensaje({
     estado: estadoNuevo,
@@ -143,6 +155,10 @@ async function notificarCambioEstado(orden, estadoNuevo) {
     // Al interior el flete no se cobró en el checkout: la orden quedó con
     // costoEnvio en 0 y todavía hay que pasarle el costo al cliente.
     envioACotizar: modoEnvio === 'INTERIOR' && Number(orden.costoEnvio) === 0,
+    metodoPago: orden.metodoPago,
+    total: Number(orden.total),
+    transferencia,
+    venceEl: orden.venceEl,
   })
   if (!mensaje) return
 

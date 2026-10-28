@@ -10,9 +10,9 @@
 // Después hay que propagar a los productos ya cargados:
 //   node scripts/recalcular-precios-productos.js
 //
-// Los precios son los FINALES que ve el cliente: no se les suma el recargo de
-// Mercado Pago. Si alguna vez se vuelve a aplicar, se hace con
-// ajustar-precios-mp.js y no tocando esta lista.
+// Los precios son los FINALES que ve el cliente: no llevan recargo por
+// comisiones de pago (la tienda cobra por transferencia o en efectivo).
+// En 2026-10 se bajaron todos un 30% al sacar Mercado Pago, redondeados a $100.
 //
 // La fuente de verdad del precio es la banda (categoría + rango de talles), no
 // el producto: el producto y la variante guardan una copia que es la que se
@@ -39,31 +39,31 @@ const BANDAS = [
 // scripts/renombrar-categoria.js.
 const LISTA = [
   // ── Colegiales: llevan escudo, se producen a pedido ──────────────────────
-  { nombre: 'Remera Bordada', categoria: 'REMERA BORDADA', precios: [25250, 26680, 27720, 29540] },
-  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precios: [19400, 20800, 22100, 24800] },
-  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', precios: [30800, 32800, 33400, 35400] },
-  { nombre: 'Short sin frisa estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', precios: [28000, 30000, 31000, 33000] },
-  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precios: [39500, 40800, 42100, 45500] },
-  { nombre: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', precios: [36500, 37800, 39100, 42500] },
-  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precios: [42800, 46000, 49200, 54800] },
-  { nombre: 'Buzo cuello redondo con frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', precios: [39800, 43000, 46200, 51800] },
-  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precios: [45500, 46800, 50800, 56100] },
-  { nombre: 'Pantalón largo con frisa estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', precios: [42500, 43800, 46800, 51100] },
-  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', precios: [52100, 56100, 58800, 64200] },
-  { nombre: 'Campera canguro con frisa estampada', categoria: 'CAMPERA CANGURO CON FRISA ESTAMPADO', precios: [50100, 53100, 55800, 60200] },
-  { nombre: 'Buzo de acetato', categoria: 'BUZO ACETATO', precios: [56100, 58800, 61500, 66800] },
+  { nombre: 'Remera Bordada', categoria: 'REMERA BORDADA', precios: [17700, 18700, 19400, 20700] },
+  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precios: [13600, 14600, 15500, 17400] },
+  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', precios: [21600, 23000, 23400, 24800] },
+  { nombre: 'Short sin frisa estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', precios: [19600, 21000, 21700, 23100] },
+  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precios: [27700, 28600, 29500, 31800] },
+  { nombre: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', precios: [25600, 26500, 27400, 29700] },
+  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precios: [30000, 32200, 34400, 38400] },
+  { nombre: 'Buzo cuello redondo con frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', precios: [27900, 30100, 32300, 36300] },
+  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precios: [31800, 32800, 35600, 39300] },
+  { nombre: 'Pantalón largo con frisa estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', precios: [29700, 30700, 32800, 35800] },
+  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', precios: [36500, 39300, 41200, 44900] },
+  { nombre: 'Campera canguro con frisa estampada', categoria: 'CAMPERA CANGURO CON FRISA ESTAMPADO', precios: [35100, 37200, 39100, 42100] },
+  { nombre: 'Buzo de acetato', categoria: 'BUZO ACETATO', precios: [39300, 41200, 43100, 46800] },
 
   // ── Lisos: sin escudo, stock permanente ──────────────────────────────────
-  { nombre: 'Chomba lisa', categoria: 'CHOMBA LISA', precios: [31685, 33110, 34454, 37405] },
-  { nombre: 'Remera lisa', categoria: 'REMERA LISA', precios: [15400, 16700, 18100, 21400] },
-  { nombre: 'Remera lisa manga larga', categoria: 'REMERA MANGAS LARGAS LISA', precios: [18800, 20100, 21400, 24100] },
-  { nombre: 'Short liso colegial', categoria: 'SHORT SIN FRISA LISO', precios: [22800, 24800, 26100, 29300] },
-  { nombre: 'Chaleco liso polar azul marino', categoria: 'CHALECO LISO POLAR', precios: [25400, 28100, 30800, 33400] },
-  { nombre: 'Campera polar lisa azul marino', categoria: 'CAMPERA LISA POLAR', precios: [33400, 35400, 38100, 40800] },
-  { nombre: 'Pantalón jogging liso con frisa', categoria: 'PANTALON LARGO CON FRISA LISO', precios: [36000, 38400, 42100, 46100] },
-  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FRISA LISO', precios: [49190, 52050, 54910, 59200] },
-  { nombre: 'Buzo canguro liso con frisa', categoria: 'BUZO CANGURO CON FRISA LISO', precios: [36580, 42040, 44900, 49190] },
-  { nombre: 'Pantalón cargo azul-gris gabardina', categoria: 'PANTALON CARGO GABARDINA', precios: [56000, 61000, 66000, 71000] },
+  { nombre: 'Chomba lisa', categoria: 'CHOMBA LISA', precios: [22200, 23200, 24100, 26200] },
+  { nombre: 'Remera lisa', categoria: 'REMERA LISA', precios: [10800, 11700, 12700, 15000] },
+  { nombre: 'Remera lisa manga larga', categoria: 'REMERA MANGAS LARGAS LISA', precios: [13200, 14100, 15000, 16900] },
+  { nombre: 'Short liso colegial', categoria: 'SHORT SIN FRISA LISO', precios: [16000, 17400, 18300, 20500] },
+  { nombre: 'Chaleco liso polar azul marino', categoria: 'CHALECO LISO POLAR', precios: [17800, 19700, 21600, 23400] },
+  { nombre: 'Campera polar lisa azul marino', categoria: 'CAMPERA LISA POLAR', precios: [23400, 24800, 26700, 28600] },
+  { nombre: 'Pantalón jogging liso con frisa', categoria: 'PANTALON LARGO CON FRISA LISO', precios: [25200, 26900, 29500, 32300] },
+  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FRISA LISO', precios: [34400, 36400, 38400, 41400] },
+  { nombre: 'Buzo canguro liso con frisa', categoria: 'BUZO CANGURO CON FRISA LISO', precios: [25600, 29400, 31400, 34400] },
+  { nombre: 'Pantalón cargo azul-gris gabardina', categoria: 'PANTALON CARGO GABARDINA', precios: [39200, 42700, 46200, 49700] },
 ]
 
 const pesos = n => '$' + Number(n).toLocaleString('es-AR')

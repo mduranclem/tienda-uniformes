@@ -12,6 +12,7 @@ const BASE = {
 
 test('no avisa los estados que no le sirven al cliente', () => {
   assert.equal(componerMensaje({ ...BASE, estado: 'PREPARANDO', modoEnvio: 'RETIRO' }), null)
+  // PENDIENTE sin forma de pago conocida (pedidos viejos) tampoco avisa
   assert.equal(componerMensaje({ ...BASE, estado: 'PENDIENTE', modoEnvio: 'RETIRO' }), null)
 })
 
@@ -89,4 +90,46 @@ test('todos los mensajes llevan el número de pedido', () => {
       assert.match(msg, /#42/, `${modo}/${estado} no lleva el número`)
     }
   }
+})
+
+const TRANSFERENCIA = { alias: 'incollege.uniformes', cbu: '0000003100012345678901', titular: 'InCollege SRL', banco: 'Galicia' }
+
+test('pedido recibido por transferencia pasa monto, alias y CBU', () => {
+  const msg = componerMensaje({
+    ...BASE, estado: 'PENDIENTE', modoEnvio: 'RETIRO',
+    metodoPago: 'transferencia', total: 43500, transferencia: TRANSFERENCIA,
+    venceEl: new Date('2026-11-02T15:00:00Z'),
+  })
+  assert.match(msg, /\$43\.500/)
+  assert.match(msg, /incollege\.uniformes/)
+  assert.match(msg, /0000003100012345678901/)
+  assert.match(msg, /comprobante/)
+  assert.match(msg, /lunes 2 de noviembre/)
+})
+
+// 23 h en Argentina ya es el día siguiente en UTC: el plazo tiene que leerse
+// en hora argentina o se le promete un día de más.
+test('el vencimiento se muestra en hora argentina', () => {
+  const msg = componerMensaje({
+    ...BASE, estado: 'PENDIENTE', modoEnvio: 'RETIRO',
+    metodoPago: 'transferencia', total: 1000, transferencia: TRANSFERENCIA,
+    venceEl: new Date('2026-11-03T02:00:00Z'), // lunes 2, 23 h en Rosario
+  })
+  assert.match(msg, /lunes 2 de noviembre/)
+})
+
+test('sin datos bancarios cargados no se manda el aviso de transferencia', () => {
+  const msg = componerMensaje({
+    ...BASE, estado: 'PENDIENTE', modoEnvio: 'RETIRO', metodoPago: 'transferencia', total: 1000,
+  })
+  assert.equal(msg, null)
+})
+
+test('pedido recibido en efectivo no pide transferencia', () => {
+  const msg = componerMensaje({
+    ...BASE, estado: 'PENDIENTE', modoEnvio: 'RETIRO', metodoPago: 'efectivo', total: 1000,
+    transferencia: TRANSFERENCIA,
+  })
+  assert.match(msg, /efectivo/)
+  assert.ok(!/transfer/i.test(msg))
 })

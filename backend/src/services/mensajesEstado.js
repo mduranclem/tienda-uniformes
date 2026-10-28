@@ -15,7 +15,53 @@ const MODOS = ['RETIRO', 'ROSARIO', 'INTERIOR']
 // PREPARANDO queda afuera: no le pide una acción al cliente ni le da
 // información que no tenga, y cada mensaje de más gasta la paciencia de la que
 // dependen los que sí importan.
-const ESTADOS_QUE_NOTIFICAN_POR_DEFECTO = ['PAGADA', 'LISTA', 'ENTREGADA', 'CANCELADA']
+// PENDIENTE sí: es el mensaje que le pasa al cliente los datos para pagar.
+const ESTADOS_QUE_NOTIFICAN_POR_DEFECTO = ['PENDIENTE', 'PAGADA', 'LISTA', 'ENTREGADA', 'CANCELADA']
+
+function formatearMonto(n) {
+  return `$${Number(n).toLocaleString('es-AR')}`
+}
+
+// venceEl es un instante y no un día de calendario como entregaFecha: se
+// muestra en hora argentina, o un pedido de las 22 h vencería "un día después".
+function formatearVencimiento(venceEl) {
+  const fecha = venceEl instanceof Date ? venceEl : new Date(venceEl)
+  return new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(fecha).replace(',', '')
+}
+
+// Pedido recién hecho: qué tiene que hacer el cliente para pagarlo.
+function mensajePendiente({ pedido, metodoPago, total, transferencia, venceEl }) {
+  const plazo = venceEl ? ` antes del ${formatearVencimiento(venceEl)}` : ''
+
+  if (metodoPago === 'efectivo') {
+    return `🛍️ ${pedido}\n\n¡Recibimos tu pedido! Lo pagás en efectivo cuando lo pasás a retirar. Te avisamos por acá apenas esté listo.`
+  }
+  // Sin datos bancarios cargados no hay nada útil que decir: mandar "transferí"
+  // sin decir adónde solo genera la pregunta.
+  if (metodoPago !== 'transferencia' || !transferencia) return null
+
+  const datos = [
+    transferencia.alias && `Alias: *${transferencia.alias}*`,
+    transferencia.cbu && `CBU: ${transferencia.cbu}`,
+    transferencia.titular && `Titular: ${transferencia.titular}`,
+    transferencia.banco && `Banco: ${transferencia.banco}`,
+  ].filter(Boolean).join('\n')
+
+  return [
+    `🛍️ ${pedido}`,
+    '',
+    `¡Recibimos tu pedido! Para confirmarlo, transferí *${formatearMonto(total)}*${plazo}:`,
+    '',
+    datos,
+    '',
+    'Cuando lo hagas, mandanos el comprobante por acá. Si necesitás más tiempo, avisanos y te guardamos el pedido.',
+  ].join('\n')
+}
 
 function cuando({ entregaFecha, entregaFranja }) {
   if (!entregaFecha || !entregaFranja) return null
@@ -25,14 +71,23 @@ function cuando({ entregaFecha, entregaFranja }) {
 /**
  * @param {{ estado: string, modoEnvio: string, numero: number,
  *           puntoRetiro?: string|null, entregaFecha?: Date|string|null,
- *           entregaFranja?: string|null, envioACotizar?: boolean }} datos
+ *           entregaFranja?: string|null, envioACotizar?: boolean,
+ *           metodoPago?: string|null, total?: number,
+ *           transferencia?: {alias, cbu, titular, banco}|null,
+ *           venceEl?: Date|string|null }} datos
  * @returns {string|null} null si ese estado no corresponde avisarlo
  */
-function componerMensaje({ estado, modoEnvio, numero, puntoRetiro, entregaFecha, entregaFranja, envioACotizar = false }) {
+function componerMensaje({
+  estado, modoEnvio, numero, puntoRetiro, entregaFecha, entregaFranja, envioACotizar = false,
+  metodoPago = null, total = 0, transferencia = null, venceEl = null,
+}) {
   const pedido = `*Pedido #${numero}*`
   const momento = cuando({ entregaFecha, entregaFranja })
 
   switch (estado) {
+    case 'PENDIENTE':
+      return mensajePendiente({ pedido, metodoPago, total, transferencia, venceEl })
+
     case 'PAGADA':
       if (modoEnvio === 'RETIRO') {
         return `✅ ${pedido}\n\n¡Recibimos tu pago! Te avisamos por acá apenas esté listo para retirar.`
@@ -69,7 +124,7 @@ function componerMensaje({ estado, modoEnvio, numero, puntoRetiro, entregaFecha,
       return `❌ ${pedido}\n\nTu pedido fue cancelado. Si creés que es un error, respondenos este mensaje y lo revisamos.`
 
     default:
-      // PENDIENTE y PREPARANDO no avisan.
+      // PREPARANDO no avisa.
       return null
   }
 }

@@ -88,6 +88,7 @@ export const adminApi = {
   },
   obtenerOrden: (token, id) => adminRequest(`/admin/ordenes/${id}`, {}, token),
   cambiarEstadoOrden: (token, id, estado, nota) => adminRequest(`/admin/ordenes/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado, nota }) }, token),
+  extenderPlazoOrden: (token, id) => adminRequest(`/admin/ordenes/${id}/extender-plazo`, { method: 'POST' }, token),
   // Cupones
   listarCupones: (token) => adminRequest('/admin/cupones', {}, token),
   crearCupon: (token, data) => adminRequest('/admin/cupones', { method: 'POST', body: JSON.stringify(data) }, token),
@@ -178,16 +179,6 @@ export const ordenesApi = {
   misOrdenes: (token) => request('/ordenes/mis-ordenes', {
     headers: { Authorization: `Bearer ${token}` },
   }),
-}
-
-// ── Pagos ─────────────────────────────────────────────────────────────────────
-export const pagosApi = {
-  crearPreferencia: (token, ordenId) =>
-    request('/pagos/preferencia', {
-      method: 'POST',
-      body: JSON.stringify({ ordenId }),
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }),
 }
 
 // ── Tienda (datos generales) ─────────────────────────────────────────────────

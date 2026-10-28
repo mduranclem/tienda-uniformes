@@ -2,7 +2,9 @@ const { Router } = require('express')
 const prisma = require('../lib/prisma')
 const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
-const { notificarNuevoPedido } = require('../services/notificaciones')
+const { notificarNuevoPedido, notificarCambioEstado } = require('../services/notificaciones')
+const { leerDatosTransferencia } = require('../lib/configTienda')
+const { calcularVencimiento } = require('../lib/vencimientoOrden')
 const { esZonaLocal, costoEnvioLocal } = require('../lib/envios')
 const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
 const { esFechaValida, esFranjaValida, FRANJAS } = require('../lib/agendaEntrega')
@@ -18,9 +20,10 @@ const router = Router()
 // (o posterior) quema el descuento de bienvenida.
 const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
 
-// Efectivo solo tiene sentido si el cliente pasa por el local. Con envío a
+// Sin pasarela: el cliente transfiere y manda el comprobante, o paga en el
+// local. Efectivo solo tiene sentido si pasa por el local: con envío a
 // domicilio no hay dónde cobrarle.
-const METODOS_PAGO = ['mercadopago', 'efectivo']
+const METODOS_PAGO = ['transferencia', 'efectivo']
 
 async function esPrimeraCompra(email) {
   const emailNorm = email.trim().toLowerCase()
@@ -44,7 +47,7 @@ router.post('/', authOpcional, async (req, res, next) => {
     const { items, nombre, email, telefono, entregaId, domicilio, cuponId } = req.body
     const entregaFechaCruda = req.body.entregaFecha
     const entregaFranjaCruda = req.body.entregaFranja
-    const metodoPago = req.body.metodoPago ?? 'mercadopago'
+    const metodoPago = req.body.metodoPago ?? 'transferencia'
 
     if (!items?.length) return res.status(400).json({ mensaje: 'El carrito está vacío' })
     if (!nombre || !email) return res.status(400).json({ mensaje: 'Nombre y email son requeridos' })
@@ -188,6 +191,7 @@ router.post('/', authOpcional, async (req, res, next) => {
           telefonoGuest: telefono ?? null,
           entregaId,
           metodoPago,
+          venceEl: calcularVencimiento(),
           servicioEnvio,
           entregaFecha,
           entregaFranja,
@@ -244,12 +248,17 @@ router.post('/', authOpcional, async (req, res, next) => {
         },
         entrega: true,
       },
-    }).then(ordenCompleta => {
+    }).then(async ordenCompleta => {
       if (!ordenCompleta) return
       const datos = { ...ordenCompleta, emailGuest: email, nombreGuest: nombre, telefonoGuest: telefono }
-      enviarConfirmacionCompra(datos)
+      const transferencia = metodoPago === 'transferencia'
+        ? await leerDatosTransferencia().catch(() => null)
+        : null
+      enviarConfirmacionCompra(datos, transferencia)
       notificarNuevoPedido(datos)
-    })
+      // WhatsApp al cliente con los datos para pagar
+      notificarCambioEstado(datos, 'PENDIENTE').catch(() => {})
+    }).catch(err => console.error('[ordenes] Error en notificaciones post-orden:', err.message))
 
     res.status(201).json({ id: orden.id, numero: orden.numero })
   } catch (err) { next(err) }
@@ -305,7 +314,12 @@ router.get('/:id', authOpcional, async (req, res, next) => {
     if (req.user && orden.usuarioId && orden.usuarioId !== req.user.id) {
       return res.status(403).json({ mensaje: 'No tenés acceso a esta orden' })
     }
-    res.json(orden)
+    // Mientras se espera la transferencia, la pantalla del pedido muestra
+    // adónde mandarla. Una vez pagado o cancelado ya no hace falta.
+    const datosTransferencia = orden.metodoPago === 'transferencia' && orden.estado === 'PENDIENTE'
+      ? await leerDatosTransferencia()
+      : null
+    res.json({ ...orden, datosTransferencia })
   } catch (err) { next(err) }
 })
 

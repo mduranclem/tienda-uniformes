@@ -7,7 +7,78 @@ function formatPrecio(n) {
   return `$ ${Number(n).toLocaleString('es-AR')}`
 }
 
-function htmlConfirmacion(orden) {
+// Número al que se manda el comprobante. Es el mismo de frontend/src/lib/contacto.js.
+const WHATSAPP_NUMERO = '5493417434552'
+const WHATSAPP_LEGIBLE = '341 743 4552'
+
+function escaparHtml(texto) {
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+// venceEl es un instante: se muestra en hora argentina.
+function formatearVencimiento(venceEl) {
+  return new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date(venceEl)).replace(',', '')
+}
+
+// Qué tiene que hacer el cliente para pagar. Sin pasarela, el mail es uno de
+// los lugares donde quedan los datos bancarios: la pantalla del pedido se
+// cierra y el WhatsApp puede no llegar si el número está mal escrito.
+function htmlPago(orden, transferencia) {
+  const plazo = orden.venceEl
+    ? `<p style="margin:10px 0 0;font-size:12px;color:#a1a1aa;line-height:1.5;">Te guardamos el pedido hasta el ${formatearVencimiento(orden.venceEl)}. Si necesitás más tiempo, escribinos.</p>`
+    : ''
+
+  if (orden.metodoPago === 'efectivo') {
+    return `
+          <div style="margin-top:24px;padding:16px;background:#09090b;border-radius:10px;border:1px solid #27272a;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:0.08em;">Pago</p>
+            <p style="margin:4px 0;color:#d4d4d8;font-size:14px;">💵 <strong>Efectivo al retirar</strong></p>
+            <p style="margin:4px 0;color:#a1a1aa;font-size:13px;">Lo pagás cuando pasás a buscar el pedido.</p>
+            ${plazo}
+          </div>`
+  }
+  if (orden.metodoPago !== 'transferencia') return ''
+
+  const fila = (etiqueta, valor) => valor ? `
+              <tr>
+                <td style="padding:3px 0;font-size:13px;color:#71717a;">${etiqueta}</td>
+                <td style="padding:3px 0;font-size:13px;color:#f4f4f5;text-align:right;font-weight:600;word-break:break-all;">${escaparHtml(valor)}</td>
+              </tr>` : ''
+
+  const datosHtml = transferencia
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+              ${fila('Alias', transferencia.alias)}
+              ${fila('CBU', transferencia.cbu)}
+              ${fila('Titular', transferencia.titular)}
+              ${fila('Banco', transferencia.banco)}
+            </table>`
+    : `<p style="margin:4px 0;color:#a1a1aa;font-size:13px;">Te pasamos los datos para transferir por WhatsApp.</p>`
+
+  const mensajeWhatsapp = encodeURIComponent(`Hola! Te mando el comprobante del pedido #${orden.numero}`)
+
+  return `
+          <div style="margin-top:24px;padding:16px;background:#09090b;border-radius:10px;border:1px solid #27272a;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:0.08em;">Cómo pagar</p>
+            <p style="margin:4px 0;color:#d4d4d8;font-size:14px;">Transferí <strong style="color:#f4f4f5;">${formatPrecio(orden.total)}</strong> a esta cuenta:</p>
+            ${datosHtml}
+            <p style="margin:14px 0 0;color:#a1a1aa;font-size:13px;line-height:1.5;">
+              Después mandanos el comprobante por WhatsApp al <strong style="color:#d4d4d8;">${WHATSAPP_LEGIBLE}</strong>, indicando el pedido #${orden.numero}.
+            </p>
+            <a href="https://wa.me/${WHATSAPP_NUMERO}?text=${mensajeWhatsapp}" style="display:inline-block;margin-top:12px;padding:10px 16px;background:#16a34a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;">Enviar comprobante por WhatsApp</a>
+            ${plazo}
+          </div>`
+}
+
+function htmlConfirmacion(orden, transferencia) {
   const cliente = orden.usuario?.nombre ?? orden.nombreGuest ?? 'Cliente'
   const emailDestino = orden.usuario?.email ?? orden.emailGuest
 
@@ -97,6 +168,7 @@ function htmlConfirmacion(orden) {
             <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:0.08em;">Entrega</p>
             ${entregaHtml}
           </div>
+${htmlPago(orden, transferencia)}
 
         </td></tr>
 
@@ -153,6 +225,7 @@ function htmlAdmin(orden) {
             <p style="margin:2px 0;font-size:14px;color:#f4f4f5;font-weight:600;">${cliente}</p>
             <p style="margin:2px 0;font-size:13px;color:#a1a1aa;">${emailCliente}</p>
             <p style="margin:2px 0;font-size:13px;color:#a1a1aa;">Tel: ${telefono}</p>
+            <p style="margin:2px 0;font-size:13px;color:#a1a1aa;">Pago: ${orden.metodoPago === 'efectivo' ? 'Efectivo al retirar' : 'Transferencia (esperando comprobante)'}</p>
           </div>
 
           <!-- Productos -->
@@ -180,7 +253,7 @@ function htmlAdmin(orden) {
 </html>`
 }
 
-async function enviarConfirmacionCompra(orden) {
+async function enviarConfirmacionCompra(orden, transferencia = null) {
   const emailCliente = orden.usuario?.email ?? orden.emailGuest
   const adminEmail = process.env.ADMIN_EMAIL
   const from = process.env.RESEND_FROM ?? 'onboarding@resend.dev'
@@ -190,7 +263,7 @@ async function enviarConfirmacionCompra(orden) {
       from,
       to: emailCliente,
       subject: `Pedido #${orden.numero} recibido — InCollege`,
-      html: htmlConfirmacion(orden),
+      html: htmlConfirmacion(orden, transferencia),
     }),
     adminEmail && resend.emails.send({
       from,

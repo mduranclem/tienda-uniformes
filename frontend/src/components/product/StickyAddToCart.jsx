@@ -3,7 +3,7 @@ import { formatPrecio } from '../../lib/utils'
 
 // Barra fija inferior (solo mobile) con precio + agregar al carrito,
 // siempre visible al scrollear la ficha de producto.
-export default function StickyAddToCart({ precioFinal, cuotas, varianteSeleccionada, agregado, sinColores, onAgregar }) {
+export default function StickyAddToCart({ precioFinal, varianteSeleccionada, agregado, sinColores, onAgregar }) {
   const stockVariante = varianteSeleccionada?.stock ?? 0
   const deshabilitado = sinColores || !varianteSeleccionada || stockVariante === 0
 
@@ -22,11 +22,7 @@ export default function StickyAddToCart({ precioFinal, cuotas, varianteSeleccion
       <div className="flex items-center gap-3">
         <div className="min-w-0 shrink-0 max-w-[45%]">
           <p className="text-lg font-bold text-zinc-100 leading-tight">{formatPrecio(precioFinal)}</p>
-          {/* textoCorto: en la barra fija el espacio es mínimo y la versión con
-              el monto se cortaba a la mitad. El precio ya está justo arriba. */}
-          {cuotas ? (
-            <p className="text-[11px] font-bold text-green-400 leading-tight truncate">{cuotas.textoCorto}</p>
-          ) : varianteSeleccionada ? (
+          {varianteSeleccionada ? (
             <p className="text-[11px] text-zinc-500 leading-tight truncate">
               Talle {varianteSeleccionada.talle}{varianteSeleccionada.color ? ` · ${varianteSeleccionada.color}` : ''}
             </p>

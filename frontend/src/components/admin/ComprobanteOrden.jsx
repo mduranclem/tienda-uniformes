@@ -10,8 +10,9 @@ import { formatPrecio } from '../../lib/utils'
 // tipo de contenedores al imprimir.
 
 const ETIQUETA_PAGO = {
-  mercadopago: 'Mercado Pago',
+  transferencia: 'Transferencia',
   efectivo: 'Efectivo al retirar',
+  mercadopago: 'Mercado Pago',
 }
 
 function Dato({ etiqueta, children }) {
@@ -50,7 +51,9 @@ export default function ComprobanteOrden({ orden }) {
 
   const descuento = Number(orden.descuento)
   const costoEnvio = Number(orden.costoEnvio)
-  const cobrarEnEfectivo = orden.metodoPago === 'efectivo' && orden.estado === 'PENDIENTE'
+  // Sin pasarela, cualquier pendiente está sin cobrar: efectivo o transferencia
+  // que todavía no llegó.
+  const pendienteDeCobro = orden.estado === 'PENDIENTE'
 
   return createPortal(
     <div className="comprobante">
@@ -129,7 +132,7 @@ export default function ComprobanteOrden({ orden }) {
             </Dato>
             <Dato etiqueta="Cupón">{orden.cupon?.codigo}</Dato>
           </dl>
-          {cobrarEnEfectivo && (
+          {pendienteDeCobro && (
             <p className="comprobante-aviso">▸ PENDIENTE DE COBRO</p>
           )}
         </section>

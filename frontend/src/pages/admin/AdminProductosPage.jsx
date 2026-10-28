@@ -2,7 +2,7 @@ import { useEffect, useState, Fragment } from 'react'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatPrecio, infoCuotas, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
+import { formatPrecio, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
 import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
@@ -24,9 +24,6 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     descripcion: producto?.descripcion ?? '',
     tipo: producto?.tipo ?? (categorias[0]?.nombre ?? 'REMERA'),
     precioOferta: producto?.precioOferta ?? '',
-    cuotas: producto?.cuotas ?? '',
-    financiacion: producto?.cuotasRecargo ? 'recargo' : 'sin_interes',
-    cuotasRecargo: producto?.cuotasRecargo ?? '',
     pesoGramos: producto?.pesoGramos ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
@@ -54,14 +51,9 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
   async function handleSubmit(e) {
     e.preventDefault(); setError(''); setGuardando(true)
     try {
-      const { financiacion, ...resto } = form
       const data = {
-        ...resto,
+        ...form,
         precioOferta: form.precioOferta ? parseFloat(form.precioOferta) : null,
-        cuotas: form.cuotas ? parseInt(form.cuotas) : null,
-        cuotasRecargo: form.cuotas && financiacion === 'recargo' && form.cuotasRecargo
-          ? parseFloat(form.cuotasRecargo)
-          : null,
         pesoGramos: form.pesoGramos ? parseInt(form.pesoGramos) : null,
       }
       if (editando) await adminApi.actualizarProducto(token, producto.id, data)
@@ -117,54 +109,10 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Precio oferta">
-              <input type="number" min="0" step="0.01" value={form.precioOferta}
-                onChange={e => set('precioOferta', e.target.value)} className="input" placeholder="Vacío = sin oferta" />
-            </Campo>
-            <Campo label="Cuotas">
-              <select value={form.cuotas} onChange={e => set('cuotas', e.target.value)} className="input">
-                <option value="">No mostrar</option>
-                <option value="3">3 cuotas</option>
-                <option value="6">6 cuotas</option>
-                <option value="9">9 cuotas</option>
-                <option value="12">12 cuotas</option>
-              </select>
-            </Campo>
-          </div>
-          {form.cuotas && (
-            <div className="flex flex-col gap-2 bg-zinc-800/50 border border-zinc-700/60 rounded-lg p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Financiación">
-                  <select value={form.financiacion} onChange={e => set('financiacion', e.target.value)} className="input">
-                    <option value="sin_interes">Sin interés</option>
-                    <option value="recargo">Con recargo</option>
-                  </select>
-                </Campo>
-                {form.financiacion === 'recargo' && (
-                  <Campo label="Recargo (%)">
-                    <input type="number" min="0" max="100" step="0.1" value={form.cuotasRecargo}
-                      onChange={e => set('cuotasRecargo', e.target.value)} className="input" placeholder="15" />
-                  </Campo>
-                )}
-              </div>
-              {(() => {
-                const base = parseFloat(form.precioOferta) || precioBase
-                const preview = infoCuotas(
-                  base,
-                  parseInt(form.cuotas),
-                  form.financiacion === 'recargo' ? parseFloat(form.cuotasRecargo) || 0 : null
-                )
-                return preview ? (
-                  <p className="text-sm text-green-400">
-                    Vista previa: <span className="font-medium">{preview.texto}</span>
-                  </p>
-                ) : (
-                  <p className="text-xs text-zinc-500">Ingresá el precio para ver la vista previa.</p>
-                )
-              })()}
-            </div>
-          )}
+          <Campo label="Precio oferta">
+            <input type="number" min="0" step="0.01" value={form.precioOferta}
+              onChange={e => set('precioOferta', e.target.value)} className="input" placeholder="Vacío = sin oferta" />
+          </Campo>
           <Campo label="Peso (gramos)">
             <input type="number" min="1" step="1" value={form.pesoGramos}
               onChange={e => set('pesoGramos', e.target.value)} className="input" placeholder="Ej: 200" />
