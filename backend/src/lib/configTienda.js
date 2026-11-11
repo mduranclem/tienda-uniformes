@@ -78,6 +78,19 @@ async function leerDatosTransferencia() {
   }
 }
 
+/**
+ * Error de los datos de pago, o null si están bien. Con CBU o alias cargados el
+ * titular es obligatorio: el cliente tiene que ver a nombre de quién transfiere
+ * antes de mandar la plata. Sin cuenta cargada no se exige nada.
+ */
+function errorDatosPago(config) {
+  const cargado = clave => Boolean(String(config[clave] ?? '').trim())
+  if ((cargado('bancoCbu') || cargado('bancoAlias')) && !cargado('bancoTitular')) {
+    return 'Falta el titular de la cuenta: el cliente tiene que ver a nombre de quién transfiere.'
+  }
+  return null
+}
+
 /** Si el checkout por Mercado Pago está habilitado. Apagado salvo que se pida. */
 async function mercadoPagoEstaActivo() {
   const fila = await prisma.configTienda.findUnique({ where: { clave: 'mercadoPagoActivo' } })
@@ -90,5 +103,6 @@ module.exports = {
   leerConfigTienda,
   leerConfigPublica,
   leerDatosTransferencia,
+  errorDatosPago,
   mercadoPagoEstaActivo,
 }

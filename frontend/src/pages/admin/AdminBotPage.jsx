@@ -67,8 +67,19 @@ export default function AdminBotPage() {
     setGuardado(false)
   }
 
+  // Con cuenta cargada (CBU o alias) el titular es obligatorio: el cliente
+  // tiene que ver a nombre de quién transfiere. El backend valida lo mismo.
+  const hayCuenta = Boolean(form.bancoCbu?.trim() || form.bancoAlias?.trim())
+  const faltaTitular = hayCuenta && !form.bancoTitular?.trim()
+
   async function handleSubmit(e) {
-    e.preventDefault(); setError(''); setGuardando(true); setGuardado(false)
+    e.preventDefault(); setGuardado(false)
+    if (faltaTitular) {
+      setError('Falta el titular de la cuenta: el cliente tiene que ver a nombre de quién transfiere.')
+      document.getElementById('campo-bancoTitular')?.focus()
+      return
+    }
+    setError(''); setGuardando(true)
     try {
       const data = await adminApi.actualizarConfigBot(token, form)
       setForm(data)
@@ -102,17 +113,28 @@ export default function AdminBotPage() {
               que le pasamos los datos por WhatsApp.
             </p>
           </div>
-          {CAMPOS_BANCO.map(({ clave, label, placeholder }) => (
-            <div key={clave} className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400">{label}</label>
-              <input
-                value={form[clave] ?? ''}
-                onChange={e => set(clave, e.target.value)}
-                className="input"
-                placeholder={placeholder}
-              />
-            </div>
-          ))}
+          {CAMPOS_BANCO.map(({ clave, label, placeholder }) => {
+            const esTitular = clave === 'bancoTitular'
+            const marcar = esTitular && faltaTitular
+            return (
+              <div key={clave} className="flex flex-col gap-1.5">
+                <label htmlFor={`campo-${clave}`} className="text-xs font-medium text-zinc-400">
+                  {label}{esTitular && hayCuenta && <span className="text-red-400"> *</span>}
+                </label>
+                <input
+                  id={`campo-${clave}`}
+                  value={form[clave] ?? ''}
+                  onChange={e => { set(clave, e.target.value); if (esTitular) setError('') }}
+                  className={`input ${marcar ? 'border-red-500/60' : ''}`}
+                  placeholder={placeholder}
+                  aria-invalid={marcar || undefined}
+                />
+                {marcar && (
+                  <p className="text-xs text-red-400">Obligatorio si cargás CBU o alias.</p>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <p className="text-sm font-semibold text-zinc-200">Datos para el bot</p>
