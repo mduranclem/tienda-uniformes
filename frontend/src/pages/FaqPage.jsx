@@ -17,7 +17,7 @@ const PREGUNTAS = [
   },
   {
     q: '¿Cómo puedo pagar?',
-    a: 'Aceptamos pagos con tarjeta de crédito y débito, transferencia bancaria y billeteras virtuales. Todos los pagos son procesados de forma segura.',
+    a: 'Por transferencia bancaria: al confirmar el pedido te mostramos los datos para transferir, y nos mandás el comprobante por WhatsApp. Si retirás por el local, también podés pagar ahí cuando lo pasás a buscar, en efectivo o como prefieras. Te guardamos el pedido 7 días; si necesitás más tiempo, avisanos.',
   },
   {
     q: '¿Hacen envíos a todo el país?',

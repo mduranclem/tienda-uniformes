@@ -6,6 +6,15 @@ const adminOnly = require('../../middleware/adminOnly')
 const router = Router()
 router.use(authMiddleware, adminOnly)
 
+// undefined = no se toca; '' o null = sin precio; si no, un número positivo.
+function leerPrecio(precio) {
+  if (precio === undefined) return { valor: undefined }
+  if (precio === null || precio === '') return { valor: null }
+  const n = Number(precio)
+  if (!Number.isFinite(n) || n <= 0) return { error: 'El precio tiene que ser un número mayor a 0' }
+  return { valor: n }
+}
+
 // GET /api/admin/categorias
 router.get('/', async (_req, res, next) => {
   try {
@@ -21,8 +30,10 @@ router.post('/', async (req, res, next) => {
   try {
     const { nombre, orden } = req.body
     if (!nombre?.trim()) return res.status(400).json({ mensaje: 'nombre es requerido' })
+    const precio = leerPrecio(req.body.precio)
+    if (precio.error) return res.status(400).json({ mensaje: precio.error })
     const cat = await prisma.categoria.create({
-      data: { nombre: nombre.trim().toUpperCase(), orden: orden ?? 0 },
+      data: { nombre: nombre.trim().toUpperCase(), orden: orden ?? 0, precio: precio.valor ?? null },
     })
     res.status(201).json(cat)
   } catch (err) {
@@ -32,18 +43,33 @@ router.post('/', async (req, res, next) => {
 })
 
 // PUT /api/admin/categorias/:id
+// Al cambiar el precio se actualizan en el mismo paso todos los productos de la
+// categoría: el producto guarda una copia, que es la que se cobra.
 router.put('/:id', async (req, res, next) => {
   try {
     const { nombre, activo, orden } = req.body
-    const cat = await prisma.categoria.update({
-      where: { id: req.params.id },
-      data: {
-        nombre: nombre !== undefined ? nombre.trim().toUpperCase() : undefined,
-        activo: activo !== undefined ? activo : undefined,
-        orden: orden !== undefined ? orden : undefined,
-      },
+    const precio = leerPrecio(req.body.precio)
+    if (precio.error) return res.status(400).json({ mensaje: precio.error })
+
+    const { cat, productosActualizados } = await prisma.$transaction(async (tx) => {
+      const cat = await tx.categoria.update({
+        where: { id: req.params.id },
+        data: {
+          nombre: nombre !== undefined ? nombre.trim().toUpperCase() : undefined,
+          activo: activo !== undefined ? activo : undefined,
+          orden: orden !== undefined ? orden : undefined,
+          precio: precio.valor,
+        },
+      })
+      // Sin precio no se toca a los productos: quedan con el último que tuvieron.
+      if (cat.precio === null || precio.valor === undefined) return { cat, productosActualizados: 0 }
+      const { count } = await tx.producto.updateMany({
+        where: { tipo: cat.nombre },
+        data: { precio: cat.precio },
+      })
+      return { cat, productosActualizados: count }
     })
-    res.json(cat)
+    res.json({ ...cat, productosActualizados })
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ mensaje: 'Ya existe una categoría con ese nombre' })
     next(err)
@@ -56,89 +82,6 @@ router.delete('/:id', async (req, res, next) => {
     const enUso = await prisma.producto.count({ where: { tipo: { equals: (await prisma.categoria.findUnique({ where: { id: req.params.id }, select: { nombre: true } }))?.nombre } } })
     if (enUso > 0) return res.status(409).json({ mensaje: `No se puede eliminar: hay ${enUso} producto(s) con esta categoría. Podés desactivarla en cambio.` })
     await prisma.categoria.delete({ where: { id: req.params.id } })
-    res.status(204).end()
-  } catch (err) { next(err) }
-})
-
-// ── Bandas de precio (por talle) ────────────────────────────────────────────
-
-function talleSolapado(bandasExistentes, talles, excluirId) {
-  for (const b of bandasExistentes) {
-    if (b.id === excluirId) continue
-    const conflicto = b.talles.find(t => talles.includes(t))
-    if (conflicto) return conflicto
-  }
-  return null
-}
-
-// GET /api/admin/categorias/:id/bandas
-router.get('/:id/bandas', async (req, res, next) => {
-  try {
-    const bandas = await prisma.precioBanda.findMany({
-      where: { categoriaId: req.params.id },
-      orderBy: { createdAt: 'asc' },
-    })
-    res.json(bandas)
-  } catch (err) { next(err) }
-})
-
-// POST /api/admin/categorias/:id/bandas
-router.post('/:id/bandas', async (req, res, next) => {
-  try {
-    const { talles, precio } = req.body
-    if (!Array.isArray(talles) || !talles.length) {
-      return res.status(400).json({ mensaje: 'talles es requerido' })
-    }
-    if (!precio || Number(precio) <= 0) {
-      return res.status(400).json({ mensaje: 'precio es requerido' })
-    }
-    const existentes = await prisma.precioBanda.findMany({
-      where: { categoriaId: req.params.id },
-    })
-    const conflicto = talleSolapado(existentes, talles)
-    if (conflicto) {
-      return res.status(409).json({ mensaje: `El talle ${conflicto} ya está en otra banda` })
-    }
-    const banda = await prisma.precioBanda.create({
-      data: { categoriaId: req.params.id, talles, precio: Number(precio) },
-    })
-    res.status(201).json(banda)
-  } catch (err) { next(err) }
-})
-
-// PUT /api/admin/categorias/bandas/:bandaId
-router.put('/bandas/:bandaId', async (req, res, next) => {
-  try {
-    const { talles, precio } = req.body
-    const actual = await prisma.precioBanda.findUnique({ where: { id: req.params.bandaId } })
-    if (!actual) return res.status(404).json({ mensaje: 'Banda no encontrada' })
-    if (talles !== undefined) {
-      if (!Array.isArray(talles) || !talles.length) {
-        return res.status(400).json({ mensaje: 'talles no puede estar vacío' })
-      }
-      const existentes = await prisma.precioBanda.findMany({
-        where: { categoriaId: actual.categoriaId },
-      })
-      const conflicto = talleSolapado(existentes, talles, actual.id)
-      if (conflicto) {
-        return res.status(409).json({ mensaje: `El talle ${conflicto} ya está en otra banda` })
-      }
-    }
-    const banda = await prisma.precioBanda.update({
-      where: { id: req.params.bandaId },
-      data: {
-        talles: talles !== undefined ? talles : undefined,
-        precio: precio !== undefined ? Number(precio) : undefined,
-      },
-    })
-    res.json(banda)
-  } catch (err) { next(err) }
-})
-
-// DELETE /api/admin/categorias/bandas/:bandaId
-router.delete('/bandas/:bandaId', async (req, res, next) => {
-  try {
-    await prisma.precioBanda.delete({ where: { id: req.params.bandaId } })
     res.status(204).end()
   } catch (err) { next(err) }
 })

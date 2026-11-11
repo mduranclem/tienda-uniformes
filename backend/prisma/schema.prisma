@@ -8,11 +8,16 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ── Banners (carrusel home) ───────────────────────────────────────────────────
+// ── Destacados (portada) ──────────────────────────────────────────────────────
+// Destacados de la portada: imágenes (flyers de promos, liquidaciones) que se
+// ven arriba de todo al entrar a la tienda.
 model BannerSlide {
   id        String   @id @default(cuid())
   url       String
-  titulo    String?
+  titulo    String?  // texto alternativo de la imagen
+  // Adónde lleva al tocarla: una ruta de la tienda ("/producto/…", "/colegio/…")
+  // o una dirección completa. null = la imagen no es un link.
+  enlace    String?
   orden     Int      @default(0)
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -38,13 +43,17 @@ model Categoria {
   nombre    String   @unique
   activo    Boolean  @default(true)
   orden     Int      @default(0)
+  // Precio de la prenda, igual para todos los talles. Es la fuente de verdad:
+  // Producto.precio guarda una copia que se actualiza al guardar la categoría.
+  // null = todavía sin precio (no se pueden crear productos de esa categoría).
+  precio    Decimal? @db.Decimal(10, 2)
   createdAt DateTime @default(now())
 
   preciosBanda PrecioBanda[]
 }
 
-// Precio de una categoría por rango de talles (cada categoría ya es específica,
-// ej. "CHOMBA BORDADA" vs "CHOMBA LISA" son categorías separadas)
+// EN DESUSO desde 2026-11: el precio pasó a ser uno por prenda (Categoria.precio).
+// La tabla queda con los precios por talle viejos como respaldo; nada la lee.
 model PrecioBanda {
   id          String    @id @default(cuid())
   categoriaId String
@@ -215,7 +224,11 @@ model Orden {
   descuento      Decimal     @default(0) @db.Decimal(10, 2)
   costoEnvio     Decimal     @default(0) @db.Decimal(10, 2)
   total          Decimal     @db.Decimal(10, 2)
-  metodoPago     String?
+  metodoPago     String?     // "transferencia" | "efectivo" ("mercadopago" en pedidos viejos)
+  // Hasta cuándo se espera el pago de un pedido PENDIENTE. Pasada la fecha se
+  // cancela solo y el stock vuelve. Desde el panel se puede extender.
+  venceEl        DateTime?
+  // Solo pedidos viejos, de cuando se cobraba con Mercado Pago.
   mpPaymentId    String?
   mpPreferenceId String?
   cuponId        String?

@@ -88,6 +88,7 @@ export const adminApi = {
   },
   obtenerOrden: (token, id) => adminRequest(`/admin/ordenes/${id}`, {}, token),
   cambiarEstadoOrden: (token, id, estado, nota) => adminRequest(`/admin/ordenes/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado, nota }) }, token),
+  extenderPlazoOrden: (token, id) => adminRequest(`/admin/ordenes/${id}/extender-plazo`, { method: 'POST' }, token),
   // Cupones
   listarCupones: (token) => adminRequest('/admin/cupones', {}, token),
   crearCupon: (token, data) => adminRequest('/admin/cupones', { method: 'POST', body: JSON.stringify(data) }, token),
@@ -117,11 +118,6 @@ export const adminApi = {
   actualizarCategoria: (token, id, data) => adminRequest(`/admin/categorias/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
   eliminarCategoria: (token, id) => adminRequest(`/admin/categorias/${id}`, { method: 'DELETE' }, token),
   // Precios por banda (categoría + talle)
-  listarBandas: (token, categoriaId) => adminRequest(`/admin/categorias/${categoriaId}/bandas`, {}, token),
-  crearBanda: (token, categoriaId, data) => adminRequest(`/admin/categorias/${categoriaId}/bandas`, { method: 'POST', body: JSON.stringify(data) }, token),
-  actualizarBanda: (token, bandaId, data) => adminRequest(`/admin/categorias/bandas/${bandaId}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  eliminarBanda: (token, bandaId) => adminRequest(`/admin/categorias/bandas/${bandaId}`, { method: 'DELETE' }, token),
-  recalcularPrecios: (token, productoId) => adminRequest(`/admin/productos/${productoId}/recalcular-precios`, { method: 'POST' }, token),
   // Puntos de venta
   listarPuntosVenta: (token) => adminRequest('/admin/puntos-venta', {}, token),
   crearPuntoVenta: (token, data) => adminRequest('/admin/puntos-venta', { method: 'POST', body: JSON.stringify(data) }, token),

@@ -19,8 +19,19 @@ const SALUDO = 'Hola! Tengo una consulta sobre los uniformes'
  * Escribir el mensaje por el cliente no es un detalle: el que abre WhatsApp con
  * el chat en blanco muchas veces no escribe nada y se pierde la consulta.
  */
-export function whatsappUrl(mensaje = SALUDO) {
-  return `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`
+export function whatsappUrl(mensaje = SALUDO, numero = WHATSAPP_NUMERO) {
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
+}
+
+/**
+ * Pasa un número cargado a mano en el panel ("341 743 4552", "0341…",
+ * "+54 9 341…") al formato de wa.me. Sin dígitos devuelve null.
+ */
+export function numeroWhatsapp(texto) {
+  const digitos = String(texto ?? '').replace(/\D/g, '')
+  if (!digitos) return null
+  if (digitos.startsWith('54')) return digitos
+  return `549${digitos.replace(/^0/, '')}`
 }
 
 export const WHATSAPP_URL = whatsappUrl()

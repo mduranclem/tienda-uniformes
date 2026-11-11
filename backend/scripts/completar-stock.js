@@ -12,10 +12,8 @@
 // con sus colores declarados: no inventa talles.
 //
 // Con --todos-los-talles usa la grilla completa (4 a ESP) para todos los
-// productos. Requiere que la categoría tenga precio para cada talle; si falta
-// alguno se avisa y no se crea esa variante, porque una variante sin precio
-// propio hereda el precio base del producto —el del talle más chico— y se
-// vendería más barata de lo que corresponde.
+// productos. Las variantes no llevan precio: todos los talles cobran el
+// precio del producto.
 //
 // Cada cambio de stock queda registrado en MovimientoStock, que es el historial
 // que alimenta /admin/movimientos-stock. Saltearlo dejaría el stock y su
@@ -46,14 +44,6 @@ async function main() {
   const todosLosTalles = process.argv.includes('--todos-los-talles')
   const objetivo = leerStockObjetivo()
 
-  // Los precios por talle viven en las bandas de cada categoría. Se cargan de
-  // una y se resuelven en memoria: consultarlas por variante serían cientos de
-  // viajes contra el pooler.
-  const categorias = await prisma.categoria.findMany({ include: { preciosBanda: true } })
-  const bandasPorTipo = new Map(categorias.map(c => [c.nombre, c.preciosBanda]))
-  const precioDeTalle = (tipo, talle) =>
-    (bandasPorTipo.get(tipo) ?? []).find(b => b.talles.includes(talle))?.precio ?? null
-
   const punto = await prisma.puntoDeVenta.findFirst({ where: { nombre: PUNTO_VENTA } })
   if (!punto) {
     console.error(`No existe el punto de venta "${PUNTO_VENTA}". Crealo en /admin/puntos-venta.`)
@@ -74,7 +64,6 @@ async function main() {
   let creadas = 0
   let ajustadas = 0
   const sinTalles = []
-  const sinPrecio = []
 
   for (const producto of productos) {
     const talles = todosLosTalles
@@ -97,21 +86,10 @@ async function main() {
       const existe = producto.variantes.some(v => v.talle === combo.talle && v.color === combo.color)
       if (existe) continue
 
-      // La banda de la categoría manda; la hermana del mismo talle es el
-      // respaldo para productos cuya categoría no tenga bandas cargadas.
-      const hermana = producto.variantes.find(v => v.talle === combo.talle)
-      const precio = precioDeTalle(producto.tipo, combo.talle) ?? hermana?.precio ?? null
-
-      if (precio === null) {
-        sinPrecio.push(`${producto.nombre} — talle ${combo.talle}`)
-        continue
-      }
-
       nuevas.push({
         productoId: producto.id,
         talle: combo.talle,
         color: combo.color,
-        precio,
         stock: objetivo,
       })
     }
@@ -167,13 +145,6 @@ async function main() {
     `\n${creadas} variante(s) ${aplicar ? 'creadas' : 'a crear'} · ` +
     `${ajustadas} ${aplicar ? 'ajustadas' : 'a ajustar'} a stock ${objetivo}.`
   )
-
-  if (sinPrecio.length) {
-    console.log('\n⚠️  Sin precio en la banda de su categoría, no se crearon:')
-    sinPrecio.slice(0, 15).forEach(x => console.log('   ·', x))
-    if (sinPrecio.length > 15) console.log(`   … y ${sinPrecio.length - 15} más`)
-    console.log('   Cargá esos talles en /admin/categorias y volvé a correr esto.')
-  }
 
   if (sinTalles.length) {
     console.log('\n⚠️  Sin ningún talle cargado, no se pudo completar nada:')

@@ -8,9 +8,9 @@ import VariantSelector from '../components/product/VariantSelector'
 import TablaTalles from '../components/product/TablaTalles'
 import StickyAddToCart from '../components/product/StickyAddToCart'
 import Spinner from '../components/ui/Spinner'
-import { formatPrecio, titleCase, infoCuotas } from '../lib/utils'
+import { formatPrecio, titleCase } from '../lib/utils'
 import { trackViewContent, trackAddToCart } from '../lib/metaPixel'
-import { ShoppingCart, ChevronLeft, GraduationCap, Truck, CreditCard } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, GraduationCap, Truck } from 'lucide-react'
 
 export default function ProductoPage() {
   const { id } = useParams()
@@ -171,7 +171,6 @@ export default function ProductoPage() {
   const descuentoPct = tieneOferta
     ? Math.round((1 - Number(producto.precioOferta) / Number(producto.precio)) * 100)
     : 0
-  const cuotas = infoCuotas(precioFinal, producto.cuotas, producto.cuotasRecargo)
   const colorActual = colorSeleccionado ?? varianteSeleccionada?.color ?? null
 
   return (
@@ -218,15 +217,9 @@ export default function ProductoPage() {
             ) : (
               <p className="text-3xl font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
             )}
-            {cuotas && (
-              <p className="mt-2 inline-flex items-center gap-1.5 bg-green-500/25 border border-green-400/50 text-green-300 text-sm font-bold px-3 py-1.5 rounded-lg">
-                <CreditCard className="w-4 h-4 flex-shrink-0" />
-                {cuotas.texto}
-              </p>
-            )}
             {/* Contraste subido: emerald-400 sobre emerald/10 quedaba por
                 debajo del mínimo legible sobre el fondo oscuro. */}
-            <div className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
               <Truck className="h-3.5 w-3.5 flex-shrink-0" />
               Envío gratis a partir de 2 unidades
             </div>
@@ -341,7 +334,6 @@ export default function ProductoPage() {
       {/* Barra de compra fija — solo mobile */}
       <StickyAddToCart
         precioFinal={precioFinal}
-        cuotas={cuotas}
         varianteSeleccionada={varianteSeleccionada}
         agregado={agregado}
         sinColores={!tieneCargadoColores}

@@ -2,6 +2,7 @@ const { Resend } = require('resend')
 const { esZonaLocal } = require('../lib/envios')
 const { leerConfigPublica } = require('../lib/configTienda')
 const { WHATSAPP_LEGIBLE } = require('../lib/contacto')
+const { formatearVencimiento } = require('./mensajesEstado')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -46,11 +47,11 @@ function htmlComoPagar(orden, config) {
         ${cuerpo}
         <p style="margin:0;font-size:13px;color:#fbbf24;line-height:1.5;">
           Enviá el comprobante de transferencia al WhatsApp
-          <strong style="color:#fcd34d;">${WHATSAPP_LEGIBLE}</strong>
+          <strong style="color:#fcd34d;">${config.whatsappComprobantes?.trim() || WHATSAPP_LEGIBLE}</strong>
           indicando tu número de pedido <strong style="color:#fcd34d;">#${orden.numero}</strong>.
         </p>
         <p style="margin:8px 0 0;font-size:12px;color:#71717a;line-height:1.5;">
-          Preparamos el pedido en cuanto confirmemos el pago.
+          Preparamos el pedido en cuanto confirmemos el pago.${orden.venceEl ? ` Te lo guardamos hasta el ${formatearVencimiento(orden.venceEl)}; si necesitás más tiempo, avisanos.` : ''}
         </p>
       </div>`
   }

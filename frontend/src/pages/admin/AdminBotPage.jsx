@@ -23,6 +23,7 @@ const CAMPOS_BANCO = [
   { clave: 'bancoCbu', label: 'CBU', placeholder: '0000000000000000000000' },
   { clave: 'bancoAlias', label: 'Alias', placeholder: 'mi.alias.mp' },
   { clave: 'bancoCuit', label: 'CUIT / CUIL', placeholder: '20-12345678-9' },
+  { clave: 'whatsappComprobantes', label: 'WhatsApp para recibir comprobantes', placeholder: '341 743 4552 (vacío: el número de contacto de la tienda)' },
 ]
 
 // Estados de pedido que pueden avisar al cliente por WhatsApp.
@@ -30,13 +31,14 @@ const CAMPOS_BANCO = [
 // información que no tenga, y cada mensaje de más gasta la paciencia de la que
 // dependen los que sí importan.
 const ESTADOS_NOTIFICABLES = [
+  { valor: 'PENDIENTE', label: 'Pedido recibido (con los datos para pagar)' },
   { valor: 'PAGADA', label: 'Pago confirmado' },
   { valor: 'PREPARANDO', label: 'Preparando el pedido' },
   { valor: 'LISTA', label: 'Listo para retirar / sale a entregarse' },
   { valor: 'ENTREGADA', label: 'Entregado' },
   { valor: 'CANCELADA', label: 'Cancelado' },
 ]
-const ESTADOS_POR_DEFECTO = 'PAGADA,LISTA,ENTREGADA,CANCELADA'
+const ESTADOS_POR_DEFECTO = 'PENDIENTE,PAGADA,LISTA,ENTREGADA,CANCELADA'
 
 export default function AdminBotPage() {
   const { sesion } = useAuth()
@@ -82,13 +84,38 @@ export default function AdminBotPage() {
   return (
     <div className="p-6 max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-100">Configuración del bot / tienda</h1>
+        <h1 className="text-xl font-bold text-zinc-100">Configuración de la tienda</h1>
         <p className="text-sm text-zinc-500">
-          Estos textos los usa el bot de WhatsApp para responder preguntas frecuentes (endpoint <code>/api/bot/info</code>).
+          Datos de pago y textos que usa el bot de WhatsApp para responder preguntas frecuentes.
+          Ningún campo es obligatorio.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-zinc-900 rounded-xl border border-zinc-800 p-5 flex flex-col gap-4">
+        {/* Datos para transferencias */}
+        <div className="flex flex-col gap-4 pb-4 border-b border-zinc-800">
+          <div>
+            <p className="text-sm font-semibold text-zinc-200">Datos de pago</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Se los mostramos al cliente al confirmar el pedido y se los mandamos por mail y WhatsApp.
+              Cargá los que tengas: alcanza con el CBU o el alias. Sin ninguno de los dos, le avisamos
+              que le pasamos los datos por WhatsApp.
+            </p>
+          </div>
+          {CAMPOS_BANCO.map(({ clave, label, placeholder }) => (
+            <div key={clave} className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-400">{label}</label>
+              <input
+                value={form[clave] ?? ''}
+                onChange={e => set(clave, e.target.value)}
+                className="input"
+                placeholder={placeholder}
+              />
+            </div>
+          ))}
+        </div>
+
+        <p className="text-sm font-semibold text-zinc-200">Datos para el bot</p>
         {CAMPOS.map(({ clave, label, textarea, placeholder }) => (
           <div key={clave} className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-zinc-400">{label}</label>
@@ -109,28 +136,6 @@ export default function AdminBotPage() {
             )}
           </div>
         ))}
-
-        {/* Datos para transferencias */}
-        <div className="flex flex-col gap-4 pt-4 border-t border-zinc-800">
-          <div>
-            <p className="text-sm font-semibold text-zinc-200">Datos para transferencias</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Se los mostramos al cliente al confirmar el pedido y se los mandamos por mail.
-              Sin CBU ni alias no se le puede pedir que transfiera.
-            </p>
-          </div>
-          {CAMPOS_BANCO.map(({ clave, label, placeholder }) => (
-            <div key={clave} className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400">{label}</label>
-              <input
-                value={form[clave] ?? ''}
-                onChange={e => set(clave, e.target.value)}
-                className="input"
-                placeholder={placeholder}
-              />
-            </div>
-          ))}
-        </div>
 
         {/* Mercado Pago */}
         <div className="flex flex-col gap-2 pt-4 border-t border-zinc-800">

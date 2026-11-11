@@ -1,23 +1,20 @@
-// Carga la lista de precios de la tienda: las categorías y sus bandas.
+// Carga la lista de precios de la tienda: un precio por categoría (prenda),
+// igual para todos los talles, y lo copia a los productos de cada categoría.
 //
 // NO crea productos. Cada entrada de la lista es una categoría —un tipo de
-// prenda con su escala de precios—, no algo que se venda: los productos son
-// las prendas concretas de cada colegio y se cargan desde el panel.
+// prenda con su precio—, no algo que se venda: los productos son las prendas
+// concretas de cada colegio y se cargan desde el panel.
 //
 //   node scripts/cargar-lista-precios.js --dry-run   (simula, no escribe)
 //   node scripts/cargar-lista-precios.js             (aplica)
 //
-// Después hay que propagar a los productos ya cargados:
-//   node scripts/recalcular-precios-productos.js
+// Los precios son los FINALES que ve el cliente: la lista "precio promo, solo
+// efectivo o transferencia" de noviembre de 2026. Se cobra por transferencia o
+// en el local, sin recargo de pasarela.
 //
-// Los precios son los FINALES que ve el cliente: no se les suma el recargo de
-// Mercado Pago. Si alguna vez se vuelve a aplicar, se hace con
-// ajustar-precios-mp.js y no tocando esta lista.
-//
-// La fuente de verdad del precio es la banda (categoría + rango de talles), no
-// el producto: el producto y la variante guardan una copia que es la que se
-// muestra. Por eso acá se cargan las bandas y no precios sueltos — escribirlos
-// producto por producto los perdería en la próxima recalculación.
+// La fuente de verdad es Categoria.precio; Producto.precio guarda una copia, que
+// es la que se cobra. Desde el panel, guardar el precio de una categoría hace
+// las dos cosas juntas; este script hace lo mismo para toda la lista de una vez.
 //
 // Es idempotente: correrlo dos veces deja lo mismo.
 
@@ -25,138 +22,103 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 
 const prisma = require('../src/lib/prisma')
 
-// Los cuatro rangos, en el orden en que se muestran.
-//
-// 'ESP' va primero en su rango a propósito: la comparación de más abajo busca
-// la banda anterior por el primer talle de la lista, así que dejándolo al
-// frente sigue reconociendo las bandas ya cargadas. Los especiales conviven con
-// el talle ESP que ya usan las variantes cargadas, en vez de reemplazarlo: son
-// 54 variantes con stock y cambiarles el talle las dejaría sin precio.
-const BANDAS = [
-  { clave: '4-10', talles: ['4', '6', '8', '10'] },
-  { clave: '12-16', talles: ['12', '14', '16'] },
-  { clave: 'S-XL', talles: ['S', 'M', 'L', 'XL'] },
-  { clave: 'ESP', talles: ['ESP', '2XL', '3XL', '6ESP', '8ESP'] },
-]
-
 // `categoria` es el nombre exacto en la tabla Categoria, que es también lo que
 // guarda Producto.tipo. Para renombrar una categoría no alcanza con cambiarla
 // acá: hay que arrastrar el tipo de cada producto, y de eso se ocupa
 // scripts/renombrar-categoria.js.
 const LISTA = [
-  // ── Colegiales: llevan escudo, se producen a pedido ──────────────────────
-  // Lista de septiembre 2026. Las bordadas y las dos remeras se actualizaron;
-  // las estampadas que no vinieron en la lista mantienen el precio de agosto.
-  { nombre: 'Remera de algodón', categoria: 'REMERA BORDADA', precios: [23170, 24430, 25480, 28000] },
-  { nombre: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precios: [20230, 21385, 21805, 25480] },
-  { nombre: 'Short sin frisa bordado', categoria: 'SHORT SIN FRISA BORDADO', precios: [28945, 30730, 33355, 36715] },
-  { nombre: 'Short sin frisa estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', precios: [28000, 30000, 31000, 33000] },
-  { nombre: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precios: [34300, 36820, 37555, 40075] },
-  { nombre: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', precios: [36500, 37800, 39100, 42500] },
-  { nombre: 'Buzo cuello redondo con frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precios: [38185, 40495, 43120, 46270] },
-  { nombre: 'Buzo cuello redondo con frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', precios: [39800, 43000, 46200, 51800] },
-  { nombre: 'Buzo canguro con frisa bordado', categoria: 'BUZO CANGURO CON FRISA BORDADO', precios: [42805, 47215, 48475, 50890] },
-  { nombre: 'Pantalón largo con frisa bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precios: [38185, 40495, 43120, 46270] },
-  { nombre: 'Pantalón largo con frisa estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', precios: [42500, 43800, 46800, 51100] },
-  { nombre: 'Campera canguro con frisa bordada', categoria: 'CAMPERA CANGURO CON FRISA BORDADO', precios: [50680, 53830, 55615, 58975] },
-  { nombre: 'Campera canguro con frisa estampada', categoria: 'CAMPERA CANGURO CON FRISA ESTAMPADO', precios: [50100, 53100, 55800, 60200] },
-  { nombre: 'Buzo de acetato', categoria: 'BUZO ACETATO', precios: [56100, 58800, 61500, 66800] },
+  { prenda: 'Remera lisa', categoria: 'REMERA LISA', precio: 10000 },
+  { prenda: 'Remera bordada', categoria: 'REMERA BORDADA', precio: 14000 },
+  { prenda: 'Remera estampada', categoria: 'REMERA ESTAMPADA', precio: 12000 },
 
-  // ── Lisos: sin escudo, stock permanente ──────────────────────────────────
-  { nombre: 'Chomba lisa', categoria: 'CHOMBA LISA', precios: [31685, 33110, 34454, 37405] },
-  { nombre: 'Remera lisa', categoria: 'REMERA LISA', precios: [15400, 16700, 18100, 21400] },
-  { nombre: 'Remera lisa manga larga', categoria: 'REMERA MANGAS LARGAS LISA', precios: [18800, 20100, 21400, 24100] },
-  { nombre: 'Short liso colegial', categoria: 'SHORT SIN FRISA LISO', precios: [22800, 24800, 26100, 29300] },
-  { nombre: 'Chaleco liso polar azul marino', categoria: 'CHALECO LISO POLAR', precios: [25400, 28100, 30800, 33400] },
-  { nombre: 'Campera polar lisa azul marino', categoria: 'CAMPERA LISA POLAR', precios: [33400, 35400, 38100, 40800] },
-  { nombre: 'Pantalón jogging liso con frisa', categoria: 'PANTALON LARGO CON FRISA LISO', precios: [36000, 38400, 42100, 46100] },
-  { nombre: 'Campera lisa canguro con frisa', categoria: 'CAMPERA CANGURO CON FRISA LISO', precios: [49190, 52050, 54910, 59200] },
-  { nombre: 'Buzo canguro liso con frisa', categoria: 'BUZO CANGURO CON FRISA LISO', precios: [36580, 42040, 44900, 49190] },
-  { nombre: 'Pantalón cargo azul-gris gabardina', categoria: 'PANTALON CARGO GABARDINA', precios: [56000, 61000, 66000, 71000] },
+  { prenda: 'Chomba bordada', categoria: 'CHOMBA BORDADA', precio: 25000 },
+  { prenda: 'Chomba estampada', categoria: 'CHOMBA ESTAMPADA', precio: 23000 },
+
+  { prenda: 'Jogging frisa / rústico liso', categoria: 'PANTALON LARGO CON FRISA LISO', precio: 25000 },
+  { prenda: 'Jogging frisa / rústico bordado', categoria: 'PANTALON LARGO CON FRISA BORDADO', precio: 28000 },
+  { prenda: 'Jogging frisa / rústico estampado', categoria: 'PANTALON LARGO CON FRISA ESTAMPADO', precio: 26000 },
+
+  { prenda: 'Short rústico liso', categoria: 'SHORT SIN FRISA LISO', precio: 12000 },
+  { prenda: 'Short rústico bordado', categoria: 'SHORT SIN FRISA BORDADO', precio: 15000 },
+  { prenda: 'Short rústico estampado', categoria: 'SHORT SIN FRISA ESTAMPADO', precio: 13000 },
+
+  { prenda: 'Buzo básico de frisa liso', categoria: 'BUZO CUELLO RED CON FRISA LISO', precio: 25000 },
+  { prenda: 'Buzo básico de frisa bordado', categoria: 'BUZO CUELLO RED CON FRISA BORDADO', precio: 28000 },
+  { prenda: 'Buzo básico de frisa estampado', categoria: 'BUZO CUELLO RED CON FRISA ESTAMPADO', precio: 26000 },
+
+  { prenda: 'Buzo canguro liso', categoria: 'BUZO CANGURO CON FRISA LISO', precio: 27000 },
+  { prenda: 'Buzo canguro bordado', categoria: 'BUZO CANGURO CON FRISA BORDADO', precio: 30000 },
+  { prenda: 'Buzo canguro estampado', categoria: 'BUZO CANGURO CON FRISA ESTAMPADO', precio: 28000 },
+
+  // No es la campera canguro: es otra prenda, y la canguro no vino en la lista.
+  { prenda: 'Campera básica frisa / rústico lisa', categoria: 'CAMPERA BASICA CON FRISA LISO', precio: 33000 },
+  { prenda: 'Campera básica frisa / rústico bordada', categoria: 'CAMPERA BASICA CON FRISA BORDADO', precio: 36000 },
+  { prenda: 'Campera básica frisa / rústico estampada', categoria: 'CAMPERA BASICA CON FRISA ESTAMPADO', precio: 34000 },
+
+  { prenda: 'Pantalón cargo liso', categoria: 'PANTALON CARGO GABARDINA', precio: 35000 },
+  { prenda: 'Pantalón cargo bordado', categoria: 'PANTALON CARGO GABARDINA BORDADO', precio: 40000 },
+  { prenda: 'Pantalón cargo estampado', categoria: 'PANTALON CARGO GABARDINA ESTAMPADO', precio: 38000 },
+
+  // ── Productos especiales ─────────────────────────────────────────────────
+  { prenda: 'Buzo con tejidos y bordados (Nuevo Siglo y Oblatas)', categoria: 'BUZO CON TEJIDOS Y BORDADOS', precio: 39000 },
+  { prenda: 'Mochila Nuevo Siglo', categoria: 'MOCHILA', precio: 30000 },
 ]
 
-const pesos = n => '$' + Number(n).toLocaleString('es-AR')
+const pesos = n => (n == null ? '—' : '$' + Number(n).toLocaleString('es-AR'))
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run')
   const marca = dryRun ? '·' : '✓'
 
-  const existentes = await prisma.categoria.findMany({ include: { preciosBanda: true } })
+  const existentes = await prisma.categoria.findMany()
   const porNombre = new Map(existentes.map(c => [c.nombre, c]))
-  const maxOrden = existentes.reduce((m, c) => Math.max(m, c.orden), 0)
-  let orden = maxOrden
+  let orden = existentes.reduce((m, c) => Math.max(m, c.orden), 0)
 
   let categoriasNuevas = 0
-  let bandasEscritas = 0
+  let preciosCambiados = 0
+  let productosActualizados = 0
 
   for (const item of LISTA) {
-    // ── Categoría ──────────────────────────────────────────────────────────
-    let categoria = porNombre.get(item.categoria)
-    if (!categoria) {
-      orden++
-      if (!dryRun) {
-        categoria = await prisma.categoria.create({
-          data: { nombre: item.categoria, orden, activo: true },
-        })
-      }
-      categoriasNuevas++
-      console.log(`${marca} categoría nueva: ${item.categoria}`)
-    }
-
-    // ── Bandas de precio ───────────────────────────────────────────────────
-    // Se reemplazan enteras en vez de actualizar una por una: así el resultado
-    // no depende de cómo estaban cargadas antes (había rangos con los talles
-    // en otro orden, y alguno de más).
-    const anterior = (categoria?.preciosBanda ?? [])
-    const cambios = BANDAS.map((banda, i) => {
-      const previo = anterior.find(b => b.talles.includes(banda.talles[0]))
-      const antes = previo ? Number(previo.precio) : null
-      return { banda, precio: item.precios[i], antes }
+    const categoria = porNombre.get(item.categoria)
+    const antes = categoria?.precio == null ? null : Number(categoria.precio)
+    const productos = await prisma.producto.count({
+      where: { tipo: item.categoria, precio: { not: item.precio } },
     })
+    if (antes === item.precio && productos === 0) continue
 
-    const hayCambio = cambios.some(c => c.antes !== c.precio)
-    if (hayCambio && !dryRun && categoria) {
-      await prisma.$transaction([
-        prisma.precioBanda.deleteMany({ where: { categoriaId: categoria.id } }),
-        prisma.precioBanda.createMany({
-          data: BANDAS.map((banda, i) => ({
-            categoriaId: categoria.id,
-            talles: banda.talles,
-            precio: item.precios[i],
-          })),
-        }),
-      ])
-    }
-    if (hayCambio) {
-      bandasEscritas += BANDAS.length
-      const detalle = cambios
-        .map(c => `${c.banda.clave} ${c.antes === null ? '—' : pesos(c.antes)}→${pesos(c.precio)}`)
-        .join('  ')
-      console.log(`${marca} ${item.categoria.padEnd(38)} ${detalle}`)
-    }
+    if (!categoria) categoriasNuevas++
+    if (antes !== item.precio) preciosCambiados++
+    productosActualizados += productos
+    console.log(
+      `${marca} ${item.categoria.padEnd(38)} ${pesos(antes).padStart(9)} → ${pesos(item.precio).padStart(9)}` +
+      `${categoria ? '' : '  (categoría nueva)'}${productos ? `  · ${productos} producto(s)` : ''}`
+    )
 
+    if (dryRun) continue
+    await prisma.$transaction([
+      categoria
+        ? prisma.categoria.update({ where: { id: categoria.id }, data: { precio: item.precio } })
+        : prisma.categoria.create({ data: { nombre: item.categoria, orden: ++orden, activo: true, precio: item.precio } }),
+      prisma.producto.updateMany({ where: { tipo: item.categoria }, data: { precio: item.precio } }),
+    ])
   }
 
   // ── Resumen ──────────────────────────────────────────────────────────────
   console.log(
-    `\n${categoriasNuevas} categoría(s) nueva(s) y ${bandasEscritas} banda(s) ` +
-    `${dryRun ? 'a escribir' : 'escritas'}.`
+    `\n${preciosCambiados} precio(s) de categoría, ${categoriasNuevas} categoría(s) nueva(s) y ` +
+    `${productosActualizados} producto(s) ${dryRun ? 'a actualizar' : 'actualizados'}.`
   )
 
   // Categorías que existen en la base pero no están en la lista: quedan con el
-  // precio viejo y conviene decirlo, no que se descubra en una venta.
+  // precio que tenían y conviene decirlo, no que se descubra en una venta.
   const enLista = new Set(LISTA.map(i => i.categoria))
   const fuera = existentes.filter(c => !enLista.has(c.nombre))
   if (fuera.length) {
-    console.log('\n⚠️  Categorías que NO están en la lista y mantienen su precio anterior:')
+    console.log('\n⚠️  Categorías que NO están en la lista (cargales el precio en /admin/categorias):')
     for (const c of fuera) {
       const n = await prisma.producto.count({ where: { tipo: c.nombre } })
-      console.log(`   · ${c.nombre.padEnd(38)} ${n} producto(s)`)
+      console.log(`   · ${c.nombre.padEnd(38)} ${pesos(c.precio).padStart(9)}  ${n} producto(s)`)
     }
-  }
-
-  if (!dryRun) {
-    console.log('\nAhora corré:  node scripts/recalcular-precios-productos.js')
   }
 }
 

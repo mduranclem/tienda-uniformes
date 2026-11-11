@@ -23,6 +23,9 @@ const CLAVES = [
   'bancoCbu',
   'bancoAlias',
   'bancoCuit',
+  // WhatsApp al que el cliente manda el comprobante, en cualquier formato
+  // ("341 743 4552"). Vacío = el número de contacto de lib/contacto.js.
+  'whatsappComprobantes',
   // '1' habilita el checkout por Mercado Pago; cualquier otra cosa lo deja
   // apagado. Hoy se cobra por transferencia con confirmación manual, pero el
   // código de MP sigue entero para poder volver atrás sin deploy.
@@ -39,6 +42,7 @@ const CLAVES_PUBLICAS = [
   'bancoCbu',
   'bancoAlias',
   'bancoCuit',
+  'whatsappComprobantes',
   'mercadoPagoActivo',
   'direccion',
 ]
@@ -57,6 +61,23 @@ function leerConfigPublica() {
   return leerClaves(CLAVES_PUBLICAS)
 }
 
+/**
+ * Datos para transferir, para los avisos que salen del backend. Ningún campo es
+ * obligatorio: se muestra lo que esté cargado. null si no hay ni CBU ni alias,
+ * porque sin eso no hay adónde transferir.
+ */
+async function leerDatosTransferencia() {
+  const c = await leerClaves(['bancoNombre', 'bancoTitular', 'bancoCbu', 'bancoAlias', 'bancoCuit'])
+  if (!c.bancoCbu.trim() && !c.bancoAlias.trim()) return null
+  return {
+    alias: c.bancoAlias.trim(),
+    cbu: c.bancoCbu.trim(),
+    titular: c.bancoTitular.trim(),
+    banco: c.bancoNombre.trim(),
+    cuit: c.bancoCuit.trim(),
+  }
+}
+
 /** Si el checkout por Mercado Pago está habilitado. Apagado salvo que se pida. */
 async function mercadoPagoEstaActivo() {
   const fila = await prisma.configTienda.findUnique({ where: { clave: 'mercadoPagoActivo' } })
@@ -68,5 +89,6 @@ module.exports = {
   CLAVES_PUBLICAS,
   leerConfigTienda,
   leerConfigPublica,
+  leerDatosTransferencia,
   mercadoPagoEstaActivo,
 }

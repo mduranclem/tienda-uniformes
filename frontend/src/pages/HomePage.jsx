@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { colegiosApi, productosApi, primeraCompraApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
+import Destacados from '../components/home/Destacados'
 import { useAuth } from '../context/AuthContext'
 import { Sparkles, Truck, Store, Lock, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import { useSwipe } from '../lib/useSwipe'
@@ -246,6 +247,7 @@ export default function HomePage() {
 
   return (
     <div>
+      <Destacados />
       <HeroCarrusel slides={slides} imgLisos={imgLisos} imgColegial={imgColegial} />
 
       <SeccionProductos

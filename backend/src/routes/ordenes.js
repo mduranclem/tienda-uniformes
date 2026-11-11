@@ -2,7 +2,8 @@ const { Router } = require('express')
 const prisma = require('../lib/prisma')
 const { authMiddleware, authOpcional } = require('../middleware/auth')
 const { enviarConfirmacionCompra } = require('../services/email')
-const { notificarNuevoPedido } = require('../services/notificaciones')
+const { notificarNuevoPedido, notificarCambioEstado } = require('../services/notificaciones')
+const { calcularVencimiento } = require('../lib/vencimientoOrden')
 const { esZonaLocal, costoEnvioLocal } = require('../lib/envios')
 const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
 const { esFechaValida, esFranjaValida, FRANJAS } = require('../lib/agendaEntrega')
@@ -213,6 +214,7 @@ router.post('/', authOpcional, async (req, res, next) => {
           total,
           cuponId: cuponValido ? cuponId : null,
           estado: 'PENDIENTE',
+          venceEl: calcularVencimiento(),
           items: {
             create: items.map(i => {
               const variante = variantes.find(v => v.id === i.varianteId)
@@ -264,6 +266,8 @@ router.post('/', authOpcional, async (req, res, next) => {
       const datos = { ...ordenCompleta, emailGuest: email, nombreGuest: nombre, telefonoGuest: telefono }
       enviarConfirmacionCompra(datos)
       notificarNuevoPedido(datos)
+      // WhatsApp al cliente con cómo pagar (datos para transferir y plazo).
+      notificarCambioEstado(datos, 'PENDIENTE')
     })
 
     res.status(201).json({ id: orden.id, numero: orden.numero })
