@@ -3,7 +3,7 @@ const prisma = require('../../lib/prisma')
 const { authMiddleware } = require('../../middleware/auth')
 const adminOnly = require('../../middleware/adminOnly')
 const { verificarAlertasStock } = require('../../services/alertasStock')
-const { resolverPrecioBanda, precioBaseCategoria } = require('../../lib/preciosBanda')
+const { precioCategoria } = require('../../lib/precioCategoria')
 
 const router = Router()
 
@@ -42,9 +42,9 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ mensaje: 'nombre es requerido' })
     }
     const tipoFinal = tipo ?? 'REMERA'
-    const precio = await precioBaseCategoria(prisma, { tipo: tipoFinal })
+    const precio = await precioCategoria(prisma, { tipo: tipoFinal })
     if (precio === null) {
-      return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría antes de crear el producto' })
+      return res.status(400).json({ mensaje: 'Cargá el precio de esta categoría antes de crear el producto' })
     }
     const producto = await prisma.producto.create({
       data: {
@@ -58,7 +58,8 @@ router.post('/', async (req, res, next) => {
         pesoGramos: pesoGramos ? Number(pesoGramos) : null,
         colegioId: colegioId || null,
         imagenes: imagenes?.length ? { create: imagenes } : undefined,
-        variantes: variantes?.length ? { create: variantes } : undefined,
+        // El precio es el del producto para todos los talles: no se copia a la variante.
+        variantes: variantes?.length ? { create: variantes.map(({ precio: _, ...v }) => v) } : undefined,
       },
       include: {
         colegio: { select: { id: true, nombre: true } },
@@ -77,9 +78,9 @@ router.put('/:id', async (req, res, next) => {
 
     let precio
     if (tipo !== undefined) {
-      precio = await precioBaseCategoria(prisma, { tipo })
+      precio = await precioCategoria(prisma, { tipo })
       if (precio === null) {
-        return res.status(400).json({ mensaje: 'Configurá los precios de esta categoría antes de guardar' })
+        return res.status(400).json({ mensaje: 'Cargá el precio de esta categoría antes de guardar' })
       }
     }
 
@@ -172,16 +173,8 @@ router.delete('/imagenes/:imagenId', async (req, res, next) => {
 // POST /api/admin/productos/:id/variantes
 router.post('/:id/variantes', async (req, res, next) => {
   try {
-    const { talle, color, stock, sku, precio } = req.body
+    const { talle, color, stock, sku } = req.body
     if (!talle) return res.status(400).json({ mensaje: 'talle es requerido' })
-
-    let precioFinal = precio ? parseFloat(precio) : null
-    if (precioFinal === null) {
-      const producto = await prisma.producto.findUnique({ where: { id: req.params.id }, select: { tipo: true } })
-      if (producto) {
-        precioFinal = await resolverPrecioBanda(prisma, { tipo: producto.tipo, talle })
-      }
-    }
 
     const variante = await prisma.variante.create({
       data: {
@@ -190,7 +183,6 @@ router.post('/:id/variantes', async (req, res, next) => {
         color: color ?? null,
         stock: stock ?? 0,
         sku: sku ?? null,
-        precio: precioFinal,
       },
     })
     res.status(201).json(variante)
@@ -200,7 +192,7 @@ router.post('/:id/variantes', async (req, res, next) => {
 // PUT /api/admin/variantes/:varianteId
 router.put('/variantes/:varianteId', async (req, res, next) => {
   try {
-    const { talle, color, stock, sku, precio } = req.body
+    const { talle, color, stock, sku } = req.body
 
     const anterior = await prisma.variante.findUnique({ where: { id: req.params.varianteId } })
     if (!anterior) return res.status(404).json({ mensaje: 'Variante no encontrada' })
@@ -212,7 +204,6 @@ router.put('/variantes/:varianteId', async (req, res, next) => {
         color: color !== undefined ? color : undefined,
         stock: stock !== undefined ? Number(stock) : undefined,
         sku: sku !== undefined ? sku : undefined,
-        precio: precio !== undefined ? (precio ? parseFloat(precio) : null) : undefined,
       },
     })
 
@@ -229,28 +220,6 @@ router.delete('/variantes/:varianteId', async (req, res, next) => {
   try {
     await prisma.variante.delete({ where: { id: req.params.varianteId } })
     res.status(204).end()
-  } catch (err) { next(err) }
-})
-
-// POST /api/admin/productos/:id/recalcular-precios
-// Reaplica el precio de la banda vigente a cada variante del producto según su talle.
-router.post('/:id/recalcular-precios', async (req, res, next) => {
-  try {
-    const producto = await prisma.producto.findUnique({
-      where: { id: req.params.id },
-      include: { variantes: true },
-    })
-    if (!producto) return res.status(404).json({ mensaje: 'Producto no encontrado' })
-
-    let actualizadas = 0
-    for (const v of producto.variantes) {
-      const precio = await resolverPrecioBanda(prisma, { tipo: producto.tipo, talle: v.talle })
-      if (precio !== null) {
-        await prisma.variante.update({ where: { id: v.id }, data: { precio } })
-        actualizadas++
-      }
-    }
-    res.json({ actualizadas })
   } catch (err) { next(err) }
 })
 

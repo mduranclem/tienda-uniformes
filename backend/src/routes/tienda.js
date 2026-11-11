@@ -24,6 +24,8 @@ router.get('/pago', async (_req, res, next) => {
       transferenciaDisponible: Boolean(config.bancoCbu || config.bancoAlias),
       mercadoPagoActivo: config.mercadoPagoActivo === '1',
       direccion: config.direccion,
+      // Vacío = el frontend usa su número de contacto.
+      whatsappComprobantes: config.whatsappComprobantes,
     })
   } catch (err) { next(err) }
 })

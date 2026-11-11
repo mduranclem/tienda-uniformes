@@ -5,7 +5,7 @@ import { ordenesApi, pagosApi, tiendaApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { formatPrecio, esRosario } from '../lib/utils'
 import { trackPurchase } from '../lib/metaPixel'
-import { WHATSAPP_LEGIBLE, whatsappUrl } from '../lib/contacto'
+import { WHATSAPP_LEGIBLE, whatsappUrl, numeroWhatsapp } from '../lib/contacto'
 import Spinner from '../components/ui/Spinner'
 import { CheckCircle2, Package, CreditCard, Clock, XCircle, AlertCircle, Banknote, Landmark, Copy, Check } from 'lucide-react'
 
@@ -134,6 +134,14 @@ export default function ConfirmacionPage() {
   const esperandoRetiro = esEfectivo && !yaPagada
   const esperandoTransferencia = esTransferencia && !yaPagada
   const banco = configPago?.banco ?? {}
+  // El WhatsApp de comprobantes se carga en el panel; si no hay, el de contacto.
+  const whatsappCargado = configPago?.whatsappComprobantes?.trim()
+  const whatsappComprobantes = whatsappCargado && numeroWhatsapp(whatsappCargado)
+    ? { legible: whatsappCargado, numero: numeroWhatsapp(whatsappCargado) }
+    : { legible: WHATSAPP_LEGIBLE, numero: undefined }
+  const venceEl = orden.venceEl
+    ? new Date(orden.venceEl).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '')
+    : null
   // Envío fuera de Rosario sin costo cobrado: se acuerda aparte.
   const envioACotizar = orden.entrega?.tipo === 'ENVIO'
     && !esRosario(orden.domicilio?.ciudad)
@@ -307,18 +315,19 @@ export default function ConfirmacionPage() {
             <p className="text-xs text-amber-300 leading-relaxed">
               Enviá el comprobante al WhatsApp{' '}
               <a
-                href={whatsappUrl(`Hola! Te paso el comprobante del pedido #${orden.numero}`)}
+                href={whatsappUrl(`Hola! Te paso el comprobante del pedido #${orden.numero}`, whatsappComprobantes.numero)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-bold underline hover:text-amber-200"
               >
-                {WHATSAPP_LEGIBLE}
+                {whatsappComprobantes.legible}
               </a>{' '}
               indicando tu número de pedido <span className="font-bold">#{orden.numero}</span>.
             </p>
           </div>
           <p className="text-xs text-zinc-500 mt-2">
             Te lo mandamos también por mail. Preparamos el pedido en cuanto confirmemos el pago.
+            {venceEl && ` Te lo guardamos hasta el ${venceEl}; si necesitás más tiempo, avisanos.`}
           </p>
         </div>
       )}

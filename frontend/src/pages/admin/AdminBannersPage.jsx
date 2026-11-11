@@ -52,13 +52,16 @@ export default function AdminBannersPage() {
     cargar()
   }
 
-  async function actualizarTitulo(slide, titulo) {
-    await adminApi.actualizarBanner(token, slide.id, { titulo })
-    cargar()
+  async function actualizarCampo(slide, campo, valor) {
+    if ((slide[campo] ?? '') === valor.trim()) return
+    try {
+      await adminApi.actualizarBanner(token, slide.id, { [campo]: valor })
+      cargar()
+    } catch (err) { alert(err.message) }
   }
 
   async function eliminar(id) {
-    if (!confirm('¿Eliminar esta imagen del carrusel?')) return
+    if (!confirm('¿Eliminar este destacado?')) return
     await adminApi.eliminarBanner(token, id)
     cargar()
   }
@@ -78,14 +81,20 @@ export default function AdminBannersPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-zinc-100">Carrusel (Home)</h1>
-          <p className="text-sm text-zinc-500">{slides.length} imágenes cargadas</p>
+          <h1 className="text-xl font-bold text-zinc-100">Destacados</h1>
+          <p className="text-sm text-zinc-500">
+            Imágenes que se ven arriba de todo en la portada (promos, liquidaciones…). Se muestran enteras,
+            sin recortar: un flyer cuadrado o vertical se ve completo en el celular.
+          </p>
+          <p className="text-xs text-zinc-600 mt-1">
+            {slides.filter(s => s.activo).length} visibles de {slides.length}. Sin ninguno visible, la sección no aparece.
+          </p>
         </div>
-        <label className={`btn-primario flex items-center gap-2 cursor-pointer ${subiendo ? 'opacity-50 pointer-events-none' : ''}`}>
+        <label className={`btn-primario flex items-center gap-2 cursor-pointer shrink-0 ${subiendo ? 'opacity-50 pointer-events-none' : ''}`}>
           {subiendo ? <Spinner className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-          {subiendo ? 'Subiendo...' : 'Subir foto'}
+          {subiendo ? 'Subiendo...' : 'Subir imagen'}
           <input type="file" accept="image/*" className="hidden" onChange={subirFoto} />
         </label>
       </div>
@@ -94,14 +103,14 @@ export default function AdminBannersPage() {
         <div className="flex justify-center py-20"><Spinner className="w-8 h-8" /></div>
       ) : slides.length === 0 ? (
         <div className="text-center py-20 text-zinc-500 text-sm">
-          No hay imágenes en el carrusel aún. Subí la primera foto.
+          No hay destacados todavía. Subí la primera imagen.
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {slides.map((slide, i) => (
             <div key={slide.id} className={`bg-zinc-900 border rounded-xl overflow-hidden ${slide.activo ? 'border-zinc-800' : 'border-zinc-800 opacity-50'}`}>
-              <div className="aspect-video relative">
-                <img src={slide.url} alt={slide.titulo ?? ''} className="w-full h-full object-cover" />
+              <div className="aspect-square relative bg-zinc-800">
+                <img src={slide.url} alt={slide.titulo ?? ''} className="w-full h-full object-contain" />
                 <div className="absolute top-2 right-2 flex gap-1">
                   <button onClick={() => toggleActivo(slide)}
                     title={slide.activo ? 'Ocultar' : 'Mostrar'}
@@ -115,13 +124,26 @@ export default function AdminBannersPage() {
                 </div>
               </div>
               <div className="p-3 flex flex-col gap-2">
-                <input
-                  type="text"
-                  defaultValue={slide.titulo ?? ''}
-                  onBlur={e => actualizarTitulo(slide, e.target.value)}
-                  placeholder="Texto sobre la imagen (opcional)"
-                  className="text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
-                />
+                <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+                  Al tocarla lleva a (opcional)
+                  <input
+                    type="text"
+                    defaultValue={slide.enlace ?? ''}
+                    onBlur={e => actualizarCampo(slide, 'enlace', e.target.value)}
+                    placeholder="/producto/… o https://…"
+                    className="text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] text-zinc-500">
+                  Qué dice la imagen (para lectores de pantalla y buscadores)
+                  <input
+                    type="text"
+                    defaultValue={slide.titulo ?? ''}
+                    onBlur={e => actualizarCampo(slide, 'titulo', e.target.value)}
+                    placeholder="Ej: Chomba colegial en liquidación a $25.000"
+                    className="text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+                  />
+                </label>
                 <div className="flex items-center gap-1 text-xs text-zinc-600">
                   <GripVertical className="w-3.5 h-3.5" />
                   <button disabled={i === 0} onClick={() => moverOrden(slide.id, -1)}

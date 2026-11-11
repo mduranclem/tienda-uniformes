@@ -95,4 +95,19 @@ setInterval(async () => {
   try { await prisma.$queryRaw`SELECT 1` } catch (_) {}
 }, 4 * 60 * 1000)
 
+// Cancela los pedidos que pasaron su plazo de pago sin pagarse y devuelve el
+// stock. Corre al arrancar y después cada hora: el plazo es de días, así que
+// una hora de demora no cambia nada.
+const { cancelarVencidas } = require('./lib/vencimientoOrden')
+async function revisarVencidas() {
+  try {
+    const canceladas = await cancelarVencidas()
+    if (canceladas) console.log(`[vencimientos] ${canceladas} pedido(s) cancelado(s) por falta de pago`)
+  } catch (err) {
+    console.error('[vencimientos] Error:', err.message)
+  }
+}
+revisarVencidas()
+setInterval(revisarVencidas, 60 * 60 * 1000)
+
 module.exports = app

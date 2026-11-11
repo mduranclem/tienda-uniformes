@@ -34,9 +34,10 @@ export default function TerminosPage() {
           aviso previo; el precio válido es el vigente al momento de confirmar la compra.
         </p>
         <p>
-          Los pagos se procesan a través de Mercado Pago. No almacenamos datos de tarjetas: los
-          ingresás directamente en la plataforma de pago. El pedido se considera confirmado
-          únicamente cuando recibimos la acreditación del pago.
+          Los pagos se hacen por transferencia bancaria o, si retirás por el local, en efectivo.
+          El pedido se considera confirmado únicamente cuando verificamos la acreditación del pago.
+          Si no recibimos el pago dentro de los 7 días de hecho el pedido, se cancela y las prendas
+          vuelven a estar disponibles, salvo que nos hayas pedido más tiempo.
         </p>
       </Seccion>
 

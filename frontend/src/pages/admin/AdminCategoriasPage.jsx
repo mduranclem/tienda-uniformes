@@ -1,118 +1,60 @@
 import { useEffect, useState, useRef } from 'react'
 import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { formatPrecio, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
+import { normalizarTexto } from '../../lib/utils'
 import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
-import { Plus, Pencil, Check, X, ChevronDown, ChevronUp, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Check, X, Search } from 'lucide-react'
 
-function SeccionBandas({ categoriaId, bandas, token, onActualizado }) {
-  const [tallesSeleccionados, setTallesSeleccionados] = useState([])
-  const [precioNueva, setPrecioNueva] = useState('')
+// Precio de la prenda, igual para todos los talles. Al guardarlo se actualizan
+// todos los productos de la categoría, así que se confirma con Enter o el
+// botón y no a cada tecla.
+function CeldaPrecio({ categoria, token, onGuardado }) {
+  const actual = categoria.precio != null ? String(Number(categoria.precio)) : ''
+  const [valor, setValor] = useState(actual)
   const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState('')
+  const [aviso, setAviso] = useState('')
 
-  function toggleTalle(talle) {
-    setTallesSeleccionados(s => s.includes(talle) ? s.filter(t => t !== talle) : [...s, talle])
-  }
+  useEffect(() => { setValor(actual) }, [actual])
 
-  async function agregarBanda(e) {
-    e.preventDefault()
-    if (!tallesSeleccionados.length || !precioNueva) return
-    setError(''); setGuardando(true)
+  const cambio = valor.trim() !== actual
+  async function guardar() {
+    if (!cambio || guardando) return
+    setGuardando(true); setAviso('')
     try {
-      await adminApi.crearBanda(token, categoriaId, {
-        talles: tallesSeleccionados,
-        precio: parseFloat(precioNueva),
-      })
-      setTallesSeleccionados([]); setPrecioNueva('')
-      onActualizado()
-    } catch (err) { setError(err.message) }
+      const r = await adminApi.actualizarCategoria(token, categoria.id, { precio: valor.trim() === '' ? null : Number(valor) })
+      setAviso(r.productosActualizados ? `${r.productosActualizados} producto(s) actualizados` : 'Guardado')
+      onGuardado()
+    } catch (err) { setAviso(err.message) }
     finally { setGuardando(false) }
   }
 
-  async function eliminarBanda(bandaId) {
-    if (!confirm('¿Eliminar esta banda de precio?')) return
-    try { await adminApi.eliminarBanda(token, bandaId); onActualizado() }
-    catch (err) { alert(err.message) }
-  }
-
   return (
-    <div>
-      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Precios por talle</p>
-
-      <div className="flex flex-col gap-1.5 mb-3">
-        {bandas.length === 0 ? (
-          <p className="text-xs text-amber-400/70 italic">Sin precios cargados</p>
-        ) : (
-          bandas.map(b => (
-            <div key={b.id} className="flex items-center justify-between gap-2 bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-1.5">
-              <div className="flex flex-wrap items-center gap-1">
-                {b.talles.map(t => (
-                  <span key={t} className="text-[10px] font-medium bg-zinc-700 text-zinc-300 rounded px-1.5 py-0.5">{t}</span>
-                ))}
-                <span className="text-sm text-zinc-100 font-medium ml-1">{formatPrecio(b.precio)}</span>
-              </div>
-              <button onClick={() => eliminarBanda(b.id)} className="text-zinc-600 hover:text-red-400 transition-colors">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm text-zinc-500">$</span>
+        <input
+          type="number" min="0" step="100" inputMode="numeric"
+          value={valor}
+          onChange={e => { setValor(e.target.value); setAviso('') }}
+          onKeyDown={e => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') setValor(actual) }}
+          placeholder="Sin precio"
+          aria-label={`Precio de ${categoria.nombre}`}
+          className={`input text-sm py-1 w-28 ${actual ? '' : 'border-amber-500/50'}`}
+        />
+        {cambio && (
+          <button onClick={guardar} disabled={guardando} aria-label="Guardar precio"
+            className="text-green-400 hover:text-green-300 disabled:opacity-40">
+            <Check className="w-4 h-4" />
+          </button>
         )}
       </div>
-
-      <form onSubmit={agregarBanda} className="flex flex-col gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {TALLES_STANDARD.map(talle => (
-            <button
-              type="button"
-              key={talle}
-              onClick={() => toggleTalle(talle)}
-              className={`text-xs font-medium rounded px-2 py-1 border transition-colors ${
-                tallesSeleccionados.includes(talle)
-                  ? 'bg-blue-600/20 border-blue-600/40 text-blue-400'
-                  : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
-              }`}
-            >
-              {talle}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="number" min="0" step="0.01"
-            value={precioNueva}
-            onChange={e => setPrecioNueva(e.target.value)}
-            placeholder="Precio $"
-            className="input text-sm py-1.5 flex-1"
-          />
-          <button
-            type="submit"
-            disabled={guardando || !tallesSeleccionados.length || !precioNueva}
-            className="flex items-center gap-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-3 py-1.5 rounded disabled:opacity-40 transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-3 h-3" /> Agregar banda
-          </button>
-        </div>
-        {error && <p className="text-xs text-red-400">{error}</p>}
-      </form>
+      {aviso && <span className="text-[11px] text-zinc-500">{aviso}</span>}
     </div>
   )
 }
 
-function FilaCategoria({ categoria, token, editandoId, editNombre, setEditandoId, setEditNombre, guardarEdicion, toggleActivo, eliminar }) {
-  const [expandido, setExpandido] = useState(false)
-  const [bandas, setBandas] = useState([])
-  const [cargandoBandas, setCargandoBandas] = useState(false)
-
-  async function cargarBandas() {
-    setCargandoBandas(true)
-    const data = await adminApi.listarBandas(token, categoria.id)
-    setBandas(data); setCargandoBandas(false)
-  }
-
-  useEffect(() => { if (expandido) cargarBandas() }, [expandido])
-
+function FilaCategoria({ categoria, token, editandoId, editNombre, setEditandoId, setEditNombre, guardarEdicion, toggleActivo, eliminar, recargar }) {
   return (
     <>
       <tr className="border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors">
@@ -132,6 +74,9 @@ function FilaCategoria({ categoria, token, editandoId, editNombre, setEditandoId
           ) : (
             <span className="text-sm font-medium text-zinc-100">{categoria.nombre}</span>
           )}
+        </td>
+        <td className="px-4 py-3">
+          <CeldaPrecio categoria={categoria} token={token} onGuardado={recargar} />
         </td>
         <td className="px-4 py-3">
           <Badge variante={categoria.activo ? 'green' : 'default'}>{categoria.activo ? 'Activa' : 'Inactiva'}</Badge>
@@ -156,25 +101,9 @@ function FilaCategoria({ categoria, token, editandoId, editNombre, setEditandoId
             >
               Eliminar
             </button>
-            <button onClick={() => setExpandido(!expandido)} className="p-1.5 text-zinc-500 hover:text-zinc-200 rounded transition-colors">
-              {expandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
           </div>
         </td>
       </tr>
-      {expandido && (
-        <tr className="border-b border-zinc-800 bg-zinc-800/20">
-          <td colSpan={3} className="px-6 py-4">
-            {cargandoBandas ? (
-              <div className="flex justify-center py-6"><Spinner className="w-6 h-6" /></div>
-            ) : (
-              <div className="max-w-md">
-                <SeccionBandas categoriaId={categoria.id} bandas={bandas} token={token} onActualizado={cargarBandas} />
-              </div>
-            )}
-          </td>
-        </tr>
-      )}
     </>
   )
 }
@@ -241,11 +170,11 @@ export default function AdminCategoriasPage() {
     : categorias
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-6 max-w-3xl">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-zinc-100">Categorías</h1>
         <p className="text-sm text-zinc-500 mt-0.5">
-          Tipos de prenda disponibles para los productos. Expandí una categoría para cargar sus precios por talle.
+          Tipos de prenda disponibles para los productos. El precio es el mismo para todos los talles; al guardarlo se actualizan todos los productos de esa categoría.
         </p>
       </div>
 
@@ -293,6 +222,7 @@ export default function AdminCategoriasPage() {
             <thead className="border-b border-zinc-800">
               <tr>
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Nombre</th>
+                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Precio</th>
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
                 <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Acciones</th>
               </tr>
@@ -310,6 +240,7 @@ export default function AdminCategoriasPage() {
                   guardarEdicion={guardarEdicion}
                   toggleActivo={toggleActivo}
                   eliminar={eliminar}
+                  recargar={cargar}
                 />
               ))}
             </tbody>

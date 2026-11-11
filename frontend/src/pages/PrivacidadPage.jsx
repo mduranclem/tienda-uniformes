@@ -15,8 +15,9 @@ export default function PrivacidadPage() {
           alumnos, con el único fin de facilitarte las próximas compras.
         </p>
         <p>
-          No guardamos datos de tarjetas de crédito ni débito. Esa información la ingresás
-          directamente en Mercado Pago, que la procesa bajo sus propias condiciones.
+          No pedimos ni guardamos datos de tarjetas ni de cuentas bancarias. Los pagos se hacen
+          por transferencia o en efectivo en el local; del comprobante que nos mandás solo usamos
+          lo necesario para identificar el pago.
         </p>
       </Seccion>
 
@@ -30,8 +31,7 @@ export default function PrivacidadPage() {
 
       <Seccion titulo="Con quién los compartimos">
         <p>
-          Solo con quienes hacen falta para completar la compra: Mercado Pago para el cobro,
-          Andreani para los envíos al interior y los proveedores técnicos que alojan la tienda y
+          Solo con quienes hacen falta para completar la compra: Andreani para los envíos al interior y los proveedores técnicos que alojan la tienda y
           envían las notificaciones. No vendemos ni cedemos tus datos a terceros con fines
           publicitarios.
         </p>

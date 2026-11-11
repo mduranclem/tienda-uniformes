@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Truck } from 'lucide-react'
-import { formatPrecio, titleCase, infoCuotas, posicionTalle } from '../../lib/utils'
+import { formatPrecio, titleCase, posicionTalle } from '../../lib/utils'
 import FotoProducto from './FotoProducto'
 
 // Precio efectivo de una variante: el propio (si tiene) o el del producto
@@ -27,7 +27,6 @@ export default function ProductCard({ producto }) {
   const descuentoPct = tieneOferta
     ? Math.round((1 - precioFinal / Number(producto.precio)) * 100)
     : 0
-  const cuotas = infoCuotas(precioFinal, producto.cuotas, producto.cuotasRecargo)
 
   // Rango de talles disponibles (solo variantes con stock)
   const tallesDisponibles = [...new Set(
@@ -87,12 +86,6 @@ export default function ProductCard({ producto }) {
               <p className="text-xs text-zinc-500 line-through">{formatPrecio(producto.precio)}</p>
             )}
           </div>
-
-          {cuotas && (
-            <p className="inline-flex w-fit rounded-md border border-green-400/50 bg-green-500/25 px-2 py-0.5 text-[11px] font-bold text-green-300">
-              {cuotas.textoCorto}
-            </p>
-          )}
 
           {stockTotal > 0 && stockTotal < 5 ? (
             <p className="text-xs font-semibold text-amber-400">¡Últimas unidades!</p>

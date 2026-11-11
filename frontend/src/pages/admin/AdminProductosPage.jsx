@@ -2,11 +2,11 @@ import { useEffect, useState, Fragment } from 'react'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatPrecio, infoCuotas, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
+import { formatPrecio, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
 import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
-import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, RefreshCw, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, Search } from 'lucide-react'
 
 function Campo({ label, children }) {
   return (
@@ -24,44 +24,25 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     descripcion: producto?.descripcion ?? '',
     tipo: producto?.tipo ?? (categorias[0]?.nombre ?? 'REMERA'),
     precioOferta: producto?.precioOferta ?? '',
-    cuotas: producto?.cuotas ?? '',
-    financiacion: producto?.cuotasRecargo ? 'recargo' : 'sin_interes',
-    cuotasRecargo: producto?.cuotasRecargo ?? '',
     pesoGramos: producto?.pesoGramos ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
   })
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
-  const [bandas, setBandas] = useState([])
-  const [cargandoBandas, setCargandoBandas] = useState(true)
 
+  // El precio sale de la categoría: es el mismo para todos los talles.
   const categoriaSeleccionada = categorias.find(c => c.nombre === form.tipo)
-  const precioBase = bandas.length
-    ? Math.min(...bandas.map(b => Number(b.precio)))
-    : null
-
-  useEffect(() => {
-    if (!categoriaSeleccionada) { setBandas([]); setCargandoBandas(false); return }
-    setCargandoBandas(true)
-    adminApi.listarBandas(token, categoriaSeleccionada.id)
-      .then(setBandas)
-      .finally(() => setCargandoBandas(false))
-  }, [categoriaSeleccionada?.id])
+  const precioCategoria = categoriaSeleccionada?.precio != null ? Number(categoriaSeleccionada.precio) : null
 
   function set(campo, valor) { setForm(f => ({ ...f, [campo]: valor })) }
 
   async function handleSubmit(e) {
     e.preventDefault(); setError(''); setGuardando(true)
     try {
-      const { financiacion, ...resto } = form
       const data = {
-        ...resto,
+        ...form,
         precioOferta: form.precioOferta ? parseFloat(form.precioOferta) : null,
-        cuotas: form.cuotas ? parseInt(form.cuotas) : null,
-        cuotasRecargo: form.cuotas && financiacion === 'recargo' && form.cuotasRecargo
-          ? parseFloat(form.cuotasRecargo)
-          : null,
         pesoGramos: form.pesoGramos ? parseInt(form.pesoGramos) : null,
       }
       if (editando) await adminApi.actualizarProducto(token, producto.id, data)
@@ -101,70 +82,21 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
             </Campo>
           </div>
 
-          {cargandoBandas ? (
-            <p className="text-xs text-zinc-500">Buscando precios configurados...</p>
-          ) : precioBase === null ? (
+          {precioCategoria === null ? (
             <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-              Esta categoría no tiene precios configurados. Cargalos primero en Categorías → {form.tipo}.
+              Esta categoría no tiene precio. Cargalo primero en Categorías → {form.tipo}.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5 bg-zinc-800/50 border border-zinc-700/60 rounded-lg px-3 py-2">
-              {bandas.map(b => (
-                <span key={b.id} className="text-xs text-zinc-300">
-                  {b.talles.join(',')}: <span className="text-zinc-100 font-medium">{formatPrecio(b.precio)}</span>
-                </span>
-              ))}
-            </div>
+            <p className="text-xs text-zinc-300 bg-zinc-800/50 border border-zinc-700/60 rounded-lg px-3 py-2">
+              Precio (todos los talles): <span className="text-zinc-100 font-medium">{formatPrecio(precioCategoria)}</span>
+              <span className="text-zinc-500"> · se cambia desde Categorías</span>
+            </p>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Precio oferta">
-              <input type="number" min="0" step="0.01" value={form.precioOferta}
-                onChange={e => set('precioOferta', e.target.value)} className="input" placeholder="Vacío = sin oferta" />
-            </Campo>
-            <Campo label="Cuotas">
-              <select value={form.cuotas} onChange={e => set('cuotas', e.target.value)} className="input">
-                <option value="">No mostrar</option>
-                <option value="3">3 cuotas</option>
-                <option value="6">6 cuotas</option>
-                <option value="9">9 cuotas</option>
-                <option value="12">12 cuotas</option>
-              </select>
-            </Campo>
-          </div>
-          {form.cuotas && (
-            <div className="flex flex-col gap-2 bg-zinc-800/50 border border-zinc-700/60 rounded-lg p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Financiación">
-                  <select value={form.financiacion} onChange={e => set('financiacion', e.target.value)} className="input">
-                    <option value="sin_interes">Sin interés</option>
-                    <option value="recargo">Con recargo</option>
-                  </select>
-                </Campo>
-                {form.financiacion === 'recargo' && (
-                  <Campo label="Recargo (%)">
-                    <input type="number" min="0" max="100" step="0.1" value={form.cuotasRecargo}
-                      onChange={e => set('cuotasRecargo', e.target.value)} className="input" placeholder="15" />
-                  </Campo>
-                )}
-              </div>
-              {(() => {
-                const base = parseFloat(form.precioOferta) || precioBase
-                const preview = infoCuotas(
-                  base,
-                  parseInt(form.cuotas),
-                  form.financiacion === 'recargo' ? parseFloat(form.cuotasRecargo) || 0 : null
-                )
-                return preview ? (
-                  <p className="text-sm text-green-400">
-                    Vista previa: <span className="font-medium">{preview.texto}</span>
-                  </p>
-                ) : (
-                  <p className="text-xs text-zinc-500">Ingresá el precio para ver la vista previa.</p>
-                )
-              })()}
-            </div>
-          )}
+          <Campo label="Precio oferta">
+            <input type="number" min="0" step="0.01" value={form.precioOferta}
+              onChange={e => set('precioOferta', e.target.value)} className="input" placeholder="Vacío = sin oferta" />
+          </Campo>
           <Campo label="Peso (gramos)">
             <input type="number" min="1" step="1" value={form.pesoGramos}
               onChange={e => set('pesoGramos', e.target.value)} className="input" placeholder="Ej: 200" />
@@ -182,7 +114,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
           {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onCerrar} className="btn-secundario">Cancelar</button>
-            <button type="submit" disabled={guardando || cargandoBandas || precioBase === null} className="btn-primario">
+            <button type="submit" disabled={guardando || precioCategoria === null} className="btn-primario">
               {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear producto'}
             </button>
           </div>
@@ -199,13 +131,11 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
   const [expandido, setExpandido] = useState(false)
   const [editando, setEditando] = useState(false)
   const [subiendoImg, setSubiendoImg] = useState(false)
-  const [recalculando, setRecalculando] = useState(false)
 
   // Edición de variantes existentes
   const [stockEdit, setStockEdit] = useState({})
-  const [precioEdit, setPrecioEdit] = useState({})
 
-  // Filas nuevas pendientes por talle: { [talle]: [{ _id, color, stock, precio }] }
+  // Filas nuevas pendientes por talle: { [talle]: [{ _id, color, stock }] }
   const [nuevasPorTalle, setNuevasPorTalle] = useState({})
 
   // Nuevo color
@@ -215,7 +145,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
   function agregarFilaNueva(talle) {
     setNuevasPorTalle(s => ({
       ...s,
-      [talle]: [...(s[talle] ?? []), { _id: nuevoId(), color: '', stock: '', precio: '' }],
+      [talle]: [...(s[talle] ?? []), { _id: nuevoId(), color: '', stock: '' }],
     }))
   }
 
@@ -241,7 +171,6 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
         talle,
         color: fila.color,
         stock: Number(fila.stock || 0),
-        precio: fila.precio ? parseFloat(fila.precio) : null,
       })
       quitarFilaNueva(talle, id)
       onActualizado()
@@ -295,26 +224,9 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
     onActualizado()
   }
 
-  async function guardarPrecio(varianteId) {
-    const precio = precioEdit[varianteId]; if (precio === undefined) return
-    await adminApi.actualizarVariante(token, varianteId, { precio: precio === '' ? null : precio })
-    setPrecioEdit(s => { const n = { ...s }; delete n[varianteId]; return n })
-    onActualizado()
-  }
-
   async function eliminarVariante(varianteId) {
     if (!confirm('¿Eliminar variante?')) return
     await adminApi.eliminarVariante(token, varianteId); onActualizado()
-  }
-
-  async function recalcularPrecios() {
-    setRecalculando(true)
-    try {
-      const { actualizadas } = await adminApi.recalcularPrecios(token, producto.id)
-      onActualizado()
-      alert(`${actualizadas} variante(s) actualizadas con el precio de banda vigente.`)
-    } catch (err) { alert(err.message) }
-    finally { setRecalculando(false) }
   }
 
   async function cambiarColorImagen(imagenId, color) {
@@ -451,18 +363,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
               {/* ── Tabla de variantes ── */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Stock por talle y color</p>
-                  <button
-                    onClick={recalcularPrecios}
-                    disabled={recalculando}
-                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-400 disabled:opacity-40 transition-colors"
-                    title="Reaplica el precio de banda vigente a cada variante según su talle"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${recalculando ? 'animate-spin' : ''}`} />
-                    Recalcular precios
-                  </button>
-                </div>
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Stock por talle y color</p>
 
                 {coloresProducto.length === 0 && (
                   <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
@@ -472,11 +373,10 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
                 <div className="rounded-lg border border-zinc-700 overflow-hidden">
                   {/* Cabecera */}
-                  <div className="grid grid-cols-[3rem_1fr_3.5rem_5rem_6rem_2.5rem] gap-1 px-3 py-1.5 bg-zinc-800/60 text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">
+                  <div className="grid grid-cols-[3rem_1fr_3.5rem_6rem_2.5rem] gap-1 px-3 py-1.5 bg-zinc-800/60 text-[10px] text-zinc-500 font-semibold uppercase tracking-wide">
                     <span>Talle</span>
                     <span>Color</span>
                     <span className="text-center">Stock</span>
-                    <span className="text-center">Precio $</span>
                     <span>Últ. movimiento</span>
                     <span />
                   </div>
@@ -490,7 +390,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                         <Fragment key={talle}>
                           {/* Variantes guardadas */}
                           {variantesDelTalle.map(v => (
-                            <div key={v.id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_6rem_2.5rem] gap-1 items-center px-3 py-1.5">
+                            <div key={v.id} className="grid grid-cols-[3rem_1fr_3.5rem_6rem_2.5rem] gap-1 items-center px-3 py-1.5">
                               <span className="text-xs font-bold text-zinc-200">{talle}</span>
                               <span className="text-xs text-zinc-300 truncate">{v.color ?? <span className="text-zinc-600 italic">—</span>}</span>
                               <input
@@ -499,14 +399,6 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                                 onChange={e => setStockEdit(s => ({ ...s, [v.id]: e.target.value }))}
                                 onBlur={() => guardarStock(v.id)}
                                 className="w-full text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
-                              <input
-                                type="number" min="0" step="0.01"
-                                value={precioEdit[v.id] ?? (v.precio != null ? Number(v.precio) : '')}
-                                onChange={e => setPrecioEdit(s => ({ ...s, [v.id]: e.target.value }))}
-                                onBlur={() => guardarPrecio(v.id)}
-                                placeholder={String(Number(producto.precio))}
-                                className="w-full text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
                               />
                               <span className="text-[10px] text-zinc-500 truncate" title={v.movimientos?.[0]?.createdAt ? new Date(v.movimientos[0].createdAt).toLocaleString('es-AR') : undefined}>
                                 {v.movimientos?.[0]?.puntoDeVenta?.nombre ?? '—'}
@@ -519,7 +411,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
                           {/* Filas nuevas pendientes */}
                           {filasNuevas.map(fila => (
-                            <div key={fila._id} className="grid grid-cols-[3rem_1fr_3.5rem_5rem_6rem_2.5rem] gap-1 items-center px-3 py-1.5 bg-blue-950/20 border-l-2 border-blue-600/40">
+                            <div key={fila._id} className="grid grid-cols-[3rem_1fr_3.5rem_6rem_2.5rem] gap-1 items-center px-3 py-1.5 bg-blue-950/20 border-l-2 border-blue-600/40">
                               <span className="text-xs text-blue-400 font-bold">{talle}</span>
                               {/* Select de color en vez de input libre */}
                               <select
@@ -538,14 +430,6 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                                 placeholder="0"
                                 value={fila.stock}
                                 onChange={e => actualizarFilaNueva(talle, fila._id, 'stock', e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && guardarFilaNueva(talle, fila._id)}
-                                className="w-full text-xs bg-zinc-800 border border-blue-600/40 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
-                              />
-                              <input
-                                type="number" min="0" step="0.01"
-                                placeholder="base"
-                                value={fila.precio}
-                                onChange={e => actualizarFilaNueva(talle, fila._id, 'precio', e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && guardarFilaNueva(talle, fila._id)}
                                 className="w-full text-xs bg-zinc-800 border border-blue-600/40 text-zinc-100 rounded px-1.5 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-zinc-600"
                               />
@@ -582,8 +466,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
                 </div>
 
                 <p className="text-[10px] text-zinc-600 mt-1.5">
-                  Precio vacío = usa el precio de la banda configurada para esta categoría y talle
-                  (si no hay banda, usa el precio base: {formatPrecio(producto.precio)})
+                  Todos los talles se venden a {formatPrecio(producto.precioOferta ?? producto.precio)}. El precio se cambia desde Categorías.
                 </p>
               </div>
 

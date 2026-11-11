@@ -41,3 +41,16 @@ test('el retiro no muestra datos bancarios y sí la dirección', () => {
   assert.match(html, /Dean Funes 1258/)
   assert.match(html, /Abonás al retirar/)
 })
+
+test('sin alias alcanza con el CBU, y el comprobante va al WhatsApp cargado en el panel', () => {
+  const html = htmlComoPagar(ORDEN, { ...CONFIG, bancoAlias: '', whatsappComprobantes: '341 555 1234' })
+  assert.match(html, /0070123430004012345678/)
+  assert.doesNotMatch(html, /Alias/)
+  assert.match(html, /341 555 1234/)
+  assert.doesNotMatch(html, /341 743 4552/)
+})
+
+test('la transferencia dice hasta cuándo se guarda el pedido', () => {
+  const html = htmlComoPagar({ ...ORDEN, venceEl: new Date('2026-11-18T21:00:00Z') }, CONFIG)
+  assert.match(html, /hasta el miércoles 18 de noviembre/)
+})
