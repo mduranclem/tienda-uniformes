@@ -229,7 +229,7 @@ function DestacadoGrande({ producto }) {
 
 function Destacados({ productos }) {
   return (
-    <section className="border-y border-zinc-800/80 bg-zinc-950 py-12 md:py-16">
+    <section className="py-12 md:py-16">
       <div className="mx-auto max-w-6xl px-4">
         <Encabezado
           titulo="Destacados"
@@ -343,7 +343,7 @@ export default function HomePage() {
         verTodosHref="/catalogo?colegial=1"
       />
 
-      <div className="border-y border-zinc-800/80 bg-zinc-950/70">
+      <div>
         <ComoComprar />
       </div>
 
