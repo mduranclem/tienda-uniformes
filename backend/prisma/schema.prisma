@@ -77,6 +77,8 @@ model Producto {
   cuotasRecargo Decimal?      @db.Decimal(5, 2) // % de recargo por financiación; null = sin interés
   pesoGramos   Int?           // peso unitario sin embalaje; null = se estima por tipo (ver lib/pesos.js)
   activo       Boolean        @default(true)
+  // Aparece en la sección "Destacados" de la portada. Se marca desde el panel.
+  destacado    Boolean        @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
