@@ -113,7 +113,7 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
           grilla que el resto de la página. */}
       <div className="mx-auto w-full max-w-6xl px-4 pt-7 pb-2">
         {/* Gris con un punto de marca: informa sin pelearle a la barra violeta
-            del 20%, que es la que tiene que ganar la atención. */}
+            de arriba, que es la que tiene que ganar la atención. */}
         <span className="inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/80 px-3 py-1 text-[11px] font-medium text-zinc-300">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--marca-claro)]" />
           Temporada 2026 · Nuevos modelos disponibles
@@ -160,7 +160,7 @@ function HeroCarrusel({ slides, imgLisos, imgColegial }) {
             lugar es de los pocos que se ven sin scrollear. */}
         <span className="flex items-center gap-1 font-semibold text-violet-300">
           <Store className="w-3 h-3 flex-shrink-0" />
-          20% OFF retirando en el local
+          Retiro sin cargo en 3 locales
         </span>
         <span className="text-zinc-600">·</span>
         <span className="flex items-center gap-1">

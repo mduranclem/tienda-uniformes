@@ -47,10 +47,7 @@ export default function TerminosPage() {
           Gobernador Gálvez— el envío cuesta $5.000 y es sin cargo a partir de 2 prendas. El día y
           la franja horaria se coordinan durante el checkout. Al resto del país despachamos por
           Andreani; el costo se informa antes del despacho. También podés retirar por cualquiera de
-          nuestros locales, sin cargo y con un 20% de descuento sobre el pedido.
-        </p>
-        <p>
-          Los cupones de descuento se suman al 20% por retirar en el local.
+          nuestros locales, sin cargo.
         </p>
         <p>
           Los plazos son estimados y pueden verse afectados por demoras del correo o de la

@@ -119,13 +119,10 @@ export default function CheckoutPage() {
   )
   // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
   const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
-  // La promo de la casa es el 20% por retirar en el local. Este cálculo es solo
-  // para mostrar; el que vale es el del servidor (backend/src/lib/descuentos.js),
-  // que es el que arma el total de la orden.
-  const retiraEnLocal = entregaSeleccionada?.tipo === 'RETIRO'
-  const descuentoPromo = retiraEnLocal ? Math.round(totalPrecio * 20 / 100) : 0
+  // Solo para mostrar: el descuento que vale es el del servidor
+  // (backend/src/lib/descuentos.js), que es el que arma el total de la orden.
   const descuentoCupon = cupon?.descuento ?? 0
-  const descuento = descuentoPromo + descuentoCupon
+  const descuento = descuentoCupon
   const total = totalPrecio + costoEnvio - descuento
 
   // Cotiza el envío cuando cambia el CP. Mismo patrón de guarda `cancelado` que
@@ -375,11 +372,6 @@ export default function CheckoutPage() {
                       }
                       <div className="flex-1">
                         <p className="text-sm font-medium text-zinc-100">{e.nombre}</p>
-                        {e.tipo === 'RETIRO' && (
-                          <p className="mt-0.5 text-xs font-semibold text-violet-300">
-                            20% OFF retirando
-                          </p>
-                        )}
                         {e.soloRosario && (
                           <p className="mt-0.5 text-xs font-semibold text-emerald-400">
                             {unidades >= UNIDADES_ENVIO_LOCAL_GRATIS
@@ -610,20 +602,6 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Promo de la casa: retiro en el local */}
-              {descuentoPromo > 0 && (
-                <div className="mb-3 flex items-center gap-2 bg-violet-500/10 border border-violet-500/30 rounded-lg px-3 py-2">
-                  <span className="text-lg">🎉</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-violet-300">
-                      ¡20% OFF — Retirando en el local!
-                    </p>
-                    <p className="text-xs text-violet-400">Descuento aplicado automáticamente</p>
-                  </div>
-                  <span className="text-sm font-bold text-violet-300">− {formatPrecio(descuentoPromo)}</span>
-                </div>
-              )}
-
               {/* Cupón */}
               {cupon ? (
                 <div className="mb-3 flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
@@ -662,12 +640,6 @@ export default function CheckoutPage() {
                   <span>Subtotal</span>
                   <span>{formatPrecio(totalPrecio)}</span>
                 </div>
-                {descuentoPromo > 0 && (
-                  <div className="flex justify-between text-violet-400">
-                    <span>20% retiro en el local</span>
-                    <span>− {formatPrecio(descuentoPromo)}</span>
-                  </div>
-                )}
                 {descuentoCupon > 0 && (
                   <div className="flex justify-between text-green-400">
                     <span>Cupón {cupon.codigo}</span>
