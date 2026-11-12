@@ -6,7 +6,7 @@ import { formatPrecio, TALLES_STANDARD, normalizarTexto } from '../../lib/utils'
 import { comprimirImagen } from '../../lib/imageCompress'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
-import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronUp, Check, Search, Star } from 'lucide-react'
 
 function Campo({ label, children }) {
   return (
@@ -27,6 +27,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     pesoGramos: producto?.pesoGramos ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
+    destacado: producto?.destacado ?? false,
   })
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -105,6 +106,10 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
               Si lo dejás vacío se estima según el tipo de prenda.
             </p>
           </Campo>
+          <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+            <input type="checkbox" checked={form.destacado} onChange={e => set('destacado', e.target.checked)} className="accent-amber-500" />
+            Destacado (aparece en la sección "Destacados" de la portada)
+          </label>
           {editando && (
             <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
               <input type="checkbox" checked={form.activo} onChange={e => set('activo', e.target.checked)} className="accent-blue-500" />
@@ -237,6 +242,10 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
     await adminApi.actualizarProducto(token, producto.id, { activo: !producto.activo }); onActualizado()
   }
 
+  async function toggleDestacado() {
+    await adminApi.actualizarProducto(token, producto.id, { destacado: !producto.destacado }); onActualizado()
+  }
+
   const customTalles = [...new Set(producto.variantes.map(v => v.talle))].filter(t => !TALLES_STANDARD.includes(t))
   const todosTalles = [...TALLES_STANDARD, ...customTalles]
   const coloresProducto = producto.colores ?? []
@@ -265,6 +274,15 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
           <div className="flex items-center gap-1">
             <button onClick={() => setEditando(true)} className="p-1.5 text-zinc-500 hover:text-blue-400 rounded transition-colors">
               <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={toggleDestacado}
+              title={producto.destacado ? 'Quitar de Destacados' : 'Mostrar en Destacados'}
+              aria-label={producto.destacado ? 'Quitar de Destacados' : 'Mostrar en Destacados'}
+              aria-pressed={producto.destacado}
+              className={`p-1.5 rounded transition-colors ${producto.destacado ? 'text-amber-400 hover:text-amber-300' : 'text-zinc-500 hover:text-amber-400'}`}
+            >
+              <Star className={`w-4 h-4 ${producto.destacado ? 'fill-current' : ''}`} />
             </button>
             <button onClick={toggleActivo} className="p-1.5 text-zinc-500 hover:text-yellow-400 rounded text-xs font-medium transition-colors">
               {producto.activo ? 'Ocultar' : 'Activar'}

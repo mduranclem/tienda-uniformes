@@ -20,6 +20,7 @@ export default function CatalogoPage() {
     tipo: searchParams.get('tipo') ?? '',
     orden: searchParams.get('orden') ?? '',
     colegial: searchParams.get('colegial') ?? '',
+    destacados: searchParams.get('destacados') ?? '',
   }
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function CatalogoPage() {
     if (filtros.colegioId && filtros.colegioId !== 'lisos') params.colegioId = filtros.colegioId
     if (filtros.colegioId === 'lisos') params.lisos = '1'
     if (filtros.colegial === '1') params.colegial = '1'
+    if (filtros.destacados === '1') params.destacados = '1'
     if (filtros.tipo) params.tipo = filtros.tipo
     if (filtros.orden) params.orden = filtros.orden
     const q = searchParams.get('q')
@@ -76,7 +78,7 @@ export default function CatalogoPage() {
     setInputBusqueda('')
   }
 
-  const hayFiltros = filtros.colegioId || filtros.tipo || filtros.orden || filtros.colegial || searchParams.get('q')
+  const hayFiltros = filtros.colegioId || filtros.tipo || filtros.orden || filtros.colegial || filtros.destacados || searchParams.get('q')
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">

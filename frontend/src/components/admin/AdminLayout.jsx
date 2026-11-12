@@ -12,7 +12,7 @@ const links = [
   { to: '/admin/cupones', label: 'Cupones', icon: Tag },
   { to: '/admin/entregas', label: 'Entregas', icon: Truck },
   { to: '/admin/envios', label: 'Zonas de envío', icon: Map },
-  { to: '/admin/banners', label: 'Destacados', icon: Images },
+  { to: '/admin/banners', label: 'Carrusel', icon: Images },
   { to: '/admin/puntos-venta', label: 'Puntos de venta', icon: KeyRound },
   { to: '/admin/movimientos-stock', label: 'Movimientos de stock', icon: History },
   { to: '/admin/bot', label: 'Bot WhatsApp', icon: MessageCircle },

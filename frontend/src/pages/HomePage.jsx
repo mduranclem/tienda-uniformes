@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { colegiosApi, productosApi } from '../services/api'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ColegioSelector from '../components/home/ColegioSelector'
-import Destacados from '../components/home/Destacados'
 import { Truck, Store, Lock, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import { useSwipe } from '../lib/useSwipe'
 
@@ -208,6 +207,8 @@ export default function HomePage() {
   const [novedades, setNovedades] = useState([])
   const [colegiales, setColegiales] = useState([])
   const [lisos, setLisos] = useState([])
+  const [destacados, setDestacados] = useState([])
+  const [cargandoDestacados, setCargandoDestacados] = useState(true)
   const [cargandoColegiales, setCargandoColegiales] = useState(true)
   const [cargandoLisos, setCargandoLisos] = useState(true)
 
@@ -219,6 +220,10 @@ export default function HomePage() {
       const data = r.data ?? r
       setNovedades(data.filter(p => p.imagenes?.[0]?.url))
     })
+
+    productosApi.listar({ destacados: '1', limit: 6 })
+      .then(r => setDestacados(r.data ?? r))
+      .finally(() => setCargandoDestacados(false))
 
     productosApi.listar({ colegial: '1', limit: 6 })
       .then(r => setColegiales(r.data ?? r))
@@ -235,8 +240,18 @@ export default function HomePage() {
 
   return (
     <div>
-      <Destacados />
       <HeroCarrusel slides={slides} imgLisos={imgLisos} imgColegial={imgColegial} />
+
+      {/* Sin productos marcados como destacados la sección no aparece. */}
+      {(cargandoDestacados || destacados.length > 0) && (
+        <SeccionProductos
+          titulo="Destacados"
+          subtitulo="Promos y liquidaciones de la temporada"
+          productos={destacados}
+          cargando={cargandoDestacados}
+          verTodosHref="/catalogo?destacados=1"
+        />
+      )}
 
       <SeccionProductos
         titulo="Ropa Colegial"

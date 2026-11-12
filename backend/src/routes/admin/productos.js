@@ -37,7 +37,7 @@ router.get('/', async (_req, res, next) => {
 // POST /api/admin/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, imagenes, variantes } = req.body
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, destacado, imagenes, variantes } = req.body
     if (!nombre) {
       return res.status(400).json({ mensaje: 'nombre es requerido' })
     }
@@ -57,6 +57,7 @@ router.post('/', async (req, res, next) => {
         cuotasRecargo: cuotasRecargo || null,
         pesoGramos: pesoGramos ? Number(pesoGramos) : null,
         colegioId: colegioId || null,
+        destacado: destacado === true,
         imagenes: imagenes?.length ? { create: imagenes } : undefined,
         // El precio es el del producto para todos los talles: no se copia a la variante.
         variantes: variantes?.length ? { create: variantes.map(({ precio: _, ...v }) => v) } : undefined,
@@ -74,7 +75,7 @@ router.post('/', async (req, res, next) => {
 // PUT /api/admin/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, activo } = req.body
+    const { nombre, descripcion, tipo, precioOferta, cuotas, cuotasRecargo, pesoGramos, colegioId, activo, destacado } = req.body
 
     let precio
     if (tipo !== undefined) {
@@ -97,6 +98,7 @@ router.put('/:id', async (req, res, next) => {
         pesoGramos: pesoGramos !== undefined ? (pesoGramos ? Number(pesoGramos) : null) : undefined,
         colegioId: colegioId !== undefined ? (colegioId || null) : undefined,
         activo: activo !== undefined ? activo : undefined,
+        destacado: destacado !== undefined ? destacado === true : undefined,
       },
       include: {
         colegio: { select: { id: true, nombre: true } },

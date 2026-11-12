@@ -5,10 +5,10 @@ const { urlTablaTalles } = require('../lib/tablaTalles')
 const router = Router()
 
 
-// GET /api/productos?colegioId=&tipo=&q=&lisos=1&colegial=1&limit=&page=
+// GET /api/productos?colegioId=&tipo=&q=&lisos=1&colegial=1&destacados=1&limit=&page=
 router.get('/', async (req, res, next) => {
   try {
-    const { colegioId, tipo, q, lisos, colegial, limit = 20, page = 1, orden } = req.query
+    const { colegioId, tipo, q, lisos, colegial, destacados, limit = 20, page = 1, orden } = req.query
     const take = Math.min(Number(limit), 100)
     const skip = (Number(page) - 1) * take
 
@@ -23,6 +23,7 @@ router.get('/', async (req, res, next) => {
     }
 
     if (tipo) where.tipo = tipo
+    if (destacados === '1') where.destacado = true
 
     if (q) {
       where.OR = [
