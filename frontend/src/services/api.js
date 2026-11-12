@@ -158,9 +158,6 @@ export const enviosApi = {
 }
 
 // ── Órdenes ───────────────────────────────────────────────────────────────────
-export const primeraCompraApi = {
-  verificar: (email) => request(`/ordenes/primera-compra?email=${encodeURIComponent(email)}`),
-}
 
 export const ordenesApi = {
   crear: (data, token) => request('/ordenes', {
