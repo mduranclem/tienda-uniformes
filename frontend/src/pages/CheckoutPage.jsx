@@ -530,7 +530,7 @@ export default function CheckoutPage() {
                     <Banknote className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-zinc-100">Al retirar, en el local</p>
-                      <p className="text-xs text-zinc-500">Efectivo, transferencia o como prefieras cuando pases a buscarlo.</p>
+                      <p className="text-xs text-zinc-500">En efectivo o por transferencia cuando pases a buscarlo.</p>
                     </div>
                   </label>
                 )}

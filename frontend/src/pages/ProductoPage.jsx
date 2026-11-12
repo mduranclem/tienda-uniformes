@@ -9,6 +9,7 @@ import TablaTalles from '../components/product/TablaTalles'
 import StickyAddToCart from '../components/product/StickyAddToCart'
 import Spinner from '../components/ui/Spinner'
 import { formatPrecio, titleCase } from '../lib/utils'
+import AvisoPago from '../components/ui/AvisoPago'
 import { trackViewContent, trackAddToCart } from '../lib/metaPixel'
 import { ShoppingCart, ChevronLeft, GraduationCap, Truck } from 'lucide-react'
 
@@ -217,9 +218,10 @@ export default function ProductoPage() {
             ) : (
               <p className="text-3xl font-bold text-zinc-100">{formatPrecio(producto.precio)}</p>
             )}
+            <AvisoPago className="mt-3" />
             {/* Contraste subido: emerald-400 sobre emerald/10 quedaba por
                 debajo del mínimo legible sobre el fondo oscuro. */}
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+            <div className="mt-2 ml-0 flex w-fit items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
               <Truck className="h-3.5 w-3.5 flex-shrink-0" />
               Envío gratis a partir de 2 unidades
             </div>
