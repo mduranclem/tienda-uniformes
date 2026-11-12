@@ -62,6 +62,14 @@
 .animar-entrada {
   animation: entrada-titular 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+/* Bajada y botones del hero: entran detrás del titular, sin desenfoque y con
+   menos recorrido, para que el orden de lectura sea el de aparición. */
+@keyframes entrada-suave {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.animar-entrada-2 { animation: entrada-suave 800ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both; }
+.animar-entrada-3 { animation: entrada-suave 800ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both; }
 
 /* Aparición escalonada de las tarjetas al entrar en pantalla. El recorrido es
    corto y el retardo entre una y otra, mínimo: si cada tarjeta hiciera una
@@ -86,7 +94,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animar-entrada { animation: none; }
+  .animar-entrada,
+  .animar-entrada-2,
+  .animar-entrada-3 { animation: none; }
   /* Sin movimiento la tarjeta arranca visible, nunca escondida */
   .revelar {
     opacity: 1;
