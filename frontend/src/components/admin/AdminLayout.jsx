@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Spinner from '../ui/Spinner'
-import { Package, ShoppingBag, Tag, Truck, Images, School, LayoutList, MessageCircle, Map, Menu, X, KeyRound, History, Star } from 'lucide-react'
+import { Package, ShoppingBag, Tag, Truck, Images, School, LayoutList, Settings, Map, Menu, X, KeyRound, History, Star } from 'lucide-react'
 
 const links = [
   { to: '/admin/colegios', label: 'Colegios', icon: School },
@@ -16,7 +16,7 @@ const links = [
   { to: '/admin/banners', label: 'Carrusel', icon: Images },
   { to: '/admin/puntos-venta', label: 'Puntos de venta', icon: KeyRound },
   { to: '/admin/movimientos-stock', label: 'Movimientos de stock', icon: History },
-  { to: '/admin/bot', label: 'Bot WhatsApp', icon: MessageCircle },
+  { to: '/admin/bot', label: 'Configuración', icon: Settings },
 ]
 
 export default function AdminLayout() {
