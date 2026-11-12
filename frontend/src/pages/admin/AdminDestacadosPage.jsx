@@ -4,12 +4,13 @@ import { adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { formatPrecio, normalizarTexto } from '../../lib/utils'
 import Spinner from '../../components/ui/Spinner'
-import { Plus, Search, Star, X, ImageOff } from 'lucide-react'
+import ModalNuevoDestacado from '../../components/admin/ModalNuevoDestacado'
+import { Plus, Search, Star, X, ImageOff, CheckCircle2 } from 'lucide-react'
 
 // Los productos de la sección "Destacados" de la portada, en un solo lugar:
-// ver cuáles están, sacar uno, sumar uno ya cargado o cargar uno nuevo. Es lo
-// mismo que la estrella de Admin › Productos, pero sin tener que buscar en la
-// lista entera.
+// ver cuáles están, sacar uno, sumar uno ya cargado o cargar uno nuevo con su
+// flyer, precio y stock (ModalNuevoDestacado). Marcar uno ya cargado es lo
+// mismo que la estrella de Admin › Productos, sin buscar en la lista entera.
 
 function Foto({ producto, className }) {
   const url = producto.imagenes?.[0]?.url
@@ -25,6 +26,8 @@ export default function AdminDestacadosPage() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [guardandoId, setGuardandoId] = useState(null)
+  const [modalNuevo, setModalNuevo] = useState(false)
+  const [recienCreado, setRecienCreado] = useState(null)
 
   // Solo la primera carga muestra el spinner: después de marcar o quitar uno
   // se refresca en silencio para no perder lo que estabas buscando.
@@ -68,10 +71,17 @@ export default function AdminDestacadosPage() {
             Se ven en la portada, debajo del carrusel. Sin ninguno, la sección no aparece.
           </p>
         </div>
-        <Link to="/admin/productos?nuevo=destacado" className="btn-primario flex shrink-0 items-center justify-center gap-2">
-          <Plus className="w-4 h-4" /> Cargar producto nuevo
-        </Link>
+        <button onClick={() => setModalNuevo(true)} className="btn-primario flex shrink-0 items-center justify-center gap-2">
+          <Plus className="w-4 h-4" /> Cargar destacado nuevo
+        </button>
       </div>
+
+      {recienCreado && (
+        <p className="mb-6 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          "{recienCreado}" ya está publicado en la portada.
+        </p>
+      )}
 
       {/* En la portada */}
       <section className="mb-8">
@@ -144,6 +154,14 @@ export default function AdminDestacadosPage() {
           ))}
         </ul>
       </section>
+
+      {modalNuevo && (
+        <ModalNuevoDestacado
+          token={token}
+          onCerrar={() => setModalNuevo(false)}
+          onCreado={producto => { setModalNuevo(false); setRecienCreado(producto.nombre); cargar() }}
+        />
+      )}
     </div>
   )
 }
