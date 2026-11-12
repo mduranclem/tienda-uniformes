@@ -1,4 +1,4 @@
-const selectClass = 'flex-shrink-0 bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
+const selectClass = 'w-full min-w-0 lg:w-auto bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
 
 // Pluralización simple para mostrar el nombre de la categoría (ej. "REMERA" → "Remeras").
 function pluralizar(nombre) {
@@ -42,8 +42,9 @@ export default function FilterBar({ colegios, categorias, filtros, onChange }) {
         ))}
       </div>
 
-      {/* Dropdowns a la derecha */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      {/* Dropdowns a la derecha. En mobile van en dos columnas iguales: lado a
+          lado con su ancho natural se pasaban del borde de la pantalla. */}
+      <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-shrink-0 lg:items-center">
         <select
           value={filtros.colegioId ?? ''}
           onChange={e => onChange({ colegioId: e.target.value, tipo: filtros.tipo, orden: filtros.orden })}
