@@ -65,7 +65,7 @@ export default function App() {
                     UNA sola línea en mobile: el hero está calculado para entrar
                     en la primera pantalla y cada línea de más lo empuja fuera. */}
                 <div className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 text-white text-center py-2 px-3 text-[11px] sm:text-sm font-semibold tracking-wide whitespace-nowrap overflow-x-auto">
-                  <span>🏪 20% OFF retirando<span className="hidden sm:inline"> en el local</span></span>
+                  <span>🏷️ Precios de promo<span className="hidden sm:inline"> en toda la tienda</span></span>
                   <span className="mx-2 text-white/40">·</span>
                   <span>🏦 Pagá por transferencia<span className="hidden sm:inline"> o en el local</span></span>
                 </div>

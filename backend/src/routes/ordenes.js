@@ -154,8 +154,8 @@ router.post('/', authOpcional, async (req, res, next) => {
       }
     }
 
-    // Los descuentos los decide SIEMPRE el servidor: el retiro según la entrega
-    // elegida, nunca un flag que mande el cliente.
+    // El descuento lo decide SIEMPRE el servidor, nunca un flag que mande el
+    // cliente. Hoy es solo el cupón.
     let cuponValido = null
     if (cuponId) {
       const cupon = await prisma.cupon.findUnique({ where: { id: cuponId } })
@@ -164,7 +164,6 @@ router.post('/', authOpcional, async (req, res, next) => {
 
     const { total: descuento } = calcularDescuentos({
       subtotal,
-      retiraEnLocal: entrega.tipo === 'RETIRO',
       cupon: cuponValido,
     })
 
