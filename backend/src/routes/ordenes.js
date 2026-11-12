@@ -7,18 +7,10 @@ const { calcularVencimiento } = require('../lib/vencimientoOrden')
 const { esZonaLocal, costoEnvioLocal } = require('../lib/envios')
 const { cotizarPedido, OPCION_ROSARIO } = require('../services/cotizadorEnvio/pedido')
 const { esFechaValida, esFranjaValida, FRANJAS } = require('../lib/agendaEntrega')
-const {
-  calcularDescuentos,
-  DESCUENTO_BIENVENIDA_PCT,
-  DESCUENTO_RETIRO_PCT,
-} = require('../lib/descuentos')
+const { calcularDescuentos } = require('../lib/descuentos')
 const { mercadoPagoEstaActivo } = require('../lib/configTienda')
 
 const router = Router()
-
-// Estados que cuentan como compra concretada: solo una compra pagada
-// (o posterior) quema el descuento de bienvenida.
-const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
 
 // Efectivo solo tiene sentido si el cliente pasa por el local. Con envío a
 // domicilio no hay dónde cobrarle.
@@ -29,20 +21,6 @@ const ESTADOS_COMPRA = ['PAGADA', 'PREPARANDO', 'LISTA', 'ENTREGADA']
 // 'mercadopago' sigue aceptándose pero solo con el flag encendido.
 const METODOS_PAGO = ['transferencia', 'efectivo', 'mercadopago']
 
-async function esPrimeraCompra(email) {
-  const emailNorm = email.trim().toLowerCase()
-  const comprasPrevias = await prisma.orden.count({
-    where: {
-      OR: [
-        // emailGuest histórico puede estar guardado sin normalizar
-        { emailGuest: { equals: emailNorm, mode: 'insensitive' } },
-        { usuario: { email: { equals: emailNorm, mode: 'insensitive' } } },
-      ],
-      estado: { in: ESTADOS_COMPRA },
-    },
-  })
-  return comprasPrevias === 0
-}
 
 
 // POST /api/ordenes — crea una orden (guest o usuario logueado)
@@ -176,9 +154,8 @@ router.post('/', authOpcional, async (req, res, next) => {
       }
     }
 
-    // Los descuentos los decide SIEMPRE el servidor: la primera compra según el
-    // historial del email y el retiro según la entrega elegida, nunca un flag
-    // que mande el cliente.
+    // Los descuentos los decide SIEMPRE el servidor: el retiro según la entrega
+    // elegida, nunca un flag que mande el cliente.
     let cuponValido = null
     if (cuponId) {
       const cupon = await prisma.cupon.findUnique({ where: { id: cuponId } })
@@ -187,7 +164,6 @@ router.post('/', authOpcional, async (req, res, next) => {
 
     const { total: descuento } = calcularDescuentos({
       subtotal,
-      primeraCompra: await esPrimeraCompra(email),
       retiraEnLocal: entrega.tipo === 'RETIRO',
       cupon: cuponValido,
     })
@@ -271,16 +247,6 @@ router.post('/', authOpcional, async (req, res, next) => {
     })
 
     res.status(201).json({ id: orden.id, numero: orden.numero })
-  } catch (err) { next(err) }
-})
-
-// GET /api/ordenes/primera-compra?email=xxx
-router.get('/primera-compra', async (req, res, next) => {
-  try {
-    const { email } = req.query
-    if (!email) return res.json({ aplica: false })
-    const aplica = await esPrimeraCompra(email)
-    res.json({ aplica, descuentoPct: DESCUENTO_BIENVENIDA_PCT, descuentoRetiroPct: DESCUENTO_RETIRO_PCT })
   } catch (err) { next(err) }
 })
 

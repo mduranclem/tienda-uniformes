@@ -25,7 +25,7 @@ const PREGUNTAS = [
   },
   {
     q: '¿Tienen descuentos?',
-    a: 'Sí. La primera compra tiene un 20% de descuento, y retirando por cualquiera de nuestros locales también tenés un 20% de descuento, siempre, aunque ya nos hayas comprado antes. Los dos descuentos no se acumulan: se aplica uno solo del 20%. Además publicamos promos por temporada.',
+    a: 'Sí. Retirando por cualquiera de nuestros locales tenés un 20% de descuento sobre el pedido, siempre. Además publicamos promos por temporada.',
   },
 ]
 

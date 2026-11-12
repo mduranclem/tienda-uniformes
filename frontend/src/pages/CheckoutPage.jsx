@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { entregasApi, enviosApi, ordenesApi, cuponesApi, primeraCompraApi, tiendaApi } from '../services/api'
+import { entregasApi, enviosApi, ordenesApi, cuponesApi, tiendaApi } from '../services/api'
 import { formatPrecio, esZonaLocal, costoEnvioLocal, UNIDADES_ENVIO_LOCAL_GRATIS } from '../lib/utils'
 import { trackInitiateCheckout } from '../lib/metaPixel'
 import Spinner from '../components/ui/Spinner'
@@ -23,7 +23,6 @@ export default function CheckoutPage() {
   const [cupon, setCupon] = useState(null)
   const [cuponError, setCuponError] = useState('')
   const [validandoCupon, setValidandoCupon] = useState(false)
-  const [esPrimeraCompra, setEsPrimeraCompra] = useState(false)
   const [metodoPago, setMetodoPago] = useState('transferencia')
   const [configPago, setConfigPago] = useState(null)
   const [agenda, setAgenda] = useState(null)
@@ -120,26 +119,14 @@ export default function CheckoutPage() {
   )
   // Efectivo solo si pasa por el local: con envío no hay dónde cobrarle.
   const puedePagarEfectivo = entregaSeleccionada?.tipo === 'RETIRO'
-  // Las dos promos de la casa valen 20% y NO se acumulan: se aplica una sola.
-  // Este cálculo es solo para mostrar; el que vale es el del servidor
-  // (backend/src/lib/descuentos.js), que es el que arma el total de la orden.
+  // La promo de la casa es el 20% por retirar en el local. Este cálculo es solo
+  // para mostrar; el que vale es el del servidor (backend/src/lib/descuentos.js),
+  // que es el que arma el total de la orden.
   const retiraEnLocal = entregaSeleccionada?.tipo === 'RETIRO'
-  const descuentoPromo = (esPrimeraCompra || retiraEnLocal) ? Math.round(totalPrecio * 20 / 100) : 0
-  // Con las dos activas se muestra la de bienvenida, que es la que el cliente
-  // ya venía viendo desde el banner de arriba.
-  const motivoPromo = esPrimeraCompra ? 'primera compra' : 'retiro en el local'
+  const descuentoPromo = retiraEnLocal ? Math.round(totalPrecio * 20 / 100) : 0
   const descuentoCupon = cupon?.descuento ?? 0
   const descuento = descuentoPromo + descuentoCupon
   const total = totalPrecio + costoEnvio - descuento
-
-  // Verificar primera compra cuando el email cambia (con delay)
-  useEffect(() => {
-    if (!form.email || !form.email.includes('@')) { setEsPrimeraCompra(false); return }
-    const t = setTimeout(() => {
-      primeraCompraApi.verificar(form.email).then(r => setEsPrimeraCompra(r.aplica)).catch(() => {})
-    }, 600)
-    return () => clearTimeout(t)
-  }, [form.email])
 
   // Cotiza el envío cuando cambia el CP. Mismo patrón de guarda `cancelado` que
   // CatalogoPage: sin él, una respuesta lenta de un CP viejo puede pisar a la
@@ -623,19 +610,15 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Promo de la casa: bienvenida o retiro, nunca las dos */}
+              {/* Promo de la casa: retiro en el local */}
               {descuentoPromo > 0 && (
                 <div className="mb-3 flex items-center gap-2 bg-violet-500/10 border border-violet-500/30 rounded-lg px-3 py-2">
                   <span className="text-lg">🎉</span>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-violet-300">
-                      ¡20% OFF — {esPrimeraCompra ? 'Primera compra' : 'Retirando en el local'}!
+                      ¡20% OFF — Retirando en el local!
                     </p>
-                    <p className="text-xs text-violet-400">
-                      {esPrimeraCompra && retiraEnLocal
-                        ? 'Los descuentos no se acumulan: se aplica uno solo'
-                        : 'Descuento aplicado automáticamente'}
-                    </p>
+                    <p className="text-xs text-violet-400">Descuento aplicado automáticamente</p>
                   </div>
                   <span className="text-sm font-bold text-violet-300">− {formatPrecio(descuentoPromo)}</span>
                 </div>
@@ -681,7 +664,7 @@ export default function CheckoutPage() {
                 </div>
                 {descuentoPromo > 0 && (
                   <div className="flex justify-between text-violet-400">
-                    <span>20% {motivoPromo}</span>
+                    <span>20% retiro en el local</span>
                     <span>− {formatPrecio(descuentoPromo)}</span>
                   </div>
                 )}

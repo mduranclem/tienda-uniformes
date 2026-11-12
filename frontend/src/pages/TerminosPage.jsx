@@ -50,9 +50,7 @@ export default function TerminosPage() {
           nuestros locales, sin cargo y con un 20% de descuento sobre el pedido.
         </p>
         <p>
-          Los descuentos de la casa (20% por primera compra y 20% por retirar en el local)
-          no se acumulan entre sí: se aplica uno solo. Los cupones sí se suman al descuento
-          vigente.
+          Los cupones de descuento se suman al 20% por retirar en el local.
         </p>
         <p>
           Los plazos son estimados y pueden verse afectados por demoras del correo o de la
