@@ -1,4 +1,5 @@
-import { useEffect, useState, Fragment } from 'react'
+import { useEffect, useRef, useState, Fragment } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { adminApi, colegiosApi, categoriasApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
@@ -17,7 +18,7 @@ function Campo({ label, children }) {
   )
 }
 
-function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCerrar }) {
+function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCerrar, destacadoInicial = false }) {
   const editando = !!producto
   const [form, setForm] = useState({
     nombre: producto?.nombre ?? '',
@@ -27,7 +28,7 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
     pesoGramos: producto?.pesoGramos ?? '',
     colegioId: producto?.colegioId ?? '',
     activo: producto?.activo ?? true,
-    destacado: producto?.destacado ?? false,
+    destacado: producto?.destacado ?? destacadoInicial,
   })
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +48,10 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
         pesoGramos: form.pesoGramos ? parseInt(form.pesoGramos) : null,
       }
       if (editando) await adminApi.actualizarProducto(token, producto.id, data)
-      else await adminApi.crearProducto(token, data)
+      else {
+        onGuardado(await adminApi.crearProducto(token, data))
+        return
+      }
       onGuardado()
     } catch (err) { setError(err.message) }
     finally { setGuardando(false) }
@@ -132,8 +136,14 @@ function ModalProducto({ producto, colegios, categorias, token, onGuardado, onCe
 let _rowKey = 0
 function nuevoId() { return ++_rowKey }
 
-function FilaProducto({ producto, colegios, categorias, token, onActualizado }) {
-  const [expandido, setExpandido] = useState(false)
+function FilaProducto({ producto, colegios, categorias, token, onActualizado, abrirAlCargar = false }) {
+  const [expandido, setExpandido] = useState(abrirAlCargar)
+  // Recién creado (o pedido desde Destacados): se abre y se lleva a la vista,
+  // porque lo que sigue es subir las fotos y cargar el stock.
+  const filaRef = useRef(null)
+  useEffect(() => {
+    if (abrirAlCargar) filaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [abrirAlCargar])
   const [editando, setEditando] = useState(false)
   const [subiendoImg, setSubiendoImg] = useState(false)
 
@@ -252,7 +262,7 @@ function FilaProducto({ producto, colegios, categorias, token, onActualizado }) 
 
   return (
     <>
-      <tr className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+      <tr ref={filaRef} className={`border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors scroll-mt-4 ${abrirAlCargar ? 'bg-amber-500/5' : ''}`}>
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
             <img src={producto.imagenes[0]?.url ?? '/placeholder.png'}
@@ -511,6 +521,15 @@ export default function AdminProductosPage() {
   const [cargando, setCargando] = useState(true)
   const [modalNuevo, setModalNuevo] = useState(false)
   const [busqueda, setBusqueda] = useState('')
+  // Desde Admin › Destacados: ?nuevo=destacado abre el alta con el tilde de
+  // destacado puesto, y ?abrir=<id> abre ese producto para fotos y stock.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [nuevoDestacado, setNuevoDestacado] = useState(false)
+  const [abrirId, setAbrirId] = useState(searchParams.get('abrir'))
+  useEffect(() => {
+    if (searchParams.get('nuevo') === 'destacado') { setNuevoDestacado(true); setModalNuevo(true) }
+    if (searchParams.has('nuevo') || searchParams.has('abrir')) setSearchParams({}, { replace: true })
+  }, [])
   const [colegioFiltro, setColegioFiltro] = useState('')
 
   // silencioso: refresca los datos sin pasar por el spinner de página completa.
@@ -611,7 +630,8 @@ export default function AdminProductosPage() {
             </thead>
             <tbody>
               {filtrados.map(p => (
-                <FilaProducto key={p.id} producto={p} colegios={colegios} categorias={categorias} token={token} onActualizado={refrescar} />
+                <FilaProducto key={p.id} producto={p} colegios={colegios} categorias={categorias} token={token} onActualizado={refrescar}
+                  abrirAlCargar={p.id === abrirId} />
               ))}
             </tbody>
           </table>
@@ -625,8 +645,14 @@ export default function AdminProductosPage() {
 
       {modalNuevo && (
         <ModalProducto colegios={colegios} categorias={categorias} token={token}
-          onGuardado={() => { setModalNuevo(false); refrescar() }}
-          onCerrar={() => setModalNuevo(false)} />
+          destacadoInicial={nuevoDestacado}
+          onGuardado={creado => {
+            setModalNuevo(false); setNuevoDestacado(false)
+            // Sin filtros, para que el producto nuevo se vea y quede abierto.
+            setBusqueda(''); setColegioFiltro(''); setAbrirId(creado?.id ?? null)
+            refrescar()
+          }}
+          onCerrar={() => { setModalNuevo(false); setNuevoDestacado(false) }} />
       )}
     </div>
   )
