@@ -125,11 +125,12 @@ test('sin datos bancarios cargados no se manda el aviso de transferencia', () =>
   assert.equal(msg, null)
 })
 
-test('pedido recibido para pagar en el local no pide transferencia', () => {
+test('pedido recibido para pagar en el local no manda los datos bancarios', () => {
   const msg = componerMensaje({
     ...BASE, estado: 'PENDIENTE', modoEnvio: 'RETIRO', metodoPago: 'efectivo', total: 1000,
     transferencia: TRANSFERENCIA,
   })
-  assert.match(msg, /en el local/)
-  assert.ok(!/transfer/i.test(msg))
+  assert.match(msg, /en efectivo o por transferencia cuando lo pasás a retirar/)
+  assert.ok(!msg.includes(TRANSFERENCIA.cbu))
+  assert.ok(!msg.includes(TRANSFERENCIA.alias))
 })

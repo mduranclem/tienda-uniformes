@@ -9,6 +9,7 @@ import { useRevelar } from '../lib/useRevelar'
 import { formatPrecio, titleCase, posicionTalle } from '../lib/utils'
 import { Truck, Store, Star, ChevronLeft, ChevronRight, ArrowRight, Shirt, Landmark, PackageCheck } from 'lucide-react'
 import { useSwipe } from '../lib/useSwipe'
+import AvisoPago from '../components/ui/AvisoPago'
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
 // El carrusel de fotos sigue siendo el fondo de la portada, pero el titular y
@@ -62,6 +63,7 @@ function Hero({ slides, colegios }) {
 
       <div className="mx-auto flex min-h-[520px] w-full max-w-6xl flex-col justify-end px-4 pb-8 pt-40 sm:min-h-[560px] lg:min-h-[600px] lg:justify-center lg:pb-16 lg:pt-16">
         <div className="max-w-xl lg:max-w-3xl">
+          <AvisoPago className="animar-entrada-2 mb-4 bg-zinc-950/60 backdrop-blur-sm" />
           <h1 className="titular animar-entrada text-[2.9rem] text-white sm:text-6xl lg:text-7xl">
             Uniformes de tu colegio
             <span className="block text-[var(--marca-claro)]">y básicos lisos</span>
@@ -213,6 +215,7 @@ function DestacadoGrande({ producto }) {
           <span className={`text-3xl font-extrabold tracking-tight ${lista ? 'text-red-400' : 'text-white'}`}>{formatPrecio(precio)}</span>
           {lista && <span className="text-base text-zinc-500 line-through">{formatPrecio(lista)}</span>}
         </div>
+        <AvisoPago className="mt-3" />
         {talles.length > 0 && (
           <p className="mt-2 text-sm text-zinc-400">
             {talles.length === 1 ? `Talle ${talles[0]}` : `Talles ${talles[0]} al ${talles[talles.length - 1]}`}
@@ -259,7 +262,7 @@ function Destacados({ productos }) {
 // paga, para que la transferencia no sorprenda al final.
 const PASOS = [
   { icono: Shirt, titulo: 'Elegí tu prenda', texto: 'Buscá tu colegio, elegí la prenda, el talle y el color.' },
-  { icono: Landmark, titulo: 'Pagá como prefieras', texto: 'Por transferencia con los datos que te mostramos, o en el local al retirar.' },
+  { icono: Landmark, titulo: 'Pagá en efectivo o transferencia', texto: 'Transferí con los datos que te mostramos, o pagá en efectivo en el local al retirar.' },
   { icono: PackageCheck, titulo: 'Recibilo o retiralo', texto: 'Envío a todo el país, o retiro sin cargo en cualquiera de nuestros 3 locales.' },
 ]
 

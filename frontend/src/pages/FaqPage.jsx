@@ -17,7 +17,7 @@ const PREGUNTAS = [
   },
   {
     q: '¿Cómo puedo pagar?',
-    a: 'Por transferencia bancaria: al confirmar el pedido te mostramos los datos para transferir, y nos mandás el comprobante por WhatsApp. Si retirás por el local, también podés pagar ahí cuando lo pasás a buscar, en efectivo o como prefieras. Te guardamos el pedido 7 días; si necesitás más tiempo, avisanos.',
+    a: 'Por transferencia bancaria: al confirmar el pedido te mostramos los datos para transferir, y nos mandás el comprobante por WhatsApp. Si retirás por el local, también podés pagar en efectivo cuando lo pasás a buscar. Los precios de la tienda valen solo pagando en efectivo o por transferencia. Te guardamos el pedido 7 días; si necesitás más tiempo, avisanos.',
   },
   {
     q: '¿Hacen envíos a todo el país?',

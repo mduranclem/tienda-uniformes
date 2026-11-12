@@ -62,7 +62,7 @@ function htmlComoPagar(orden, config) {
       <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#52525b;text-transform:uppercase;letter-spacing:0.08em;">Cómo pagar</p>
       <p style="margin:0 0 6px;font-size:14px;color:#f4f4f5;font-weight:600;">Abonás al retirar: ${formatPrecio(orden.total)}</p>
       <p style="margin:0;font-size:13px;color:#d4d4d8;line-height:1.5;">
-        Podés pagar en efectivo, por transferencia o como prefieras cuando pases a buscarlo.
+        Pagás en efectivo o por transferencia cuando pases a buscarlo.
       </p>
       ${config.direccion ? `<p style="margin:8px 0 0;font-size:13px;color:#a1a1aa;">📍 ${config.direccion}</p>` : ''}
       <p style="margin:8px 0 0;font-size:12px;color:#71717a;line-height:1.5;">

@@ -39,7 +39,7 @@ function mensajePendiente({ pedido, metodoPago, total, transferencia, venceEl })
   const plazo = venceEl ? ` antes del ${formatearVencimiento(venceEl)}` : ''
 
   if (metodoPago === 'efectivo') {
-    return `🛍️ ${pedido}\n\n¡Recibimos tu pedido! Lo pagás en el local cuando lo pasás a retirar, como prefieras. Te avisamos por acá apenas esté listo.`
+    return `🛍️ ${pedido}\n\n¡Recibimos tu pedido! Lo pagás en efectivo o por transferencia cuando lo pasás a retirar. Te avisamos por acá apenas esté listo.`
   }
   // Sin datos bancarios cargados no hay nada útil que decir: mandar "transferí"
   // sin decir adónde solo genera la pregunta.
