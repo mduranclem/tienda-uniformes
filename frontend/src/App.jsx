@@ -14,6 +14,7 @@ import LoginPage from './pages/LoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import NuevaPasswordPage from './pages/NuevaPasswordPage'
 import AdminProductosPage from './pages/admin/AdminProductosPage'
+import AdminDestacadosPage from './pages/admin/AdminDestacadosPage'
 import AdminOrdenesPage from './pages/admin/AdminOrdenesPage'
 import AdminCuponesPage from './pages/admin/AdminCuponesPage'
 import AdminBannersPage from './pages/admin/AdminBannersPage'
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="/admin/productos" replace />} />
               <Route path="productos" element={<AdminProductosPage />} />
+              <Route path="destacados" element={<AdminDestacadosPage />} />
               <Route path="ordenes" element={<AdminOrdenesPage />} />
               <Route path="cupones" element={<AdminCuponesPage />} />
               <Route path="colegios" element={<AdminColegiosPage />} />
